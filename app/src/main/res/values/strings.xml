@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Kintsu</string>
+    <string name="widget_habits_desc">Today\'s rituals on your home screen</string>
+    <string name="widget_streak_desc">Your quiet streak counter and gold seams</string>
+    <string name="shortcut_add_task_short">Add task</string>
+    <string name="shortcut_add_task_long">Add a new task</string>
+    <string name="shortcut_start_focus_short">Focus</string>
+    <string name="shortcut_start_focus_long">Start focus timer</string>
+    <string name="shortcut_journal_short">Journal</string>
+    <string name="shortcut_journal_long">Write in evening journal</string>
+</resources>

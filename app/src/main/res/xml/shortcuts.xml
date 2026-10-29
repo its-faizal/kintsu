@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="shortcut_add_task"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_add"
+        android:shortcutShortLabel="@string/shortcut_add_task_short"
+        android:shortcutLongLabel="@string/shortcut_add_task_long">
+        <intent
+            android:action="com.kintsu.app.shortcut.ADD_TASK"
+            android:targetPackage="com.kintsu.app"
+            android:targetClass="com.kintsu.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_start_focus"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_lock_idle_alarm"
+        android:shortcutShortLabel="@string/shortcut_start_focus_short"
+        android:shortcutLongLabel="@string/shortcut_start_focus_long">
+        <intent
+            android:action="com.kintsu.app.shortcut.START_FOCUS"
+            android:targetPackage="com.kintsu.app"
+            android:targetClass="com.kintsu.app.MainActivity" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="shortcut_journal"
+        android:enabled="true"
+        android:icon="@android:drawable/ic_menu_edit"
+        android:shortcutShortLabel="@string/shortcut_journal_short"
+        android:shortcutLongLabel="@string/shortcut_journal_long">
+        <intent
+            android:action="com.kintsu.app.shortcut.JOURNAL"
+            android:targetPackage="com.kintsu.app"
+            android:targetClass="com.kintsu.app.MainActivity" />
+    </shortcut>
+</shortcuts>
