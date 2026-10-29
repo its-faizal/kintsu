@@ -129,6 +129,59 @@ fun IconProgress(color: Color, modifier: Modifier = Modifier, size: Dp = 22.dp) 
 }
 
 @Composable
+fun IconUser(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        // Head circle
+        drawCircle(color = color, radius = w * 0.22f, center = Offset(w * 0.5f, h * 0.32f), style = s)
+
+        // Shoulders arc
+        val p = Path().apply {
+            moveTo(w * 0.22f, h * 0.82f)
+            cubicTo(
+                w * 0.25f, h * 0.62f,
+                w * 0.75f, h * 0.62f,
+                w * 0.78f, h * 0.82f
+            )
+        }
+        drawPath(p, color = color, style = s)
+    }
+}
+
+@Composable
+fun IconShop(color: Color, modifier: Modifier = Modifier, size: Dp = 18.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        // Bag body
+        val p = Path().apply {
+            moveTo(w * 0.22f, h * 0.38f)
+            lineTo(w * 0.78f, h * 0.38f)
+            lineTo(w * 0.84f, h * 0.84f)
+            lineTo(w * 0.16f, h * 0.84f)
+            close()
+        }
+        drawPath(p, color = color, style = s)
+
+        // Bag handle
+        val handle = Path().apply {
+            moveTo(w * 0.36f, h * 0.38f)
+            cubicTo(
+                w * 0.36f, h * 0.20f,
+                w * 0.64f, h * 0.20f,
+                w * 0.64f, h * 0.38f
+            )
+        }
+        drawPath(handle, color = color, style = s)
+    }
+}
+
+@Composable
 fun IconSettings(color: Color, modifier: Modifier = Modifier, size: Dp = 22.dp) {
     Canvas(modifier = modifier.size(size)) {
         val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)

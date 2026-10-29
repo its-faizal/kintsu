@@ -119,4 +119,30 @@ class MigrationTest {
         assertTrue(executedStatements.contains("ALTER TABLE focus_sessions ADD COLUMN linkedTaskId INTEGER DEFAULT NULL"))
         assertTrue(executedStatements.contains("CREATE INDEX IF NOT EXISTS index_focus_sessions_linkedTaskId ON focus_sessions(linkedTaskId)"))
     }
+
+    @Test
+    fun testMigration8To9CreatesWellbeingAndShopTables() {
+        val executedStatements = mutableListOf<String>()
+
+        val dbProxy = Proxy.newProxyInstance(
+            SupportSQLiteDatabase::class.java.classLoader,
+            arrayOf(SupportSQLiteDatabase::class.java)
+        ) { _, method, args ->
+            if (method.name == "execSQL" && args != null && args.isNotEmpty()) {
+                executedStatements.add(args[0] as String)
+            }
+            null
+        } as SupportSQLiteDatabase
+
+        MIGRATION_8_9.migrate(dbProxy)
+
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS app_groups") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS block_rules") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS block_schedules") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS digital_detox_sessions") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS quit_habits") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS urge_logs") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS commitment_locks") })
+        assertTrue(executedStatements.any { it.contains("CREATE TABLE IF NOT EXISTS shop_inventory") })
+    }
 }

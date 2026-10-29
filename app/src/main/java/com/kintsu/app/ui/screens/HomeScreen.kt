@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -105,6 +106,10 @@ fun HomeScreen(
     onNavigateToTasks: () -> Unit,
     onNavigateToProgress: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenShop: () -> Unit = {},
+    onOpenDetox: () -> Unit = {},
+    onOpenQuitHabits: () -> Unit = {},
+    onOpenWellbeingWizard: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = KintsuTheme.colors
@@ -186,7 +191,9 @@ fun HomeScreen(
             KintsuTopBar(
                 title = greeting,
                 subtitle = todayFormatted,
-                onSettingsClick = onOpenSettings
+                onProfileClick = onOpenSettings,
+                coinsBalance = settings.coinsBalance,
+                onShopClick = onOpenShop
             )
 
             LazyColumn(
@@ -196,6 +203,43 @@ fun HomeScreen(
                     .padding(horizontal = spacing.xl),
                 verticalArrangement = Arrangement.spacedBy(spacing.m)
             ) {
+                // Pristine Clean First-Launch Welcome Card (when 0 habits)
+                if (habits.isEmpty()) {
+                    item(key = "empty_rituals_welcome") {
+                        KintsuCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenAddHabit() }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(spacing.l),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "A Mindful Beginning",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(spacing.xs))
+                                Text(
+                                    text = "Start with a single gentle ritual. Tap below to begin your daily journey.",
+                                    style = typography.caption,
+                                    color = colors.textSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(spacing.m))
+                                KintsuButton(
+                                    text = "Create First Ritual",
+                                    onClick = onOpenAddHabit,
+                                    variant = KintsuButtonVariant.ACCENT_SOFT
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Header Focus Mini-Bar (Compact, only visible when timer is running)
                 if (focusState.isRunning) {
                     item(key = "focus_mini_bar") {

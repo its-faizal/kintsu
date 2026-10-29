@@ -213,8 +213,7 @@ fun TasksScreen(
             .background(colors.background)
     ) {
         KintsuTopBar(
-            title = "Tasks & Plan",
-            onSettingsClick = onOpenSettings
+            title = "Tasks & Plan"
         )
 
         LazyColumn(

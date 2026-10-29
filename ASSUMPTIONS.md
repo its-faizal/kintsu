@@ -503,3 +503,32 @@ In accordance with the specification requirement (*"If not viable or too fragile
 - **Dual Connectivity Modes:**
   - **USB Reverse (`http://127.0.0.1:8080`):** Tunneled via `adb reverse tcp:8080 tcp:8080` for zero-latency, firewall-exempt USB tethering.
   - **Wi-Fi LAN (`http://192.168.29.155:8080`):** Direct local area network connection accessible from any mobile device on the local network.
+
+
+## 23. Kintsu V3 Digital Wellbeing, Addiction Blocking, and Economy
+
+### Clean First Launch Architecture
+- By default, Kintsu launches completely brand new with **zero** pre-populated habits, tasks, or horizon goals.
+- The user is greeted by serene, peaceful empty states guiding them to mindfully add their first ritual or task at their own pace.
+
+### Header & Navigation Restructuring
+- **Top-Left Placement:**
+  - **Profile Avatar:** Located at the top-left of the Home header. Tapping opens the unified Profile & Settings sheet/screen.
+  - **Kintsugi Coins & Sanctuary Shop:** Positioned next to the Profile Avatar. Shows current balance of Kintsugi Gold Coins.
+- **Sanctuary Shop Economy:**
+  - Users earn Gold Coins through mindful actions: completing daily rituals (+5 coins), finishing tasks (+3 coins), completing deep focus sessions (+10 coins), maintaining clean streaks (+20 coins/milestone), and finishing Digital Detoxes (+15 coins).
+  - Coins can be spent in the **Sanctuary Shop** on:
+    * Kintsugi Repair Gold Vials (used for Gold Repair of cracked habits).
+    * Ambient Soundscapes & Meditative Singing Bowls for focus sessions.
+    * Wabi-sabi Custom Theme Palettes (e.g. Slate Zen, Forest Moss, Twilight Indigo).
+    * Mindful Achievement Trophy Badges.
+- **Settings Consolidation:**
+  - Redundant settings entry points are consolidated into the top-left Profile icon and the dedicated Settings page.
+
+### Digital Wellbeing & Addiction Blocking Architecture
+- **Detection:** AccessibilityService (`KintsuAccessibilityBlockerService`) event-driven detection (`TYPE_WINDOW_STATE_CHANGED`) backed by `UsageStatsManager` for analytics.
+- **Tamper Resistance:** Monotonic time (`SystemClock.elapsedRealtime()`) prevents bypassing blocks via system clock manipulation.
+- **Safety Fail-Safe:** Built-in crash breaker disarms blocking if 3 crashes occur in 10 minutes.
+- **Protected Essentials:** Hard-coded list (Phone, Emergency Dialer, SMS, Settings, Launcher, Keyboard, Clock/Alarm, Kintsu) can never be blocked.
+- **Commitment Lock:** Weakening block rules requires a 24-hour cooling-off period to prevent craving-driven relapses.
+- **Quit-Habit Support:** Tracks days clean, urge logs with triggers, SOS urge-surfing flow, and integrates with Gold Repair.

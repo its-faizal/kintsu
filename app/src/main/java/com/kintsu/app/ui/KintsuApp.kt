@@ -38,6 +38,10 @@ import com.kintsu.app.util.PermissionHelper
 import com.kintsu.app.ui.screens.FocusScreen
 import com.kintsu.app.ui.screens.GoalsScreen
 import com.kintsu.app.ui.screens.HabitsScreen
+import com.kintsu.app.wellbeing.ui.DigitalDetoxSheet
+import com.kintsu.app.wellbeing.ui.QuitHabitsSheet
+import com.kintsu.app.wellbeing.ui.SanctuaryShopSheet
+import com.kintsu.app.wellbeing.ui.WellbeingWizardSheet
 import com.kintsu.app.ui.screens.HomeScreen
 import com.kintsu.app.ui.screens.JournalSheet
 import com.kintsu.app.ui.screens.OnboardingScreen
@@ -81,6 +85,17 @@ fun KintsuApp(
     val allFocusSessions by viewModel.allFocusSessions.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
     val syncError by viewModel.syncError.collectAsState()
+
+    val isShopOpen by viewModel.isShopOpen.collectAsState()
+    val isDetoxOpen by viewModel.isDetoxOpen.collectAsState()
+    val isQuitHabitsOpen by viewModel.isQuitHabitsOpen.collectAsState()
+    val isWellbeingWizardOpen by viewModel.isWellbeingWizardOpen.collectAsState()
+    val allShopItems by viewModel.allShopItems.collectAsState()
+    val activeQuitHabits by viewModel.activeQuitHabits.collectAsState()
+    val allDetoxSessions by viewModel.allDetoxSessions.collectAsState()
+    val activeDetox = remember(allDetoxSessions) {
+        allDetoxSessions.firstOrNull { !it.isCompleted && it.endTimeMillis > System.currentTimeMillis() }
+    }
 
     var isFocusOpen by remember { mutableStateOf(false) }
     var isJournalOpen by remember { mutableStateOf(false) }
@@ -284,6 +299,14 @@ fun KintsuApp(
                         Result.failure(e)
                     }
                 },
+                onOpenWellbeingWizard = { viewModel.setWellbeingWizardOpen(true) },
+                onOpenDetox = { viewModel.setDetoxOpen(true) },
+                onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
+                onOpenShop = { viewModel.setShopOpen(true) },
+                onUpdateWellbeingEnabled = { viewModel.setWellbeingEnabled(it) },
+                onUpdateStrictness = { viewModel.setWellbeingStrictness(it) },
+                onUpdateScreenTimeGoalMinutes = { viewModel.setScreenTimeGoalMinutes(it) },
+                onResetFailSafe = { viewModel.resetFailSafe() },
                 onResetData = { viewModel.resetAllData() },
                 onClose = { viewModel.setSettingsOpen(false) }
             )
@@ -366,7 +389,11 @@ fun KintsuApp(
                                     onOpenWeeklyReview = { isWeeklyReviewOpen = true },
                                     onNavigateToTasks = { viewModel.selectTab(KintsuNavTab.TASKS) },
                                     onNavigateToProgress = { viewModel.selectTab(KintsuNavTab.PROGRESS) },
-                                    onOpenSettings = { viewModel.setSettingsOpen(true) }
+                                    onOpenSettings = { viewModel.setSettingsOpen(true) },
+                                    onOpenShop = { viewModel.setShopOpen(true) },
+                                    onOpenDetox = { viewModel.setDetoxOpen(true) },
+                                    onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
+                                    onOpenWellbeingWizard = { viewModel.setWellbeingWizardOpen(true) }
                                 )
                             }
 
@@ -544,6 +571,54 @@ fun KintsuApp(
                 onContinue = {
                     showPermissionPrompt = false
                     viewModel.setPermissionsReviewed(true)
+                }
+            )
+        }
+
+        if (isShopOpen) {
+            SanctuaryShopSheet(
+                coinsBalance = settings.coinsBalance,
+                shopItems = allShopItems,
+                onPurchaseItem = { viewModel.purchaseShopItem(it) },
+                onEquipItem = { viewModel.equipShopItem(it) },
+                onDismiss = { viewModel.setShopOpen(false) }
+            )
+        }
+
+        if (isDetoxOpen) {
+            DigitalDetoxSheet(
+                activeDetox = activeDetox,
+                onStartDetox = { dur, intentStr, allowPkg, dnd ->
+                    viewModel.startDigitalDetox(dur, intentStr, allowPkg, dnd)
+                },
+                onEndDetoxEarly = {
+                    activeDetox?.let { viewModel.endDigitalDetoxEarly(it) }
+                },
+                onDismiss = { viewModel.setDetoxOpen(false) }
+            )
+        }
+
+        if (isQuitHabitsOpen) {
+            QuitHabitsSheet(
+                quitHabits = activeQuitHabits,
+                onAddQuitHabit = { name, ifThen, alt, cName, cPhone ->
+                    viewModel.addQuitHabit(name, ifThen, alt, cName, cPhone)
+                },
+                onRecordSlip = { viewModel.recordQuitHabitSlip(it) },
+                onRepairSlip = { viewModel.repairQuitHabitSlip(it) },
+                onLogUrge = { id, intensity, tags, note ->
+                    viewModel.logUrge(id, intensity, tags, note)
+                },
+                onDismiss = { viewModel.setQuitHabitsOpen(false) }
+            )
+        }
+
+        if (isWellbeingWizardOpen) {
+            WellbeingWizardSheet(
+                onDismiss = { viewModel.setWellbeingWizardOpen(false) },
+                onCompleted = {
+                    viewModel.setWellbeingWizardOpen(false)
+                    viewModel.setWellbeingEnabled(true)
                 }
             )
         }

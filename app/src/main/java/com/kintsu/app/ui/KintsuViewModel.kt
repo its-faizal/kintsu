@@ -8,8 +8,12 @@ import com.kintsu.app.data.KintsuRepository
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.data.ProgressStats
 import com.kintsu.app.data.SettingsDataStore
+import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.data.model.CommitmentLockEntity
 import com.kintsu.app.data.model.DailyIntentionEntity
 import com.kintsu.app.data.model.DailyPlanItem
+import com.kintsu.app.data.model.DigitalDetoxEntity
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.FrequencyType
 import com.kintsu.app.data.model.GoalEntity
@@ -17,11 +21,14 @@ import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.QuitHabitEntity
+import com.kintsu.app.data.model.ShopItemEntity
 import com.kintsu.app.data.model.SubtaskEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.data.model.TaskEntity
 import com.kintsu.app.data.model.TaskPriority
 import com.kintsu.app.data.model.TaskRecurrenceType
+import com.kintsu.app.data.model.UrgeLogEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.domain.GoldRepairManager
 import com.kintsu.app.domain.HabitRepairState
@@ -76,6 +83,41 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _isSettingsOpen = MutableStateFlow(false)
     val isSettingsOpen: StateFlow<Boolean> = _isSettingsOpen.asStateFlow()
+
+    private val _isShopOpen = MutableStateFlow(false)
+    val isShopOpen: StateFlow<Boolean> = _isShopOpen.asStateFlow()
+
+    private val _isDetoxOpen = MutableStateFlow(false)
+    val isDetoxOpen: StateFlow<Boolean> = _isDetoxOpen.asStateFlow()
+
+    private val _isQuitHabitsOpen = MutableStateFlow(false)
+    val isQuitHabitsOpen: StateFlow<Boolean> = _isQuitHabitsOpen.asStateFlow()
+
+    private val _isWellbeingWizardOpen = MutableStateFlow(false)
+    val isWellbeingWizardOpen: StateFlow<Boolean> = _isWellbeingWizardOpen.asStateFlow()
+
+    fun setShopOpen(open: Boolean) { _isShopOpen.value = open }
+    fun setDetoxOpen(open: Boolean) { _isDetoxOpen.value = open }
+    fun setQuitHabitsOpen(open: Boolean) { _isQuitHabitsOpen.value = open }
+    fun setWellbeingWizardOpen(open: Boolean) { _isWellbeingWizardOpen.value = open }
+
+    val allShopItems: StateFlow<List<ShopItemEntity>> = repository.allShopItems
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeQuitHabits: StateFlow<List<QuitHabitEntity>> = repository.activeQuitHabits
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allDetoxSessions: StateFlow<List<DigitalDetoxEntity>> = repository.allDetoxSessions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allAppGroups: StateFlow<List<AppGroupEntity>> = repository.allAppGroups
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeBlockRules: StateFlow<List<BlockRuleEntity>> = repository.activeBlockRules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeCommitmentLocks: StateFlow<List<CommitmentLockEntity>> = repository.activeCommitmentLocks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     private val _selectedRoutineGroup = MutableStateFlow<String?>(null)
     val selectedRoutineGroup: StateFlow<String?> = _selectedRoutineGroup.asStateFlow()
@@ -222,7 +264,62 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     init {
         viewModelScope.launch {
             repository.seedDefaultsIfEmpty()
+            repository.seedShopCatalogIfEmpty()
         }
+    }
+
+    fun purchaseShopItem(item: ShopItemEntity) {
+        viewModelScope.launch { repository.purchaseShopItem(item) }
+    }
+
+    fun equipShopItem(item: ShopItemEntity) {
+        viewModelScope.launch { repository.equipShopItem(item) }
+    }
+
+    fun startDigitalDetox(durationMinutes: Int, intention: String, allowedPackages: String, enableDnd: Boolean) {
+        viewModelScope.launch {
+            repository.startDigitalDetox(durationMinutes, intention, allowedPackages, enableDnd)
+        }
+    }
+
+    fun endDigitalDetoxEarly(session: DigitalDetoxEntity) {
+        viewModelScope.launch {
+            repository.completeDigitalDetox(session)
+        }
+    }
+
+    fun addQuitHabit(name: String, ifThen: String?, altActs: String?, contactName: String?, contactPhone: String?) {
+        viewModelScope.launch {
+            repository.addQuitHabit(name, ifThen, altActs, contactName, contactPhone)
+        }
+    }
+
+    fun recordQuitHabitSlip(habit: QuitHabitEntity) {
+        viewModelScope.launch { repository.recordQuitHabitSlip(habit) }
+    }
+
+    fun repairQuitHabitSlip(habit: QuitHabitEntity) {
+        viewModelScope.launch { repository.repairQuitHabitSlip(habit) }
+    }
+
+    fun logUrge(habitId: Long, intensity: Int, tags: String, note: String) {
+        viewModelScope.launch { repository.logUrge(habitId, intensity, tags, note) }
+    }
+
+    fun setWellbeingEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setWellbeingEnabled(enabled) } }
+    }
+
+    fun resetFailSafe() {
+        viewModelScope.launch { repository.updateSettings { it.setProtectionFailSafeTripped(false) } }
+    }
+
+    fun setWellbeingStrictness(strictness: String) {
+        viewModelScope.launch { repository.updateSettings { it.setWellbeingStrictness(strictness) } }
+    }
+
+    fun setScreenTimeGoalMinutes(minutes: Int) {
+        viewModelScope.launch { repository.updateSettings { it.setScreenTimeGoalMinutes(minutes) } }
     }
 
     fun refreshStats() {

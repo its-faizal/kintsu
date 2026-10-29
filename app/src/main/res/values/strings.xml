@@ -8,4 +8,5 @@
     <string name="shortcut_start_focus_long">Start focus timer</string>
     <string name="shortcut_journal_short">Journal</string>
     <string name="shortcut_journal_long">Write in evening journal</string>
+    <string name="accessibility_service_description">Kintsu Wellbeing Service detects distracting apps and presents calm mindful pauses and breathing shields.</string>
 </resources>

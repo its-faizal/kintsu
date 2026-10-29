@@ -60,6 +60,10 @@ import com.kintsu.app.data.ImportMode
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.ui.components.IconCheck
 import com.kintsu.app.ui.components.IconClose
+import com.kintsu.app.ui.components.IconGoldSeam
+import com.kintsu.app.wellbeing.domain.StrictnessLevel
+import com.kintsu.app.wellbeing.service.KintsuAccessibilityBlockerService
+import com.kintsu.app.wellbeing.ui.ProtectionStatusCard
 import com.kintsu.app.ui.components.KintsuBottomSheet
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
@@ -118,6 +122,14 @@ fun SettingsScreen(
     onExportData: suspend () -> String,
     onExportToFile: suspend (Uri) -> Unit = {},
     onImportFromFile: suspend (Uri, ImportMode) -> Result<Unit> = { _, _ -> Result.success(Unit) },
+    onOpenWellbeingWizard: () -> Unit = {},
+    onOpenDetox: () -> Unit = {},
+    onOpenQuitHabits: () -> Unit = {},
+    onOpenShop: () -> Unit = {},
+    onUpdateWellbeingEnabled: (Boolean) -> Unit = {},
+    onUpdateStrictness: (String) -> Unit = {},
+    onUpdateScreenTimeGoalMinutes: (Int) -> Unit = {},
+    onResetFailSafe: () -> Unit = {},
     onResetData: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -1283,6 +1295,230 @@ fun SettingsScreen(
                                 onClick = { onUpdateWeekStartMonday(false) }
                             )
                         }
+                    }
+                }
+            }
+
+            // Digital Wellbeing & Screen Time Suite
+            item {
+                Text(
+                    text = "DIGITAL WELLBEING & FOCUS SHIELD",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    // Real-time Protection Status Card
+                    Box(modifier = Modifier.padding(spacing.m)) {
+                        ProtectionStatusCard(
+                            isProtectionActive = settings.protectionActive,
+                            isFailSafeTripped = settings.protectionFailSafeTripped,
+                            missingPermissionName = if (!KintsuAccessibilityBlockerService.isServiceRunning) "Accessibility Service" else null,
+                            onFixPermission = onOpenWellbeingWizard,
+                            onResetFailSafe = onResetFailSafe,
+                            onOpenWizard = onOpenWellbeingWizard
+                        )
+                    }
+
+                    KintsuDivider()
+
+                    // Master Shield Switch
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                            Text(
+                                text = "Addiction Blocker & Shield",
+                                style = typography.itemTitle,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Enforce mindful pauses, app schedules & digital detox",
+                                style = typography.secondary,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Switch(
+                            checked = settings.wellbeingEnabled,
+                            onCheckedChange = { enabled ->
+                                onUpdateWellbeingEnabled(enabled)
+                                if (enabled && !KintsuAccessibilityBlockerService.isServiceRunning) {
+                                    onOpenWellbeingWizard()
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = colors.background,
+                                checkedTrackColor = colors.accent,
+                                uncheckedThumbColor = colors.textTertiary,
+                                uncheckedTrackColor = colors.surfaceElevated
+                            )
+                        )
+                    }
+
+                    if (settings.wellbeingEnabled) {
+                        KintsuDivider()
+
+                        // Strictness Level
+                        Column(modifier = Modifier.padding(spacing.m)) {
+                            Text(
+                                text = "Strictness Level",
+                                style = typography.itemTitle,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(spacing.xs))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                            ) {
+                                val currentStrictness = settings.wellbeingStrictness
+                                listOf(
+                                    StrictnessLevel.GENTLE.name to "Gentle",
+                                    StrictnessLevel.BALANCED.name to "Balanced",
+                                    StrictnessLevel.STRICT.name to "Strict"
+                                ).forEach { (levelKey, label) ->
+                                    KintsuFilterChip(
+                                        selected = currentStrictness == levelKey,
+                                        onClick = { onUpdateStrictness(levelKey) },
+                                        label = label
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(spacing.xs))
+                            Text(
+                                text = when (settings.wellbeingStrictness) {
+                                    "STRICT" -> "Strict: 60-second delay with typed intent to exit. 24h cooling off on weakening."
+                                    "BALANCED" -> "Balanced: 10-second delay with mindful reason picker before dismissing."
+                                    else -> "Gentle: Soft breathing pause. Always easy to dismiss non-judgmentally."
+                                },
+                                style = typography.caption,
+                                color = colors.textTertiary
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // Daily Screen-Time Goal
+                        Column(modifier = Modifier.padding(spacing.m)) {
+                            Text(
+                                text = "Daily Screen-Time Goal",
+                                style = typography.itemTitle,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(spacing.xs))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                            ) {
+                                listOf(60 to "1h", 120 to "2h", 180 to "3h", 240 to "4h").forEach { (mins, label) ->
+                                    KintsuFilterChip(
+                                        selected = settings.screenTimeGoalMinutes == mins,
+                                        onClick = { onUpdateScreenTimeGoalMinutes(mins) },
+                                        label = label
+                                    )
+                                }
+                            }
+                        }
+
+                        KintsuDivider()
+
+                        // Fast actions: Detox & Break a Habit
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(spacing.m),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            KintsuButton(
+                                text = "Digital Detox",
+                                onClick = onOpenDetox,
+                                variant = KintsuButtonVariant.SECONDARY,
+                                modifier = Modifier.weight(1f)
+                            )
+                            KintsuButton(
+                                text = "Break a Habit",
+                                onClick = onOpenQuitHabits,
+                                variant = KintsuButtonVariant.SECONDARY,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // Setup Wizard / Permissions Review
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(spacing.m),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Review Protection Permissions",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Accessibility, Usage Access, Overlay & DND",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = "Review",
+                                onClick = onOpenWellbeingWizard,
+                                variant = KintsuButtonVariant.TEXT
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Sanctuary Economy & Shop Section
+            item {
+                Text(
+                    text = "SANCTUARY ECONOMY",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s),
+                            modifier = Modifier.weight(1f).padding(end = spacing.s)
+                        ) {
+                            IconGoldSeam(color = colors.accent, size = 24.dp)
+                            Column {
+                                Text(
+                                    text = "${settings.coinsBalance} Kintsugi Coins",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Earned from completions, streaks & pauses",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+                        KintsuButton(
+                            text = "Open Shop",
+                            onClick = onOpenShop,
+                            variant = KintsuButtonVariant.ACCENT_SOFT
+                        )
                     }
                 }
             }

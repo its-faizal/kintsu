@@ -111,8 +111,7 @@ fun ProgressScreen(
     ) {
         KintsuTopBar(
             title = "Progress & Insights",
-            subtitle = "The Tapestry of Your Journey",
-            onSettingsClick = onOpenSettings
+            subtitle = "The Tapestry of Your Journey"
         )
 
         LazyColumn(

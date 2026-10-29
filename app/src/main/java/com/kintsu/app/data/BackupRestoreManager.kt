@@ -1,6 +1,10 @@
 package com.kintsu.app.data
 
+import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.DailyIntentionEntity
+import com.kintsu.app.data.model.DigitalDetoxEntity
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.FrequencyType
 import com.kintsu.app.data.model.GoalEntity
@@ -8,11 +12,13 @@ import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.SubtaskEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.data.model.TaskEntity
 import com.kintsu.app.data.model.TaskPriority
 import com.kintsu.app.data.model.TaskRecurrenceType
+import com.kintsu.app.data.model.UrgeLogEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
 import kotlinx.coroutines.flow.first
 import org.json.JSONArray
@@ -42,7 +48,13 @@ data class BackupData(
     val appTheme: String? = null,
     val contentDensity: String? = null,
     val hapticsEnabled: Boolean? = null,
-    val reducedMotion: Boolean? = null
+    val reducedMotion: Boolean? = null,
+    val appGroups: List<AppGroupEntity> = emptyList(),
+    val blockRules: List<BlockRuleEntity> = emptyList(),
+    val blockSchedules: List<BlockScheduleEntity> = emptyList(),
+    val detoxSessions: List<DigitalDetoxEntity> = emptyList(),
+    val quitHabits: List<QuitHabitEntity> = emptyList(),
+    val urgeLogs: List<UrgeLogEntity> = emptyList()
 )
 
 data class BackupValidation(
@@ -68,6 +80,12 @@ object BackupRestoreManager {
         val weeklyReviews = database.weeklyReviewDao().getAllReviews().first()
         val subtasks = database.subtaskDao().getAllSubtasks().first()
         val taskCompletions = database.taskCompletionDao().getAllCompletions().first()
+        val wellbeingDao = database.wellbeingDao()
+        val appGroups = wellbeingDao.getAllAppGroups().first()
+        val blockRules = wellbeingDao.getAllBlockRules().first()
+        val blockSchedules = wellbeingDao.getAllSchedules().first()
+        val detoxSessions = wellbeingDao.getAllDetoxSessions().first()
+        val quitHabits = wellbeingDao.getAllQuitHabits().first()
 
         val root = JSONObject()
         root.put("app", "Kintsu")
@@ -249,6 +267,80 @@ object BackupRestoreManager {
             reviewsArr.put(obj)
         }
         root.put("weekly_reviews", reviewsArr)
+
+        val groupsArr = JSONArray()
+        appGroups.forEach { g ->
+            val obj = JSONObject()
+            obj.put("id", g.id)
+            obj.put("name", g.name)
+            obj.put("categoryType", g.categoryType)
+            obj.put("packageNames", g.packageNames)
+            obj.put("isPredefined", g.isPredefined)
+            groupsArr.put(obj)
+        }
+        root.put("app_groups", groupsArr)
+
+        val rulesArr = JSONArray()
+        blockRules.forEach { br ->
+            val obj = JSONObject()
+            obj.put("id", br.id)
+            obj.put("appGroupId", br.appGroupId)
+            obj.put("mode", br.mode)
+            obj.put("dailyLimitMinutes", br.dailyLimitMinutes)
+            obj.put("maxOpensPerDay", br.maxOpensPerDay)
+            obj.put("strictnessLevel", br.strictnessLevel)
+            obj.put("pauseBreathingSeconds", br.pauseBreathingSeconds)
+            obj.put("pauseQuestion", br.pauseQuestion)
+            obj.put("isEnabled", br.isEnabled)
+            rulesArr.put(obj)
+        }
+        root.put("block_rules", rulesArr)
+
+        val schedulesArr = JSONArray()
+        blockSchedules.forEach { s ->
+            val obj = JSONObject()
+            obj.put("id", s.id)
+            obj.put("ruleId", s.ruleId)
+            obj.put("startMinuteOfDay", s.startMinuteOfDay)
+            obj.put("endMinuteOfDay", s.endMinuteOfDay)
+            obj.put("daysOfWeekMask", s.daysOfWeekMask)
+            obj.put("isEnabled", s.isEnabled)
+            schedulesArr.put(obj)
+        }
+        root.put("block_schedules", schedulesArr)
+
+        val detoxArr = JSONArray()
+        detoxSessions.forEach { d ->
+            val obj = JSONObject()
+            obj.put("id", d.id)
+            obj.put("startTimeMillis", d.startTimeMillis)
+            obj.put("durationMinutes", d.durationMinutes)
+            obj.put("endTimeMillis", d.endTimeMillis)
+            obj.put("intention", d.intention ?: "")
+            obj.put("allowedPackages", d.allowedPackages)
+            obj.put("enableDnd", d.enableDnd)
+            obj.put("isCompleted", d.isCompleted)
+            detoxArr.put(obj)
+        }
+        root.put("detox_sessions", detoxArr)
+
+        val quitHabitsArr = JSONArray()
+        quitHabits.forEach { q ->
+            val obj = JSONObject()
+            obj.put("id", q.id)
+            obj.put("name", q.name)
+            obj.put("iconName", q.iconName)
+            obj.put("colorHex", q.colorHex)
+            obj.put("cleanStreakStartMillis", q.cleanStreakStartMillis)
+            obj.put("bestStreakDays", q.bestStreakDays)
+            obj.put("totalSlips", q.totalSlips)
+            obj.put("totalRepairs", q.totalRepairs)
+            obj.put("ifThenPlan", q.ifThenPlan ?: "")
+            obj.put("emergencyContactName", q.emergencyContactName ?: "")
+            obj.put("emergencyContactPhone", q.emergencyContactPhone ?: "")
+            quitHabitsArr.put(obj)
+        }
+        root.put("quit_habits", quitHabitsArr)
 
         return root.toString(2)
     }
@@ -488,6 +580,95 @@ object BackupRestoreManager {
             val hapticsEnabled = if (appearanceObj?.has("haptics_enabled") == true) appearanceObj.optBoolean("haptics_enabled") else null
             val reducedMotion = if (appearanceObj?.has("reduced_motion") == true) appearanceObj.optBoolean("reduced_motion") else null
 
+            val groupsList = mutableListOf<AppGroupEntity>()
+            val groupsArr = root.optJSONArray("app_groups") ?: JSONArray()
+            for (i in 0 until groupsArr.length()) {
+                val g = groupsArr.getJSONObject(i)
+                groupsList.add(
+                    AppGroupEntity(
+                        id = g.optLong("id", 0L),
+                        name = g.optString("name", ""),
+                        categoryType = g.optString("categoryType", "CUSTOM"),
+                        isPredefined = g.optBoolean("isPredefined", false),
+                        packageNames = g.optString("packageNames", "")
+                    )
+                )
+            }
+
+            val rulesList = mutableListOf<BlockRuleEntity>()
+            val rulesArr = root.optJSONArray("block_rules") ?: JSONArray()
+            for (i in 0 until rulesArr.length()) {
+                val r = rulesArr.getJSONObject(i)
+                rulesList.add(
+                    BlockRuleEntity(
+                        id = r.optLong("id", 0L),
+                        appGroupId = r.optLong("appGroupId", 0L),
+                        isEnabled = r.optBoolean("isEnabled", true),
+                        mode = r.optString("mode", "DAILY_LIMIT"),
+                        dailyLimitMinutes = r.optInt("dailyLimitMinutes", 60),
+                        maxOpensPerDay = r.optInt("maxOpensPerDay", 0),
+                        strictnessLevel = r.optString("strictnessLevel", "GENTLE"),
+                        pauseBreathingSeconds = r.optInt("pauseBreathingSeconds", 10),
+                        pauseQuestion = r.optString("pauseQuestion", "What are you here for?")
+                    )
+                )
+            }
+
+            val schedulesList = mutableListOf<BlockScheduleEntity>()
+            val schedulesArr = root.optJSONArray("block_schedules") ?: JSONArray()
+            for (i in 0 until schedulesArr.length()) {
+                val s = schedulesArr.getJSONObject(i)
+                schedulesList.add(
+                    BlockScheduleEntity(
+                        id = s.optLong("id", 0L),
+                        ruleId = s.optLong("ruleId", 0L),
+                        startMinuteOfDay = s.optInt("startMinuteOfDay", 1320),
+                        endMinuteOfDay = s.optInt("endMinuteOfDay", 420),
+                        daysOfWeekMask = s.optInt("daysOfWeekMask", 127),
+                        isEnabled = s.optBoolean("isEnabled", true)
+                    )
+                )
+            }
+
+            val detoxList = mutableListOf<DigitalDetoxEntity>()
+            val detoxArr = root.optJSONArray("detox_sessions") ?: JSONArray()
+            for (i in 0 until detoxArr.length()) {
+                val d = detoxArr.getJSONObject(i)
+                detoxList.add(
+                    DigitalDetoxEntity(
+                        id = d.optLong("id", 0L),
+                        startTimeMillis = d.optLong("startTimeMillis", System.currentTimeMillis()),
+                        durationMinutes = d.optInt("durationMinutes", 60),
+                        endTimeMillis = d.optLong("endTimeMillis", System.currentTimeMillis() + 3600000L),
+                        intention = d.optString("intention").ifBlank { null },
+                        allowedPackages = d.optString("allowedPackages", ""),
+                        enableDnd = d.optBoolean("enableDnd", true),
+                        isCompleted = d.optBoolean("isCompleted", false)
+                    )
+                )
+            }
+
+            val quitHabitsList = mutableListOf<QuitHabitEntity>()
+            val quitHabitsArr = root.optJSONArray("quit_habits") ?: JSONArray()
+            for (i in 0 until quitHabitsArr.length()) {
+                val q = quitHabitsArr.getJSONObject(i)
+                quitHabitsList.add(
+                    QuitHabitEntity(
+                        id = q.optLong("id", 0L),
+                        name = q.optString("name", ""),
+                        iconName = q.optString("iconName", "shield"),
+                        colorHex = q.optString("colorHex", "#B8935A"),
+                        cleanStreakStartMillis = q.optLong("cleanStreakStartMillis", System.currentTimeMillis()),
+                        bestStreakDays = q.optInt("bestStreakDays", 0),
+                        totalSlips = q.optInt("totalSlips", 0),
+                        totalRepairs = q.optInt("totalRepairs", 0),
+                        ifThenPlan = q.optString("ifThenPlan").ifBlank { null },
+                        emergencyContactName = q.optString("emergencyContactName").ifBlank { null },
+                        emergencyContactPhone = q.optString("emergencyContactPhone").ifBlank { null }
+                    )
+                )
+            }
+
             BackupValidation(
                 isValid = true,
                 data = BackupData(
@@ -509,7 +690,12 @@ object BackupRestoreManager {
                     appTheme = appTheme,
                     contentDensity = contentDensity,
                     hapticsEnabled = hapticsEnabled,
-                    reducedMotion = reducedMotion
+                    reducedMotion = reducedMotion,
+                    appGroups = groupsList,
+                    blockRules = rulesList,
+                    blockSchedules = schedulesList,
+                    detoxSessions = detoxList,
+                    quitHabits = quitHabitsList
                 )
             )
         } catch (e: Exception) {
@@ -588,6 +774,15 @@ object BackupRestoreManager {
             data.dailyIntentions.forEach { dailyIntentionDao.insertOrUpdate(it) }
             data.journalEntries.forEach { journalDao.insertOrUpdate(it) }
             data.weeklyReviews.forEach { weeklyReviewDao.insertOrUpdate(it) }
+
+            val wellbeingDao = database.wellbeingDao()
+            wellbeingDao.clearBlockRules()
+            wellbeingDao.clearAppGroups()
+            data.appGroups.forEach { wellbeingDao.insertAppGroup(it) }
+            data.blockRules.forEach { wellbeingDao.insertBlockRule(it) }
+            data.blockSchedules.forEach { wellbeingDao.insertSchedule(it) }
+            data.detoxSessions.forEach { wellbeingDao.insertDetoxSession(it) }
+            data.quitHabits.forEach { wellbeingDao.insertQuitHabit(it) }
         } else {
             // MERGE MODE
             val existingHabits = habitDao.getAllHabits().first().associateBy { it.name.trim().lowercase() }
@@ -666,6 +861,38 @@ object BackupRestoreManager {
                     weeklyReviewDao.insertOrUpdate(review.copy(id = 0L))
                 }
             }
+
+            val wellbeingDao = database.wellbeingDao()
+            data.appGroups.forEach { wellbeingDao.insertAppGroup(it.copy(id = 0L)) }
+            data.blockRules.forEach { wellbeingDao.insertBlockRule(it.copy(id = 0L)) }
+            data.blockSchedules.forEach { wellbeingDao.insertSchedule(it.copy(id = 0L)) }
+            data.detoxSessions.forEach { wellbeingDao.insertDetoxSession(it.copy(id = 0L)) }
+            data.quitHabits.forEach { wellbeingDao.insertQuitHabit(it.copy(id = 0L)) }
+        }
+
+        if (settingsStore != null) {
+            // Restore rules safely without auto-arming Strict mode until user confirms
+            settingsStore.setWellbeingStrictness("GENTLE")
+        }
+    }
+
+    fun generateHumanReadableSummary(data: BackupData): String {
+        return buildString {
+            appendLine("=== Kintsu Sanctuary Life Backup Summary ===")
+            appendLine("Exported: ${java.time.Instant.ofEpochMilli(data.exportedAt)}")
+            appendLine("• Habits: ${data.habits.size}")
+            appendLine("• Completed Logs: ${data.logs.size}")
+            appendLine("• Tasks: ${data.tasks.size}")
+            appendLine("• Goals: ${data.goals.size}")
+            appendLine("• Focus Sessions: ${data.focusSessions.size}")
+            appendLine("• Daily Intentions: ${data.dailyIntentions.size}")
+            appendLine("• Journal Reflections: ${data.journalEntries.size}")
+            appendLine("• Weekly Reviews: ${data.weeklyReviews.size}")
+            appendLine("• Digital Wellbeing App Groups: ${data.appGroups.size}")
+            appendLine("• Active Blocking Rules: ${data.blockRules.size}")
+            appendLine("• Quit Habit Trackers: ${data.quitHabits.size}")
+            appendLine("• Digital Detox Sessions: ${data.detoxSessions.size}")
+            appendLine("===========================================")
         }
     }
 }

@@ -146,7 +146,7 @@ class GoalProgressTest {
             logs = logs,
             tasks = tasks,
             focusSessions = emptyList(),
-            settings = KintsuSettings(goldRepairEnabled = true),
+            settings = KintsuSettings(goldRepairEnabled = false),
             today = today
         )
 

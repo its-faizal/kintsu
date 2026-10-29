@@ -59,7 +59,15 @@ data class KintsuSettings(
     val lastSyncTime: Long = 0L,
     val cloudEndpointUrl: String = "https://aspects-oops-lance-limit.trycloudflare.com",
     val cloudApiKey: String = "",
-    val permissionsReviewed: Boolean = false
+    val permissionsReviewed: Boolean = false,
+    val coinsBalance: Int = 100,
+    val coinsEarnedTotal: Int = 100,
+    val wellbeingEnabled: Boolean = false,
+    val wellbeingStrictness: String = "GENTLE",
+    val protectionActive: Boolean = false,
+    val protectionFailSafeTripped: Boolean = false,
+    val screenTimeGoalMinutes: Int = 120,
+    val deviceAdminEnabled: Boolean = false
 )
 
 class SettingsDataStore(private val context: Context) {
@@ -109,6 +117,14 @@ class SettingsDataStore(private val context: Context) {
         val CLOUD_ENDPOINT_URL = stringPreferencesKey("cloud_endpoint_url")
         val CLOUD_API_KEY = stringPreferencesKey("cloud_api_key")
         val PERMISSIONS_REVIEWED = booleanPreferencesKey("permissions_reviewed")
+        val COINS_BALANCE = intPreferencesKey("coins_balance")
+        val COINS_EARNED_TOTAL = intPreferencesKey("coins_earned_total")
+        val WELLBEING_ENABLED = booleanPreferencesKey("wellbeing_enabled")
+        val WELLBEING_STRICTNESS = stringPreferencesKey("wellbeing_strictness")
+        val PROTECTION_ACTIVE = booleanPreferencesKey("protection_active")
+        val PROTECTION_FAILSAFE_TRIPPED = booleanPreferencesKey("protection_failsafe_tripped")
+        val SCREEN_TIME_GOAL_MINUTES = intPreferencesKey("screen_time_goal_minutes")
+        val DEVICE_ADMIN_ENABLED = booleanPreferencesKey("device_admin_enabled")
     }
 
     val settingsFlow: Flow<KintsuSettings> = context.dataStore.data.map { prefs ->
@@ -200,8 +216,63 @@ class SettingsDataStore(private val context: Context) {
             lastSyncTime = lastSyncTime,
             cloudEndpointUrl = cloudEndpointUrl,
             cloudApiKey = cloudApiKey,
-            permissionsReviewed = permissionsReviewed
+            permissionsReviewed = permissionsReviewed,
+            coinsBalance = prefs[Keys.COINS_BALANCE] ?: 100,
+            coinsEarnedTotal = prefs[Keys.COINS_EARNED_TOTAL] ?: 100,
+            wellbeingEnabled = prefs[Keys.WELLBEING_ENABLED] ?: false,
+            wellbeingStrictness = prefs[Keys.WELLBEING_STRICTNESS] ?: "GENTLE",
+            protectionActive = prefs[Keys.PROTECTION_ACTIVE] ?: false,
+            protectionFailSafeTripped = prefs[Keys.PROTECTION_FAILSAFE_TRIPPED] ?: false,
+            screenTimeGoalMinutes = prefs[Keys.SCREEN_TIME_GOAL_MINUTES] ?: 120,
+            deviceAdminEnabled = prefs[Keys.DEVICE_ADMIN_ENABLED] ?: false
         )
+    }
+
+    suspend fun addCoins(amount: Int) {
+        if (amount <= 0) return
+        context.dataStore.edit {
+            val current = it[Keys.COINS_BALANCE] ?: 100
+            val total = it[Keys.COINS_EARNED_TOTAL] ?: 100
+            it[Keys.COINS_BALANCE] = current + amount
+            it[Keys.COINS_EARNED_TOTAL] = total + amount
+        }
+    }
+
+    suspend fun spendCoins(amount: Int): Boolean {
+        if (amount <= 0) return true
+        var success = false
+        context.dataStore.edit {
+            val current = it[Keys.COINS_BALANCE] ?: 100
+            if (current >= amount) {
+                it[Keys.COINS_BALANCE] = current - amount
+                success = true
+            }
+        }
+        return success
+    }
+
+    suspend fun setWellbeingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.WELLBEING_ENABLED] = enabled }
+    }
+
+    suspend fun setWellbeingStrictness(strictness: String) {
+        context.dataStore.edit { it[Keys.WELLBEING_STRICTNESS] = strictness }
+    }
+
+    suspend fun setProtectionActive(active: Boolean) {
+        context.dataStore.edit { it[Keys.PROTECTION_ACTIVE] = active }
+    }
+
+    suspend fun setProtectionFailSafeTripped(tripped: Boolean) {
+        context.dataStore.edit { it[Keys.PROTECTION_FAILSAFE_TRIPPED] = tripped }
+    }
+
+    suspend fun setScreenTimeGoalMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.SCREEN_TIME_GOAL_MINUTES] = minutes }
+    }
+
+    suspend fun setDeviceAdminEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DEVICE_ADMIN_ENABLED] = enabled }
     }
 
     suspend fun setDisplayName(name: String) {

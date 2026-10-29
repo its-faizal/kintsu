@@ -177,8 +177,7 @@ fun HabitsScreen(
         ) {
             KintsuTopBar(
                 title = "Habits",
-                subtitle = "Good day, $userName",
-                onSettingsClick = onOpenSettings
+                subtitle = "Good day, $userName"
             )
 
             LazyColumn(

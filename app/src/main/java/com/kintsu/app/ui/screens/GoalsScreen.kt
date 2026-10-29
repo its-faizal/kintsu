@@ -92,8 +92,7 @@ fun GoalsScreen(
             .background(colors.background)
     ) {
         KintsuTopBar(
-            title = "Goals",
-            onSettingsClick = onOpenSettings
+            title = "Goals"
         )
 
         LazyColumn(
