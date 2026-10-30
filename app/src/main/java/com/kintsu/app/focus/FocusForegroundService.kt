@@ -163,18 +163,21 @@ class FocusForegroundService : Service() {
 
         startForeground(NOTIFICATION_ID, buildNotification(newState))
         startTicker()
+        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
     }
 
     private fun pauseTimer() {
         val paused = FocusTimerManager.pause(_focusState.value)
         _focusState.value = paused
         updateNotification(paused)
+        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
     }
 
     private fun resumeTimer() {
         val resumed = FocusTimerManager.resume(_focusState.value)
         _focusState.value = resumed
         updateNotification(resumed)
+        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
     }
 
     private fun stopTimer() {
@@ -200,6 +203,7 @@ class FocusForegroundService : Service() {
             }
         }
         _focusState.value = FocusTimerManager.cancel()
+        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -217,6 +221,10 @@ class FocusForegroundService : Service() {
                     break
                 } else if (!state.isPaused) {
                     updateNotification(state)
+                    val rem = FocusTimerManager.getRemainingSeconds(state)
+                    if (rem % 60L == 0L) {
+                        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
+                    }
                 }
             }
         }
@@ -299,7 +307,7 @@ class FocusForegroundService : Service() {
                         }
                     }
                     try {
-                        HabitsGlanceWidget().updateAll(applicationContext)
+                        com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
                     } catch (e: Exception) {
                         // ignore glance widget update failures in tests/background
                     }

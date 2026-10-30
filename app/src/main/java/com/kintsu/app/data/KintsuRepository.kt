@@ -89,6 +89,12 @@ class KintsuRepository(
     val allWeeklyReviews: Flow<List<WeeklyReviewEntity>> = weeklyReviewDao.getAllReviews()
     val settingsFlow: Flow<KintsuSettings> = settingsDataStore.settingsFlow
 
+    fun notifyWidgets() {
+        try {
+            com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(settingsDataStore.context)
+        } catch (_: Exception) {}
+    }
+
     fun getLogsForDay(epochDay: Long): Flow<List<HabitLogEntity>> =
         habitDao.getLogsForDay(epochDay)
 
@@ -130,12 +136,14 @@ class KintsuRepository(
         )
         val id = habitDao.insertHabit(habit)
         syncEngine.recordLocalMutation("habits", id, SyncOperation.UPSERT, syncEngine.serializeHabit(habit.copy(id = id)))
+        notifyWidgets()
         return id
     }
 
     suspend fun updateHabit(habit: HabitEntity) {
         habitDao.updateHabit(habit)
         syncEngine.recordLocalMutation("habits", habit.id, SyncOperation.UPSERT, syncEngine.serializeHabit(habit))
+        notifyWidgets()
     }
 
     suspend fun archiveHabit(habitId: Long, archive: Boolean) {
@@ -143,15 +151,18 @@ class KintsuRepository(
         val updated = habit.copy(isArchived = archive)
         habitDao.updateHabit(updated)
         syncEngine.recordLocalMutation("habits", habit.id, SyncOperation.UPSERT, syncEngine.serializeHabit(updated))
+        notifyWidgets()
     }
 
     suspend fun deleteHabit(habit: HabitEntity) {
         habitDao.deleteHabit(habit)
         syncEngine.recordLocalMutation("habits", habit.id, SyncOperation.DELETE, "{}")
+        notifyWidgets()
     }
 
     suspend fun restoreHabit(habit: HabitEntity) {
         habitDao.insertHabit(habit)
+        notifyWidgets()
     }
 
     suspend fun toggleHabitCompletion(
@@ -187,9 +198,7 @@ class KintsuRepository(
                 awardCoins(5)
             }
         }
-        try {
-            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
-        } catch (_: Exception) {}
+        notifyWidgets()
     }
 
     /**
@@ -218,6 +227,7 @@ class KintsuRepository(
             )
         }
         awardCoins(10)
+        notifyWidgets()
     }
 
     // Tasks
@@ -247,12 +257,14 @@ class KintsuRepository(
         )
         val id = taskDao.insertTask(task)
         syncEngine.recordLocalMutation("tasks", id, SyncOperation.UPSERT, syncEngine.serializeTask(task.copy(id = id)))
+        notifyWidgets()
         return id
     }
 
     suspend fun updateTask(task: TaskEntity) {
         taskDao.updateTask(task)
         syncEngine.recordLocalMutation("tasks", task.id, SyncOperation.UPSERT, syncEngine.serializeTask(task))
+        notifyWidgets()
     }
 
     suspend fun toggleTaskCompletion(task: TaskEntity) {
@@ -293,18 +305,18 @@ class KintsuRepository(
                 awardCoins(3)
             }
         }
-        try {
-            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
-        } catch (_: Exception) {}
+        notifyWidgets()
     }
 
     suspend fun deleteTask(task: TaskEntity) {
         taskDao.deleteTask(task)
         syncEngine.recordLocalMutation("tasks", task.id, SyncOperation.DELETE, "{}")
+        notifyWidgets()
     }
 
     suspend fun restoreTask(task: TaskEntity) {
         taskDao.insertTask(task)
+        notifyWidgets()
     }
 
     suspend fun planTask(taskId: Long, epochDay: Long?, timeBlock: String?, order: Int = 0) {
@@ -316,6 +328,7 @@ class KintsuRepository(
                 planOrder = order
             )
         )
+        notifyWidgets()
     }
 
     suspend fun rescheduleTask(taskId: Long, newDueDate: Long?) {
@@ -326,6 +339,7 @@ class KintsuRepository(
                 plannedDateEpochDay = if (newDueDate != null && task.plannedDateEpochDay != null) newDueDate else task.plannedDateEpochDay
             )
         )
+        notifyWidgets()
     }
 
     // Subtasks
@@ -369,7 +383,7 @@ class KintsuRepository(
         progressType: GoalProgressType,
         manualProgressPercent: Int
     ): Long {
-        return goalDao.insertGoal(
+        val id = goalDao.insertGoal(
             GoalEntity(
                 title = title.trim(),
                 targetDateEpochDay = targetDateEpochDay,
@@ -377,18 +391,23 @@ class KintsuRepository(
                 manualProgressPercent = manualProgressPercent.coerceIn(0, 100)
             )
         )
+        notifyWidgets()
+        return id
     }
 
     suspend fun updateGoal(goal: GoalEntity) {
         goalDao.updateGoal(goal)
+        notifyWidgets()
     }
 
     suspend fun deleteGoal(goal: GoalEntity) {
         goalDao.deleteGoal(goal)
+        notifyWidgets()
     }
 
     suspend fun restoreGoal(goal: GoalEntity) {
         goalDao.insertGoal(goal)
+        notifyWidgets()
     }
 
     // Focus session operations
@@ -415,13 +434,14 @@ class KintsuRepository(
         if (isCompleted) {
             awardCoins(10)
         }
+        notifyWidgets()
         return id
     }
 
     // Daily Intention operations
     suspend fun saveDailyIntention(dateEpochDay: Long, text: String, isCompleted: Boolean = false): Long {
         val existing = dailyIntentionDao.getIntentionForDay(dateEpochDay).first()
-        return dailyIntentionDao.insertOrUpdate(
+        val id = dailyIntentionDao.insertOrUpdate(
             DailyIntentionEntity(
                 id = existing?.id ?: 0,
                 dateEpochDay = dateEpochDay,
@@ -430,6 +450,8 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+        notifyWidgets()
+        return id
     }
 
     suspend fun toggleDailyIntention(intention: DailyIntentionEntity) {
@@ -439,12 +461,13 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+        notifyWidgets()
     }
 
     // Journal operations
     suspend fun saveJournalEntry(dateEpochDay: Long, content: String, mood: String?): Long {
         val existing = journalDao.getEntryForDay(dateEpochDay).first()
-        return journalDao.insertOrUpdate(
+        val id = journalDao.insertOrUpdate(
             JournalEntryEntity(
                 id = existing?.id ?: 0,
                 dateEpochDay = dateEpochDay,
@@ -454,27 +477,31 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+        notifyWidgets()
+        return id
     }
 
     suspend fun deleteJournalEntry(entry: JournalEntryEntity) {
         journalDao.delete(entry)
+        notifyWidgets()
     }
 
     // Weekly Review operations
     suspend fun saveWeeklyReview(review: WeeklyReviewEntity): Long {
-        return weeklyReviewDao.insertOrUpdate(review)
+        val id = weeklyReviewDao.insertOrUpdate(review)
+        notifyWidgets()
+        return id
     }
 
     suspend fun deleteWeeklyReview(review: WeeklyReviewEntity) {
         weeklyReviewDao.delete(review)
+        notifyWidgets()
     }
 
     // Settings actions
     suspend fun updateSettings(block: suspend (SettingsDataStore) -> Unit) {
         block(settingsDataStore)
-        try {
-            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
-        } catch (_: Exception) {}
+        notifyWidgets()
     }
 
     // Stats calculations

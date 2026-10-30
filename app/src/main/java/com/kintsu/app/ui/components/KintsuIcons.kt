@@ -438,3 +438,26 @@ fun IconFocus(color: Color, modifier: Modifier = Modifier, size: Dp = 18.dp) {
         drawCircle(color = color, radius = w * 0.12f, center = Offset(w * 0.5f, h * 0.5f))
     }
 }
+
+@Composable
+fun IconWidget(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        val gap = w * 0.14f
+        val boxW = (w - gap) / 2f
+        val boxH = (h - gap) / 2f
+        val r = CornerRadius(boxW * 0.28f, boxW * 0.28f)
+
+        // Top-left
+        drawRoundRect(color, Offset(0f, 0f), Size(boxW, boxH), r, s)
+        // Top-right
+        drawRoundRect(color, Offset(boxW + gap, 0f), Size(boxW, boxH), r, s)
+        // Bottom-left
+        drawRoundRect(color, Offset(0f, boxH + gap), Size(boxW, boxH), r, s)
+        // Bottom-right
+        drawRoundRect(color, Offset(boxW + gap, boxH + gap), Size(boxW, boxH), r, s)
+    }
+}

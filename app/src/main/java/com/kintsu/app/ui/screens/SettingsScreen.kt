@@ -175,6 +175,7 @@ fun SettingsScreen(
     var showDeleteAccountStep2 by remember { mutableStateOf(false) }
     var deleteAccountConfirmText by remember { mutableStateOf("") }
     var deleteAccountLoading by remember { mutableStateOf(false) }
+    var showWidgetShowcaseSheet by remember { mutableStateOf(false) }
 
     var isEditingName by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf(settings.displayName) }
@@ -1027,6 +1028,74 @@ fun SettingsScreen(
                                 uncheckedThumbColor = colors.textTertiary,
                                 uncheckedTrackColor = colors.surfaceElevated
                             )
+                        )
+                    }
+                }
+            }
+
+            // Home Screen Widgets Section
+            item {
+                Text(
+                    text = "HOME SCREEN WIDGETS",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showWidgetShowcaseSheet = true }
+                            .padding(spacing.m),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(colors.accent.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            com.kintsu.app.ui.components.IconWidget(
+                                color = colors.accent,
+                                size = 20.dp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(spacing.m))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Home Screen Widgets",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .background(colors.goldSeamSoft, CircleShape)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "11 Live",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.goldSeam
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Showcase widgets, view definitions, and pin directly to home screen",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        com.kintsu.app.ui.components.IconChevronRight(
+                            color = colors.textTertiary,
+                            size = 18.dp
                         )
                     }
                 }
@@ -2984,6 +3053,12 @@ fun SettingsScreen(
             },
             containerColor = colors.surface,
             shape = KintsuTheme.shapes.large
+        )
+    }
+
+    if (showWidgetShowcaseSheet) {
+        WidgetShowcaseSheet(
+            onDismiss = { showWidgetShowcaseSheet = false }
         )
     }
 }

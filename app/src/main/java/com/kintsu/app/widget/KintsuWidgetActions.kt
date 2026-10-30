@@ -1,5 +1,7 @@
 package com.kintsu.app.widget
 
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import androidx.glance.GlanceId
@@ -12,7 +14,10 @@ import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.focus.FocusForegroundService
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 val WidgetHabitIdKey = ActionParameters.Key<Long>("widget_habit_id")
@@ -115,6 +120,14 @@ class FocusControlWidgetCallback : ActionCallback {
 }
 
 object KintsuWidgetUpdater {
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    fun triggerUpdate(context: Context) {
+        scope.launch {
+            updateAllWidgets(context)
+        }
+    }
+
     suspend fun updateAllWidgets(context: Context) {
         try { TodayOverviewWidget().updateAll(context) } catch (_: Exception) {}
         try { FocusTimerWidget().updateAll(context) } catch (_: Exception) {}
@@ -129,5 +142,36 @@ object KintsuWidgetUpdater {
         try { CompactTasksWidget().updateAll(context) } catch (_: Exception) {}
         try { HabitsGlanceWidget().updateAll(context) } catch (_: Exception) {}
         try { StreakGlanceWidget().updateAll(context) } catch (_: Exception) {}
+
+        // Broadcast to ensure launchers refresh
+        try {
+            val appWidgetManager = AppWidgetManager.getInstance(context)
+            val receivers = listOf(
+                TodayOverviewWidgetReceiver::class.java,
+                FocusTimerWidgetReceiver::class.java,
+                TodayTasksWidgetReceiver::class.java,
+                DailyHabitsWidgetReceiver::class.java,
+                GoalsProgressWidgetReceiver::class.java,
+                DailyQuoteWidgetReceiver::class.java,
+                DailyProgressWidgetReceiver::class.java,
+                QuickAddWidgetReceiver::class.java,
+                StackedSummaryWidgetReceiver::class.java,
+                AestheticQuoteWidgetReceiver::class.java,
+                CompactTasksWidgetReceiver::class.java,
+                HabitsGlanceWidgetReceiver::class.java,
+                StreakGlanceWidgetReceiver::class.java
+            )
+            for (receiver in receivers) {
+                val componentName = ComponentName(context, receiver)
+                val ids = appWidgetManager.getAppWidgetIds(componentName)
+                if (ids != null && ids.isNotEmpty()) {
+                    val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE).apply {
+                        component = componentName
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    }
+                    context.sendBroadcast(intent)
+                }
+            }
+        } catch (_: Exception) {}
     }
 }

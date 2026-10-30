@@ -41,6 +41,7 @@
         <!-- Glance Widgets -->
         <receiver
             android:name=".widget.TodayOverviewWidgetReceiver"
+            android:label="@string/widget_today_overview_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -52,6 +53,7 @@
 
         <receiver
             android:name=".widget.FocusTimerWidgetReceiver"
+            android:label="@string/widget_focus_timer_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -63,6 +65,7 @@
 
         <receiver
             android:name=".widget.TodayTasksWidgetReceiver"
+            android:label="@string/widget_today_tasks_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -74,6 +77,7 @@
 
         <receiver
             android:name=".widget.DailyHabitsWidgetReceiver"
+            android:label="@string/widget_daily_habits_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -85,6 +89,7 @@
 
         <receiver
             android:name=".widget.GoalsProgressWidgetReceiver"
+            android:label="@string/widget_goals_progress_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -96,6 +101,7 @@
 
         <receiver
             android:name=".widget.DailyQuoteWidgetReceiver"
+            android:label="@string/widget_daily_quote_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -107,6 +113,7 @@
 
         <receiver
             android:name=".widget.DailyProgressWidgetReceiver"
+            android:label="@string/widget_daily_progress_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -118,6 +125,7 @@
 
         <receiver
             android:name=".widget.QuickAddWidgetReceiver"
+            android:label="@string/widget_quick_add_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -129,6 +137,7 @@
 
         <receiver
             android:name=".widget.StackedSummaryWidgetReceiver"
+            android:label="@string/widget_stacked_summary_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -140,6 +149,7 @@
 
         <receiver
             android:name=".widget.AestheticQuoteWidgetReceiver"
+            android:label="@string/widget_aesthetic_quote_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -151,6 +161,7 @@
 
         <receiver
             android:name=".widget.CompactTasksWidgetReceiver"
+            android:label="@string/widget_compact_tasks_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
