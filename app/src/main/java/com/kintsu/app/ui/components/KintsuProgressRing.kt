@@ -29,9 +29,10 @@ fun KintsuProgressRing(
     progressColor: Color = KintsuTheme.colors.goldSeam,
     showPercentage: Boolean = true
 ) {
+    val motion = KintsuTheme.motion
     val animatedProgress by animateFloatAsState(
         targetValue = progress.coerceIn(0f, 1f),
-        animationSpec = tween(durationMillis = 350),
+        animationSpec = tween(durationMillis = motion.normalMs),
         label = "ringProgress"
     )
 

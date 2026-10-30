@@ -3,8 +3,10 @@ package com.kintsu.app.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -55,6 +57,7 @@ fun KintsuButton(
 
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val isFocused by interactionSource.collectIsFocusedAsState()
     val targetScale = if (motion.fastMs == 0) 1.0f else if (isPressed) 0.97f else 1.0f
     val scale by animateFloatAsState(
         targetValue = targetScale,
@@ -64,16 +67,16 @@ fun KintsuButton(
 
     val (bg, textColor) = when (variant) {
         KintsuButtonVariant.PRIMARY -> {
-            if (enabled) colors.accent to colors.background else colors.surfaceElevated to colors.textTertiary
+            if (enabled) colors.accent to colors.onAccent else colors.surfaceElevated to colors.textTertiary
         }
         KintsuButtonVariant.SECONDARY -> {
             if (enabled) colors.surfaceElevated to colors.textPrimary else colors.surface to colors.textTertiary
         }
         KintsuButtonVariant.ACCENT_SOFT -> {
-            if (enabled) colors.accentSoft to colors.accent else colors.surface to colors.textTertiary
+            if (enabled) colors.accentSoft to colors.accentText else colors.surface to colors.textTertiary
         }
         KintsuButtonVariant.TEXT -> {
-            Color.Transparent to if (enabled) colors.accent else colors.textTertiary
+            Color.Transparent to if (enabled) colors.accentText else colors.textTertiary
         }
     }
 
@@ -83,6 +86,13 @@ fun KintsuButton(
             .defaultMinSize(minHeight = 48.dp)
             .clip(shape)
             .background(bg)
+            .then(
+                if (isFocused) {
+                    Modifier.border(2.dp, colors.accentText, shape)
+                } else {
+                    Modifier
+                }
+            )
             .clickable(
                 enabled = enabled,
                 interactionSource = interactionSource,

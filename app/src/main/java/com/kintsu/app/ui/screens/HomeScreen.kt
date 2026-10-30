@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,10 +31,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,8 +130,7 @@ fun HomeScreen(
 
     val todayEpoch = remember { LocalDate.now().toEpochDay() }
     val todayFormatted = remember {
-        val now = LocalDate.now()
-        now.format(DateTimeFormatter.ofPattern("EEEE, MMMM d", Locale.getDefault()))
+        com.kintsu.app.util.KintsuDateFormatter.formatHeaderDate()
     }
 
     val greeting = remember(userName) {
@@ -185,8 +187,9 @@ fun HomeScreen(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
                 .widthIn(max = 640.dp)
+                .fillMaxWidth()
         ) {
             KintsuTopBar(
                 title = greeting,
@@ -243,55 +246,10 @@ fun HomeScreen(
                 // Header Focus Mini-Bar (Compact, only visible when timer is running)
                 if (focusState.isRunning) {
                     item(key = "focus_mini_bar") {
-                        val remSeconds = FocusTimerManager.getRemainingSeconds(focusState)
-                        val m = remSeconds / 60
-                        val s = remSeconds % 60
-                        val timeStr = String.format("%02d:%02d", m, s)
-
-                        KintsuCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenFocus() },
-                            backgroundColor = colors.accentSoft.copy(alpha = 0.5f),
-                            borderColor = colors.accent.copy(alpha = 0.4f)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = spacing.m, vertical = spacing.s),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(8.dp)
-                                            .clip(CircleShape)
-                                            .background(colors.accent)
-                                    )
-                                    Spacer(modifier = Modifier.width(spacing.s))
-                                    val inFocusLabel = if (focusState.linkedTaskTitle != null) {
-                                        "Focusing: ${focusState.linkedTaskTitle.take(18)}${if (focusState.linkedTaskTitle!!.length > 18) "…" else ""} • $timeStr"
-                                    } else {
-                                        "In Focus • $timeStr remaining"
-                                    }
-                                    Text(
-                                        text = inFocusLabel,
-                                        style = typography.caption,
-                                        color = colors.accent
-                                    )
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = "Return",
-                                        style = typography.caption,
-                                        color = colors.textSecondary
-                                    )
-                                    Spacer(modifier = Modifier.width(spacing.xxs))
-                                    IconChevronRight(color = colors.textSecondary, size = 14.dp)
-                                }
-                            }
-                        }
+                        FocusMiniBar(
+                            focusState = focusState,
+                            onOpenFocus = onOpenFocus
+                        )
                     }
                 }
 
@@ -906,5 +864,72 @@ private fun HomeActionButton(
             style = typography.caption.copy(fontSize = 11.sp),
             color = colors.textPrimary
         )
+    }
+}
+
+@Composable
+private fun FocusMiniBar(
+    focusState: FocusState,
+    onOpenFocus: () -> Unit
+) {
+    val colors = KintsuTheme.colors
+    val spacing = KintsuTheme.spacing
+    val typography = KintsuTheme.typography
+
+    var remSeconds by remember { mutableLongStateOf(FocusTimerManager.getRemainingSeconds(focusState)) }
+    LaunchedEffect(focusState) {
+        while (focusState.isRunning) {
+            remSeconds = FocusTimerManager.getRemainingSeconds(focusState)
+            delay(500L)
+        }
+    }
+
+    val m = remSeconds / 60
+    val s = remSeconds % 60
+    val timeStr = String.format("%02d:%02d", m, s)
+
+    KintsuCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onOpenFocus() },
+        backgroundColor = colors.accentSoft.copy(alpha = 0.5f),
+        borderColor = colors.accent.copy(alpha = 0.4f)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = spacing.m, vertical = spacing.s),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(colors.accent)
+                )
+                Spacer(modifier = Modifier.width(spacing.s))
+                val inFocusLabel = if (focusState.linkedTaskTitle != null) {
+                    "Focusing: ${focusState.linkedTaskTitle.take(18)}${if (focusState.linkedTaskTitle!!.length > 18) "…" else ""} • $timeStr"
+                } else {
+                    "In Focus • $timeStr remaining"
+                }
+                Text(
+                    text = inFocusLabel,
+                    style = typography.caption,
+                    color = colors.accentText
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Return",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+                Spacer(modifier = Modifier.width(spacing.xxs))
+                IconChevronRight(color = colors.textSecondary, size = 14.dp)
+            }
+        }
     }
 }

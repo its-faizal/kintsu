@@ -245,7 +245,7 @@ private fun GoalRowItem(
                     Text(
                         text = "Target: $targetDateFormatted" + if (daysRemaining > 0) " (${daysRemaining}d left)" else " (Reached)",
                         style = typography.secondary,
-                        color = colors.textTertiary
+                        color = colors.textSecondary
                     )
 
                     if (totalLinkedItems > 0) {

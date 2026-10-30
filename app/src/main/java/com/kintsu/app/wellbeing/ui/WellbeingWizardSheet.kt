@@ -94,9 +94,7 @@ fun WellbeingWizardSheet(
         title = "Wellbeing Setup"
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Step Indicator dots
@@ -122,7 +120,7 @@ fun WellbeingWizardSheet(
 
             Text(
                 text = step.title,
-                style = typography.screenTitle,
+                style = typography.itemTitle,
                 color = colors.textPrimary,
                 textAlign = TextAlign.Center
             )

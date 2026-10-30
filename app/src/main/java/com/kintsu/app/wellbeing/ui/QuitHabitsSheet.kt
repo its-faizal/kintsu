@@ -96,14 +96,28 @@ fun QuitHabitsSheet(
         }
     }
 
+    val titleText = when {
+        activeSosHabit != null -> "Urge Surfing"
+        loggingUrgeHabit != null -> "Log Urge"
+        isCreating -> "Break a Habit"
+        else -> "Break a Habit"
+    }
+
     KintsuBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Break a Habit"
+        title = titleText,
+        trailingAction = if (!isCreating && activeSosHabit == null && loggingUrgeHabit == null) {
+            {
+                KintsuButton(
+                    text = "+ New",
+                    onClick = { isCreating = true },
+                    variant = KintsuButtonVariant.ACCENT_SOFT
+                )
+            }
+        } else null
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl)
+            modifier = Modifier.fillMaxWidth()
         ) {
             when {
                 activeSosHabit != null -> {
@@ -117,8 +131,8 @@ fun QuitHabitsSheet(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Urge Surfing • ${habit.name}",
-                            style = typography.screenTitle,
+                            text = habit.name,
+                            style = typography.itemTitle,
                             color = colors.goldSeam
                         )
                         Spacer(modifier = Modifier.height(spacing.xxs))
@@ -298,8 +312,6 @@ fun QuitHabitsSheet(
                 isCreating -> {
                     // Add Quit Habit Form
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        Text(text = "Break a Habit", style = typography.screenTitle, color = colors.textPrimary)
-                        Spacer(modifier = Modifier.height(spacing.xs))
                         Text(text = "Track days clean, surf urges, and repair slips with gold.", style = typography.caption, color = colors.textSecondary)
 
                         Spacer(modifier = Modifier.height(spacing.m))
@@ -403,21 +415,11 @@ fun QuitHabitsSheet(
 
                 else -> {
                     // Habits List Screen
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(text = "Break a Habit", style = typography.screenTitle, color = colors.textPrimary)
-                            Text(text = "Gentle support for things you wish to stop", style = typography.caption, color = colors.textSecondary)
-                        }
-                        KintsuButton(
-                            text = "+ New",
-                            onClick = { isCreating = true },
-                            variant = KintsuButtonVariant.ACCENT_SOFT
-                        )
-                    }
+                    Text(
+                        text = "Gentle support for things you wish to stop",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
 
                     Spacer(modifier = Modifier.height(spacing.m))
 
@@ -440,11 +442,11 @@ fun QuitHabitsSheet(
                             }
                         }
                     } else {
-                        LazyColumn(
+                        Column(
                             verticalArrangement = Arrangement.spacedBy(spacing.m),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            items(quitHabits, key = { it.id }) { habit ->
+                            quitHabits.forEach { habit ->
                                 val stats = QuitHabitTracker.calculateStats(habit)
 
                                 KintsuCard(modifier = Modifier.fillMaxWidth()) {

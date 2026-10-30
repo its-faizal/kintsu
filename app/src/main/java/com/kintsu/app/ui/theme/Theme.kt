@@ -62,13 +62,39 @@ fun KintsuTheme(
     }
 
     val basePalette = getThemePalette(appTheme, isDark)
+    val onAccent = when (accentOption) {
+        AccentOption.GOLD, AccentOption.SAGE -> if (isDark) androidx.compose.ui.graphics.Color(0xFF161A17) else androidx.compose.ui.graphics.Color(0xFF1E231F)
+        else -> androidx.compose.ui.graphics.Color.White
+    }
+    val accentText = if (isDark) {
+        when (accentOption) {
+            AccentOption.GOLD -> androidx.compose.ui.graphics.Color(0xFFE2C498)
+            AccentOption.SAGE -> androidx.compose.ui.graphics.Color(0xFFA6C7B5)
+            AccentOption.CLAY -> androidx.compose.ui.graphics.Color(0xFFE6AB9B)
+            AccentOption.LAVENDER -> androidx.compose.ui.graphics.Color(0xFFC5B6DE)
+            AccentOption.STONE -> androidx.compose.ui.graphics.Color(0xFFC6BEB2)
+            AccentOption.TEAL -> androidx.compose.ui.graphics.Color(0xFF9EC0CE)
+        }
+    } else {
+        when (accentOption) {
+            AccentOption.GOLD -> androidx.compose.ui.graphics.Color(0xFF76561E)
+            AccentOption.SAGE -> androidx.compose.ui.graphics.Color(0xFF3D5C4E)
+            AccentOption.CLAY -> androidx.compose.ui.graphics.Color(0xFF7E3D27)
+            AccentOption.LAVENDER -> androidx.compose.ui.graphics.Color(0xFF564771)
+            AccentOption.STONE -> androidx.compose.ui.graphics.Color(0xFF544D42)
+            AccentOption.TEAL -> androidx.compose.ui.graphics.Color(0xFF355361)
+        }
+    }
+
     val activeColors = basePalette.copy(
         accent = accentOption.color,
         accentSoft = if (isDark) {
             accentOption.color.copy(alpha = 0.22f)
         } else {
             accentOption.color.copy(alpha = 0.16f)
-        }
+        },
+        onAccent = onAccent,
+        accentText = accentText
     )
 
     val view = LocalView.current
@@ -86,7 +112,7 @@ fun KintsuTheme(
     val materialColors = if (isDark) {
         darkColorScheme(
             primary = activeColors.accent,
-            onPrimary = activeColors.background,
+            onPrimary = activeColors.onAccent,
             primaryContainer = activeColors.accentSoft,
             onPrimaryContainer = activeColors.textPrimary,
             surface = activeColors.surface,
@@ -94,12 +120,18 @@ fun KintsuTheme(
             surfaceVariant = activeColors.surfaceElevated,
             onSurfaceVariant = activeColors.textSecondary,
             background = activeColors.background,
-            onBackground = activeColors.textPrimary
+            onBackground = activeColors.textPrimary,
+            error = activeColors.error,
+            onError = activeColors.onError,
+            errorContainer = activeColors.errorContainer,
+            onErrorContainer = activeColors.onErrorContainer,
+            outline = activeColors.border,
+            outlineVariant = activeColors.border.copy(alpha = 0.5f)
         )
     } else {
         lightColorScheme(
             primary = activeColors.accent,
-            onPrimary = activeColors.background,
+            onPrimary = activeColors.onAccent,
             primaryContainer = activeColors.accentSoft,
             onPrimaryContainer = activeColors.textPrimary,
             surface = activeColors.surface,
@@ -107,7 +139,13 @@ fun KintsuTheme(
             surfaceVariant = activeColors.surfaceElevated,
             onSurfaceVariant = activeColors.textSecondary,
             background = activeColors.background,
-            onBackground = activeColors.textPrimary
+            onBackground = activeColors.textPrimary,
+            error = activeColors.error,
+            onError = activeColors.onError,
+            errorContainer = activeColors.errorContainer,
+            onErrorContainer = activeColors.onErrorContainer,
+            outline = activeColors.border,
+            outlineVariant = activeColors.border.copy(alpha = 0.5f)
         )
     }
 

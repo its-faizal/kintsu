@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
@@ -38,6 +39,7 @@ fun KintsuBottomSheet(
     modifier: Modifier = Modifier,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     trailingAction: (@Composable () -> Unit)? = null,
+    scrollable: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -66,16 +68,21 @@ fun KintsuBottomSheet(
         },
         modifier = modifier
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentWidth(Alignment.CenterHorizontally)
-                .widthIn(max = 640.dp)
-                .padding(horizontal = spacing.xl)
-                .imePadding()
-                .navigationBarsPadding()
-                .verticalScroll(rememberScrollState())
-        ) {
+        val baseModifier = Modifier
+            .fillMaxWidth()
+            .wrapContentWidth(Alignment.CenterHorizontally)
+            .widthIn(max = 640.dp)
+            .padding(horizontal = spacing.xl)
+            .imePadding()
+            .navigationBarsPadding()
+
+        val columnModifier = if (scrollable) {
+            baseModifier.verticalScroll(rememberScrollState())
+        } else {
+            baseModifier
+        }
+
+        Column(modifier = columnModifier) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,17 +98,19 @@ fun KintsuBottomSheet(
 
                 if (trailingAction != null) {
                     trailingAction()
-                } else {
-                    KintsuIconButton(
-                        icon = { IconClose(color = it, size = 18.dp) },
-                        contentDescription = "Close sheet",
-                        onClick = onDismissRequest
-                    )
+                    Spacer(modifier = Modifier.width(spacing.s))
                 }
+                KintsuIconButton(
+                    icon = { IconClose(color = it, size = 18.dp) },
+                    contentDescription = "Close sheet",
+                    onClick = onDismissRequest
+                )
             }
 
             content()
-            Spacer(modifier = Modifier.height(spacing.xl))
+            if (scrollable) {
+                Spacer(modifier = Modifier.height(spacing.xl))
+            }
         }
     }
 }

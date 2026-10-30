@@ -3,8 +3,10 @@ package com.kintsu.app.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -49,6 +51,8 @@ fun KintsuNavBar(
 ) {
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
+    val motion = KintsuTheme.motion
+    val animDuration = if (motion.fastMs == 0) 0 else 200
 
     Box(
         modifier = modifier
@@ -68,6 +72,8 @@ fun KintsuNavBar(
             KintsuNavTab.values().forEach { tab ->
                 val isSelected = tab == selectedTab
                 val isHome = tab == KintsuNavTab.HOME
+                val interactionSource = remember { MutableInteractionSource() }
+                val isFocused by interactionSource.collectIsFocusedAsState()
 
                 val targetIconColor = when {
                     isSelected && isHome -> colors.accent
@@ -77,12 +83,12 @@ fun KintsuNavBar(
 
                 val iconColor by animateColorAsState(
                     targetValue = targetIconColor,
-                    animationSpec = tween(durationMillis = 200),
+                    animationSpec = tween(durationMillis = animDuration),
                     label = "tabIconColor"
                 )
                 val textColor by animateColorAsState(
-                    targetValue = if (isSelected) colors.accent else colors.textSecondary,
-                    animationSpec = tween(durationMillis = 200),
+                    targetValue = if (isSelected) colors.accentText else colors.textSecondary,
+                    animationSpec = tween(durationMillis = animDuration),
                     label = "tabTextColor"
                 )
 
@@ -99,8 +105,15 @@ fun KintsuNavBar(
                                 Modifier
                             }
                         )
+                        .then(
+                            if (isFocused) {
+                                Modifier.border(1.5.dp, colors.accentText, RoundedCornerShape(12.dp))
+                            } else {
+                                Modifier
+                            }
+                        )
                         .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
+                            interactionSource = interactionSource,
                             indication = null,
                             onClick = {
                                 if (isSelected) {
@@ -122,15 +135,20 @@ fun KintsuNavBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        when (tab) {
-                            KintsuNavTab.HOME -> IconHome(
-                                color = iconColor,
-                                size = if (isSelected) 23.dp else 21.dp
-                            )
-                            KintsuNavTab.HABITS -> IconHabit(color = iconColor, size = 19.dp)
-                            KintsuNavTab.TASKS -> IconTask(color = iconColor, size = 19.dp)
-                            KintsuNavTab.GOALS -> IconGoal(color = iconColor, size = 19.dp)
-                            KintsuNavTab.PROGRESS -> IconProgress(color = iconColor, size = 19.dp)
+                        Box(
+                            modifier = Modifier.size(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when (tab) {
+                                KintsuNavTab.HOME -> IconHome(
+                                    color = iconColor,
+                                    size = if (isSelected) 23.dp else 21.dp
+                                )
+                                KintsuNavTab.HABITS -> IconHabit(color = iconColor, size = 19.dp)
+                                KintsuNavTab.TASKS -> IconTask(color = iconColor, size = 19.dp)
+                                KintsuNavTab.GOALS -> IconGoal(color = iconColor, size = 19.dp)
+                                KintsuNavTab.PROGRESS -> IconProgress(color = iconColor, size = 19.dp)
+                            }
                         }
                         Text(
                             text = tab.title,

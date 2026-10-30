@@ -14,6 +14,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,6 +54,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kintsu.app.data.KintsuSettings
@@ -143,8 +146,7 @@ fun HabitsScreen(
     }
 
     val todayFormatted = remember {
-        val now = LocalDate.now()
-        now.format(DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault()))
+        com.kintsu.app.util.KintsuDateFormatter.formatHeaderDate()
     }
     val todayEpoch = remember { LocalDate.now().toEpochDay() }
     val isEndOfWeek = remember(todayEpoch, settings.weekStartMonday) {
@@ -210,9 +212,9 @@ fun HabitsScreen(
                         IconFlame(color = colors.accent, size = 15.dp)
                         Spacer(modifier = Modifier.width(spacing.xxs))
                         Text(
-                            text = "$currentStreak days active",
+                            text = "$currentStreak ${if (currentStreak == 1) "day" else "days"} active",
                             style = typography.caption,
-                            color = colors.accent
+                            color = colors.accentText
                         )
                     }
                 }
@@ -805,9 +807,10 @@ private fun HabitRowItem(
                             color = if (isDone) colors.textTertiary else colors.textPrimary
                         )
 
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(spacing.s),
-                            verticalAlignment = Alignment.CenterVertically
+                        @OptIn(ExperimentalLayoutApi::class)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
                                 text = when (habit.frequencyType) {
@@ -824,7 +827,7 @@ private fun HabitRowItem(
                                 Text(
                                     text = "• $routine",
                                     style = typography.secondary,
-                                    color = colors.accent
+                                    color = colors.accentText
                                 )
                             }
 
@@ -836,12 +839,12 @@ private fun HabitRowItem(
                                         .background(colors.accentSoft)
                                         .padding(horizontal = spacing.xs, vertical = 2.dp)
                                 ) {
-                                    IconGoal(color = colors.accent, size = 10.dp)
+                                    IconGoal(color = colors.accentText, size = 10.dp)
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
                                         text = goal.title,
                                         style = typography.caption,
-                                        color = colors.accent,
+                                        color = colors.accentText,
                                         maxLines = 1
                                     )
                                 }
@@ -964,9 +967,11 @@ private fun CompletionNoteAndMoodDialog(
                 )
 
                 // Mood selector
-                Row(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
                 ) {
                     moodOptions.forEach { mood ->
                         KintsuFilterChip(
@@ -1082,19 +1087,32 @@ private fun HabitEditSheet(
                 style = typography.caption,
                 color = colors.textSecondary
             )
+            val colorNames = mapOf(
+                "#B8935A" to "Gold",
+                "#6B8E7D" to "Sage",
+                "#B86B52" to "Clay",
+                "#81729E" to "Lavender",
+                "#7E7569" to "Stone"
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.s)) {
                 curatedColors.forEach { hex ->
                     val color = Color(android.graphics.Color.parseColor(hex))
-                    val isSelected = selectedColor == hex
+                    val isSelected = selectedColor.equals(hex, ignoreCase = true)
+                    val colorName = colorNames[hex] ?: "Custom color"
                     Box(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(color)
-                            .clickable { selectedColor = hex }
+                            .clickable(onClickLabel = "Select $colorName") { selectedColor = hex }
                             .then(
                                 if (isSelected) Modifier.border(2.dp, colors.textPrimary, CircleShape) else Modifier
                             )
+                            .semantics {
+                                role = Role.RadioButton
+                                selected = isSelected
+                                contentDescription = "$colorName color"
+                            }
                     )
                 }
             }
@@ -1105,7 +1123,12 @@ private fun HabitEditSheet(
                 style = typography.caption,
                 color = colors.textSecondary
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                verticalArrangement = Arrangement.spacedBy(spacing.xs)
+            ) {
                 KintsuFilterChip(
                     label = "Daily",
                     selected = frequencyType == FrequencyType.DAILY,
@@ -1135,9 +1158,11 @@ private fun HabitEditSheet(
                     color = colors.textSecondary
                 )
                 val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-                Row(
+                @OptIn(ExperimentalLayoutApi::class)
+                FlowRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
                 ) {
                     dayLabels.forEachIndexed { index, day ->
                         val bit = 1 shl index

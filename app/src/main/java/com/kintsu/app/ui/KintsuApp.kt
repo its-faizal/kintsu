@@ -4,7 +4,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -319,6 +322,7 @@ fun KintsuApp(
             }
 
             Scaffold(
+                contentWindowInsets = WindowInsets(0, 0, 0, 0),
                 bottomBar = {
                     KintsuNavBar(
                         selectedTab = currentTab,
@@ -341,12 +345,13 @@ fun KintsuApp(
                 ) {
                     Box(
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxHeight()
                             .widthIn(max = 640.dp)
+                            .fillMaxWidth()
                     ) {
                     Crossfade(
                         targetState = currentTab,
-                        animationSpec = tween(durationMillis = 240),
+                        animationSpec = tween(durationMillis = if (settings.reducedMotion) 0 else 240),
                         label = "tabCrossfade"
                     ) { tab ->
                         when (tab) {
@@ -536,8 +541,9 @@ fun KintsuApp(
                 }
             }
         }
+    }
 
-        if (isJournalOpen) {
+    if (isJournalOpen) {
             JournalSheet(
                 existingEntry = todayJournalEntry,
                 onDismiss = { isJournalOpen = false },
@@ -623,5 +629,4 @@ fun KintsuApp(
             )
         }
     }
-}
 }

@@ -101,7 +101,14 @@ data class KintsuColors(
     val accentSoft: Color,
     val goldSeam: Color,
     val goldSeamSoft: Color,
-    val isDark: Boolean
+    val isDark: Boolean,
+    val accentText: Color = Color.Unspecified,
+    val onAccent: Color = Color.Unspecified,
+    val error: Color = Color(0xFFBA1A1A),
+    val onError: Color = Color(0xFFFFFFFF),
+    val errorContainer: Color = Color(0xFFFFDAD6),
+    val onErrorContainer: Color = Color(0xFF410002),
+    val warning: Color = Color(0xFF8A5100)
 )
 
 // 01. Sage & Ivory
@@ -113,12 +120,19 @@ val SageIvoryLightPalette = KintsuColors(
     border = Color(0xFFD2D9CC),
     textPrimary = Color(0xFF1E231F),
     textSecondary = Color(0xFF566157),
-    textTertiary = Color(0xFF869287),
+    textTertiary = Color(0xFF5C695D),
     accent = Color(0xFF829B83),
     accentSoft = Color(0xFFDFE8D9),
     goldSeam = Color(0xFFB49A68),
     goldSeamSoft = Color(0x33B49A68),
-    isDark = false
+    isDark = false,
+    accentText = Color(0xFF3D5C4E),
+    onAccent = Color(0xFF1E231F),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFF8A5100)
 )
 
 val SageIvoryDarkPalette = KintsuColors(
@@ -134,7 +148,14 @@ val SageIvoryDarkPalette = KintsuColors(
     accentSoft = Color(0x3590AC92),
     goldSeam = Color(0xFFC4AC7B),
     goldSeamSoft = Color(0x40C4AC7B),
-    isDark = true
+    isDark = true,
+    accentText = Color(0xFFA6C7B5),
+    onAccent = Color(0xFF161A17),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFB951)
 )
 
 // 02. Lavender Mist
@@ -146,12 +167,19 @@ val LavenderMistLightPalette = KintsuColors(
     border = Color(0xFFDCD4E4),
     textPrimary = Color(0xFF211C28),
     textSecondary = Color(0xFF625970),
-    textTertiary = Color(0xFF968D9F),
+    textTertiary = Color(0xFF696173),
     accent = Color(0xFF9B8BAD),
     accentSoft = Color(0xFFEAE4F1),
     goldSeam = Color(0xFFB8935A),
     goldSeamSoft = Color(0x33B8935A),
-    isDark = false
+    isDark = false,
+    accentText = Color(0xFF564771),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFF8A5100)
 )
 
 val LavenderMistDarkPalette = KintsuColors(
@@ -167,7 +195,14 @@ val LavenderMistDarkPalette = KintsuColors(
     accentSoft = Color(0x35B5A0C5),
     goldSeam = Color(0xFFC7A268),
     goldSeamSoft = Color(0x40C7A268),
-    isDark = true
+    isDark = true,
+    accentText = Color(0xFFC5B6DE),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFB951)
 )
 
 // 03. Terracotta Linen
@@ -179,12 +214,19 @@ val TerracottaLinenLightPalette = KintsuColors(
     border = Color(0xFFDFCEBE),
     textPrimary = Color(0xFF261D19),
     textSecondary = Color(0xFF6E584E),
-    textTertiary = Color(0xFF9E877B),
+    textTertiary = Color(0xFF735D53),
     accent = Color(0xFFBF826C),
     accentSoft = Color(0xFFF0DDD0),
     goldSeam = Color(0xFFB8935A),
     goldSeamSoft = Color(0x33B8935A),
-    isDark = false
+    isDark = false,
+    accentText = Color(0xFF7E3D27),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFF8A5100)
 )
 
 val TerracottaLinenDarkPalette = KintsuColors(
@@ -195,12 +237,19 @@ val TerracottaLinenDarkPalette = KintsuColors(
     border = Color(0xFF423730),
     textPrimary = Color(0xFFF7F2EC),
     textSecondary = Color(0xFFB4A198),
-    textTertiary = Color(0xFF948278),
+    textTertiary = Color(0xFF9E8C82),
     accent = Color(0xFFD49580),
     accentSoft = Color(0x35D49580),
     goldSeam = Color(0xFFC7A268),
     goldSeamSoft = Color(0x40C7A268),
-    isDark = true
+    isDark = true,
+    accentText = Color(0xFFE6AB9B),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFB951)
 )
 
 // 04. Coastal Mist
@@ -212,12 +261,19 @@ val CoastalMistLightPalette = KintsuColors(
     border = Color(0xFFCCDCE0),
     textPrimary = Color(0xFF142127),
     textSecondary = Color(0xFF4E636C),
-    textTertiary = Color(0xFF81959E),
+    textTertiary = Color(0xFF546B75),
     accent = Color(0xFF607D8B),
     accentSoft = Color(0xFFDCE9EC),
     goldSeam = Color(0xFFB8935A),
     goldSeamSoft = Color(0x33B8935A),
-    isDark = false
+    isDark = false,
+    accentText = Color(0xFF355361),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFF8A5100)
 )
 
 val CoastalMistDarkPalette = KintsuColors(
@@ -233,7 +289,14 @@ val CoastalMistDarkPalette = KintsuColors(
     accentSoft = Color(0x357F9FAA),
     goldSeam = Color(0xFFC7A268),
     goldSeamSoft = Color(0x40C7A268),
-    isDark = true
+    isDark = true,
+    accentText = Color(0xFF9EC0CE),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFB951)
 )
 
 // 05. Midnight Champagne
@@ -245,12 +308,19 @@ val MidnightChampagneDarkPalette = KintsuColors(
     border = Color(0xFF3F4247),
     textPrimary = Color(0xFFECE5D8),
     textSecondary = Color(0xFFABA496),
-    textTertiary = Color(0xFF8E8679),
+    textTertiary = Color(0xFF9E9587),
     accent = Color(0xFFC4AC7B),
     accentSoft = Color(0x35C4AC7B),
     goldSeam = Color(0xFFC4AC7B),
     goldSeamSoft = Color(0x40C4AC7B),
-    isDark = true
+    isDark = true,
+    accentText = Color(0xFFE2C498),
+    onAccent = Color(0xFF161A17),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFB951)
 )
 
 val MidnightChampagneLightPalette = KintsuColors(
@@ -261,12 +331,19 @@ val MidnightChampagneLightPalette = KintsuColors(
     border = Color(0xFFD2CBC0),
     textPrimary = Color(0xFF202224),
     textSecondary = Color(0xFF5D5D61),
-    textTertiary = Color(0xFF8B8B8F),
+    textTertiary = Color(0xFF656569),
     accent = Color(0xFFA88E5C),
     accentSoft = Color(0x35A88E5C),
     goldSeam = Color(0xFFC4AC7B),
     goldSeamSoft = Color(0x33C4AC7B),
-    isDark = false
+    isDark = false,
+    accentText = Color(0xFF76561E),
+    onAccent = Color(0xFF1E231F),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFF8A5100)
 )
 
 fun getThemePalette(theme: AppTheme, isDark: Boolean): KintsuColors {

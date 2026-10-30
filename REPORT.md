@@ -117,15 +117,23 @@ In strict adherence to the feasibility audit (`FEASIBILITY.md`) and safety guide
 
 ---
 
-## 6. Morning Checklist (10 Most Important Things to Manually Test First)
+## 7. Precision UI Revamp & Visual Defect Resolution (K01–K34)
 
-1. [ ] **Clean First Launch:** Install fresh APK; confirm zero dummy habits/tasks/goals and verify the peaceful "A Mindful Beginning" welcome card appears.
-2. [ ] **Profile & Settings Header:** Tap the Profile icon at the top-left of the Home screen; verify Settings opens. Confirm settings gear is removed from Habits, Tasks, Goals, and Progress tabs.
-3. [ ] **Sanctuary Shop & Coin Pill:** Verify the top-left gold pill shows 100 Kintsugi coins. Tap the Shop icon; browse the catalog (Gold Repair vials, Twilight Indigo theme, soundscapes) and test purchasing an item.
-4. [ ] **Wellbeing Setup Wizard:** Open Settings > toggle Addiction Blocker; complete the 5-step guided permission wizard (Accessibility, Usage Access, Overlay, DND, Battery Exemption).
-5. [ ] **Protection Status Card:** Inspect the real-time card in Settings; confirm it displays "Protection Active" in green or identifies missing permissions.
-6. [ ] **Mindful Breathing Pause & App Block:** Set an app group with a test app (e.g., YouTube or Chrome). Open the app and verify `BlockActivity` appears with the animated breathing ring and non-judgmental prompt.
-7. [ ] **Strict Mode 60s Emergency Exit:** Switch strictness to Strict in Settings. Trigger the block screen, tap "Need to exit?", and verify the 60-second countdown and typed confirmation requirement (`"I choose to continue"`).
-8. [ ] **Digital Detox Flow:** Open the Digital Detox sheet, set a 1-hour session with an intention, tap Start Detox. Verify active countdown, DND engagement, and +15 coin reward upon completion.
-9. [ ] **Break a Habit & Urge Surfing (SOS):** Open Quit Habits sheet, add a compulsive habit to break. Test the SOS Urge Surfing mode: verify 10-minute box breathing timer, urge intensity slider, and emergency contact SMS/Call buttons.
-10. [ ] **Fail-Safe & Emergency Recovery:** Verify that if the accessibility service is ever disabled or encounters issues, the fail-safe circuit breaker disarms blocking. Verify ADB bypass command works: `adb shell settings put secure enabled_accessibility_services ""` (documented in `RECOVERY.md`).
+Following the comprehensive visual audit of the shipped application, all 34 confirmed defects (1 Critical, 8 Major, 21 Moderate, 4 Minor) were resolved directly in source under the **Precision** craftsmanship direction:
+
+1. **Critical Crash Resolved (K01):** Sanctuary Shop crash caused by nested vertical scrolling in `KintsuBottomSheet` was fixed by introducing `scrollable: Boolean = true` and making the child `LazyColumn` the single scroll owner. Coin badge was moved to `trailingAction`, and duplicate headers were removed.
+2. **Hidden Overlays Fixed (K02):** Modal sheets (Shop, Detox, Quit Habits, Wellbeing Wizard, Journal, Weekly Review) hoisted out of the `isSettingsOpen` branch directly to the root of `KintsuTheme`, allowing all sheets to open and dismiss over Settings without disappearing.
+3. **Reflow & Accessibility (K03, K15, K27):** Rigid non-wrapping rows replaced with `FlowRow` in Journal mood chips, habit frequencies, scheduled weekdays, and habit item metadata, ensuring smooth reflow under large accessibility font scales (100–200%).
+4. **Color & WCAG AA Contrast (K04, K16, K33):** Semantic `onAccent` and `accentText` tokens dynamically computed across all 5 palettes × 6 selectable accents; 100% of the 60 combinations achieve WCAG AA contrast (>= 4.5:1). Light palette `textTertiary` calibrated to >= 4.8:1. Hardcoded hex error colors replaced with theme tokens.
+5. **Authentic Variable Font Typography (K05, K17, K26):** Inter variable font configured with explicit `FontVariation.Settings(FontVariation.weight(400/500/600/700))` for authentic stroke differentiation. Complete Material 3 typography scale mapped. Timer numerals scaled to 38sp to fit comfortably within the 240dp ring.
+6. **Geometry, Insets & Stability (K06, K10, K14, K19, K20):** Duplicated Scaffold status bar inset removed across all main tabs; subtask field styled with shared shape and border; wide displays constrained to 640dp; nav icons fixed in 24dp slots to prevent baseline shifts; Tasks content padding standardized to 24dp.
+7. **Focus & Timer Logic (K07, K08, K09, K23):** Standard (25m) preset highlighted by default on idle timer; Focus and Break durations decoupled; task/ritual chip labels preserved without mid-word truncation; Home mini-bar updated with dedicated second-by-second ticker loop.
+8. **Motion, Theme & Safe Areas (K11, K12, K13, K18):** Reduced motion preference honored across all transitions and BlockActivity breathing pulse; BlockActivity inherits user theme settings, palette, and safe system/IME insets; contrast-safe visible focus outlines added for TalkBack and keyboard navigation.
+9. **Visual Integrity & Polish (K21, K22, K24, K25, K28, K29, K30, K31, K32, K34):** Deduplicated sheet headings; replaced child LazyColumn in Quit Habits; true 2dp baseline for zero activity trend bars; gold repair seam redesigned to an elegant corner arc accent; day/night Glance widget color resources; night launch window theme (`#181B18`) to eliminate cold launch flash; accessible swatch semantics; streak singular/plural fix; unified `KintsuDateFormatter`; password masking with show/hide toggle.
+
+### Verification Summary
+- **Unit Tests:** 74/74 passing (100% pass rate).
+- **Assembled APK:** `C:\Users\rfviz\.gemini\antigravity\scratch\kintsu\outputs\app-debug.apk` (17,002,397 bytes).
+- **SHA-256:** `464A845CFC0214B56547B183D6E6E96D5036223EA7C32F8ACCACEBEE74F6480A`.
+- **Signing:** APK Signature Scheme v2 verified.
+- **Audit Verification:** `check_deliverables.py` verified 34/34 findings, source references, and links.

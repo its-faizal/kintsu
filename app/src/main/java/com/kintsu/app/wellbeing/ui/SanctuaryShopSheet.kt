@@ -50,146 +50,131 @@ fun SanctuaryShopSheet(
 
     KintsuBottomSheet(
         onDismissRequest = onDismiss,
-        title = "Sanctuary Shop"
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl)
-        ) {
-            // Header with Coin Balance
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        title = "Sanctuary Shop",
+        scrollable = false,
+        trailingAction = {
+            // Balance Badge in header
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(colors.goldSeam.copy(alpha = 0.15f))
+                    .border(1.dp, colors.goldSeam.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                    .padding(horizontal = spacing.m, vertical = spacing.xs)
             ) {
-                Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconGoldSeam(color = colors.goldSeam, size = 16.dp)
+                    Spacer(modifier = Modifier.width(spacing.xs))
                     Text(
-                        text = "Sanctuary Shop",
-                        style = typography.screenTitle,
-                        color = colors.textPrimary
+                        text = "$coinsBalance",
+                        style = typography.itemTitle.copy(color = colors.goldSeam, fontSize = 16.sp)
                     )
-                    Text(
-                        text = "Spend mindful coins earned from rituals & focus",
-                        style = typography.caption,
-                        color = colors.textSecondary
-                    )
-                }
-
-                // Balance Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(colors.goldSeam.copy(alpha = 0.15f))
-                        .border(1.dp, colors.goldSeam.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                        .padding(horizontal = spacing.m, vertical = spacing.xs)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconGoldSeam(color = colors.goldSeam, size = 16.dp)
-                        Spacer(modifier = Modifier.width(spacing.xs))
-                        Text(
-                            text = "$coinsBalance",
-                            style = typography.itemTitle.copy(color = colors.goldSeam, fontSize = 16.sp)
-                        )
-                    }
                 }
             }
+        }
+    ) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(spacing.m),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            item {
+                Text(
+                    text = "Spend mindful coins earned from rituals & focus",
+                    style = typography.secondary,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(bottom = spacing.xs)
+                )
+            }
 
-            Spacer(modifier = Modifier.height(spacing.l))
+            items(shopItems, key = { it.id }) { item ->
+                val canAfford = coinsBalance >= item.costCoins
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(spacing.m),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(shopItems, key = { it.id }) { item ->
-                    val canAfford = coinsBalance >= item.costCoins
-
-                    KintsuCard(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = if (item.isEquipped) colors.accentSoft.copy(alpha = 0.35f) else colors.surfaceElevated,
-                        borderColor = if (item.isEquipped) colors.goldSeam else colors.border
+                KintsuCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = if (item.isEquipped) colors.accentSoft.copy(alpha = 0.35f) else colors.surfaceElevated,
+                    borderColor = if (item.isEquipped) colors.goldSeam else colors.border
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(spacing.m),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = item.title,
-                                        style = typography.itemTitle,
-                                        color = colors.textPrimary
-                                    )
-                                    if (item.isEquipped) {
-                                        Spacer(modifier = Modifier.width(spacing.xs))
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(colors.goldSeam.copy(alpha = 0.2f))
-                                                .padding(horizontal = spacing.xs, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "Equipped",
-                                                style = typography.caption.copy(fontSize = 10.sp, color = colors.goldSeam)
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(spacing.xxs))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = item.description,
-                                    style = typography.caption,
-                                    color = colors.textSecondary
+                                    text = item.title,
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
                                 )
-                            }
-
-                            Spacer(modifier = Modifier.width(spacing.m))
-
-                            when {
-                                item.isEquipped -> {
+                                if (item.isEquipped) {
+                                    Spacer(modifier = Modifier.width(spacing.xs))
                                     Box(
                                         modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(colors.goldSeam.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(colors.goldSeam.copy(alpha = 0.2f))
+                                            .padding(horizontal = spacing.xs, vertical = 2.dp)
                                     ) {
-                                        IconCheck(color = colors.goldSeam, size = 16.dp)
+                                        Text(
+                                            text = "Equipped",
+                                            style = typography.caption.copy(fontSize = 10.sp, color = colors.goldSeam)
+                                        )
                                     }
                                 }
-                                item.isUnlocked -> {
-                                    KintsuButton(
-                                        text = "Equip",
-                                        onClick = { onEquipItem(item) },
-                                        variant = KintsuButtonVariant.ACCENT_SOFT
-                                    )
+                            }
+                            Spacer(modifier = Modifier.height(spacing.xxs))
+                            Text(
+                                text = item.description,
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(spacing.m))
+
+                        when {
+                            item.isEquipped -> {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(colors.goldSeam.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    IconCheck(color = colors.goldSeam, size = 16.dp)
                                 }
-                                else -> {
-                                    KintsuButton(
-                                        text = "${item.costCoins} 🪙",
-                                        onClick = { onPurchaseItem(item) },
-                                        enabled = canAfford,
-                                        variant = if (canAfford) KintsuButtonVariant.PRIMARY else KintsuButtonVariant.SECONDARY
-                                    )
-                                }
+                            }
+                            item.isUnlocked -> {
+                                KintsuButton(
+                                    text = "Equip",
+                                    onClick = { onEquipItem(item) },
+                                    variant = KintsuButtonVariant.ACCENT_SOFT
+                                )
+                            }
+                            else -> {
+                                KintsuButton(
+                                    text = "${item.costCoins} 🪙",
+                                    onClick = { onPurchaseItem(item) },
+                                    enabled = canAfford,
+                                    variant = if (canAfford) KintsuButtonVariant.PRIMARY else KintsuButtonVariant.SECONDARY
+                                )
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(spacing.m))
-
-            Text(
-                text = "Earn +5 coins per completed ritual, +3 per task, +10 per focus session, and +15 per digital detox.",
-                style = typography.caption.copy(fontSize = 11.sp),
-                color = colors.textTertiary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
+            item {
+                Text(
+                    text = "Earn +5 coins per completed ritual, +3 per task, +10 per focus session, and +15 per digital detox.",
+                    style = typography.caption.copy(fontSize = 11.sp),
+                    color = colors.textTertiary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = spacing.m, bottom = spacing.xl)
+                )
+            }
         }
     }
 }

@@ -219,7 +219,7 @@ fun TasksScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = spacing.l),
+                .padding(horizontal = spacing.xl),
             verticalArrangement = Arrangement.spacedBy(spacing.s)
         ) {
             // Row 1: Apple-style Minimal Segmented Control
@@ -1324,8 +1324,13 @@ private fun TaskEditSheet(
                         OutlinedTextField(
                             value = newSubtaskInput,
                             onValueChange = { newSubtaskInput = it },
-                            placeholder = { Text("Add subtask...", style = typography.caption) },
+                            placeholder = { Text("Add subtask...", style = typography.caption, color = colors.textTertiary) },
                             singleLine = true,
+                            shape = KintsuTheme.shapes.medium,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = colors.accent,
+                                unfocusedBorderColor = colors.border
+                            ),
                             modifier = Modifier.weight(1f)
                         )
                         KintsuButton(

@@ -22,16 +22,23 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -73,8 +80,17 @@ class BlockActivity : ComponentActivity() {
         val prompt = intent.getStringExtra(EXTRA_PROMPT) ?: "What are you here for?"
         val pauseSeconds = intent.getIntExtra(EXTRA_PAUSE_SECONDS, 10).coerceAtLeast(3)
 
+        val settingsStore = com.kintsu.app.data.SettingsDataStore(applicationContext)
+
         setContent {
-            KintsuTheme {
+            val settings by settingsStore.settingsFlow.collectAsState(initial = com.kintsu.app.data.KintsuSettings())
+            KintsuTheme(
+                appTheme = settings.appTheme,
+                themeMode = settings.themeMode,
+                accentOption = settings.accentOption,
+                contentDensity = settings.contentDensity,
+                reducedMotion = settings.reducedMotion
+            ) {
                 BackHandler {
                     returnToHomeScreen()
                 }
@@ -147,9 +163,12 @@ fun BlockShieldContent(
         }
     }
 
+    val motion = KintsuTheme.motion
+    val isReducedMotion = motion.fastMs == 0
+
     // Breathing pulse animation
     val infiniteTransition = rememberInfiniteTransition(label = "breathing")
-    val breathScale by infiniteTransition.animateFloat(
+    val animatedBreathScale by infiniteTransition.animateFloat(
         initialValue = 0.85f,
         targetValue = 1.15f,
         animationSpec = infiniteRepeatable(
@@ -158,16 +177,23 @@ fun BlockShieldContent(
         ),
         label = "breathScale"
     )
+    val breathScale = if (isReducedMotion) 1.0f else animatedBreathScale
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(colors.background)
-            .padding(spacing.xl),
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .imePadding(),
         contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 640.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(spacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {

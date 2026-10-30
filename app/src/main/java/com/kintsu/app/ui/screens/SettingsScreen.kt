@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -29,8 +30,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -48,6 +51,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -243,8 +254,9 @@ fun SettingsScreen(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
                 .widthIn(max = 640.dp)
+                .fillMaxWidth()
         ) {
             // Settings Header
             Row(
@@ -444,7 +456,7 @@ fun SettingsScreen(
                                     com.kintsu.app.sync.model.SyncState.SYNCING -> colors.accent
                                     com.kintsu.app.sync.model.SyncState.SUCCESS -> colors.accent
                                     com.kintsu.app.sync.model.SyncState.OFFLINE -> colors.textTertiary
-                                    com.kintsu.app.sync.model.SyncState.ERROR -> Color(0xFFD97706)
+                                    com.kintsu.app.sync.model.SyncState.ERROR -> colors.warning
                                     com.kintsu.app.sync.model.SyncState.IDLE -> colors.textSecondary
                                 }
 
@@ -820,10 +832,15 @@ fun SettingsScreen(
                                         .size(38.dp)
                                         .clip(CircleShape)
                                         .background(accent.color)
-                                        .clickable { onUpdateAccent(accent) }
+                                        .clickable(onClickLabel = "Select ${accent.displayName}") { onUpdateAccent(accent) }
                                         .then(
                                             if (isSelected) Modifier.border(2.5.dp, colors.textPrimary, CircleShape) else Modifier
                                         )
+                                        .semantics {
+                                            role = Role.RadioButton
+                                            selected = isSelected
+                                            contentDescription = "${accent.displayName} accent"
+                                        }
                                 )
                             }
                         }
@@ -2124,6 +2141,7 @@ fun SettingsScreen(
     // --- V3.0 Account & Sync Dialogs and Auth Sheet ---
 
     if (showAuthSheet) {
+        var passwordVisible by remember { mutableStateOf(false) }
         KintsuBottomSheet(
             onDismissRequest = {
                 if (!authLoading) showAuthSheet = false
@@ -2196,7 +2214,18 @@ fun SettingsScreen(
                     label = { Text("Password") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = KintsuTheme.shapes.medium,
-                    singleLine = true
+                    singleLine = true,
+                    visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    trailingIcon = {
+                        IconButton(onClick = { passwordVisible = !passwordVisible }) {
+                            Text(
+                                text = if (passwordVisible) "Hide" else "Show",
+                                style = typography.caption,
+                                color = colors.accentText
+                            )
+                        }
+                    }
                 )
 
                 if (authModeIsSignUp) {
@@ -2216,7 +2245,7 @@ fun SettingsScreen(
                     Text(
                         text = authError ?: "",
                         style = typography.caption,
-                        color = Color(0xFFEF4444)
+                        color = colors.error
                     )
                 }
 

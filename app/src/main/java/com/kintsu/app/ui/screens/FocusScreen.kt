@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -86,12 +87,14 @@ fun FocusScreen(
     val spacing = KintsuTheme.spacing
     val typography = KintsuTheme.typography
 
-    var selectedDuration by remember { mutableIntStateOf(defaultPresetMinutes) }
-    var customDuration by remember { mutableFloatStateOf(30f) }
-    var selectedPresetLabel by remember { mutableStateOf("$defaultPresetMinutes min") }
+    var selectedFocusDuration by remember { mutableIntStateOf(defaultPresetMinutes) }
+    var selectedBreakDuration by remember { mutableIntStateOf(breakLengthMinutes) }
+    var customDuration by remember { mutableFloatStateOf(if (defaultPresetMinutes !in listOf(15, 25, 50)) defaultPresetMinutes.toFloat() else 30f) }
     var selectedHabitId by remember { mutableStateOf<Long?>(null) }
     var linkedTask by remember { mutableStateOf(initialLinkedTask) }
     var isBreakMode by remember { mutableStateOf(false) }
+
+    val activeDuration = if (isBreakMode) selectedBreakDuration else selectedFocusDuration
 
     // Ticking remaining time
     var remainingSeconds by remember { mutableLongStateOf(FocusTimerManager.getRemainingSeconds(focusState)) }
@@ -106,7 +109,7 @@ fun FocusScreen(
     val totalDurationSeconds = if (focusState.isRunning) {
         focusState.durationMinutes * 60L
     } else {
-        selectedDuration * 60L
+        activeDuration * 60L
     }
 
     val progressFraction = if (totalDurationSeconds > 0) {
@@ -131,8 +134,9 @@ fun FocusScreen(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxHeight()
                 .widthIn(max = 640.dp)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = spacing.xl, vertical = spacing.l),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -217,8 +221,10 @@ fun FocusScreen(
                 ) {
                     Text(
                         text = formattedTime,
-                        style = typography.screenTitle.copy(fontSize = 44.sp, lineHeight = 48.sp),
-                        color = colors.textPrimary
+                        style = typography.screenTitle.copy(fontSize = 38.sp, lineHeight = 42.sp),
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        softWrap = false
                     )
                     Text(
                         text = when {
@@ -272,6 +278,10 @@ fun FocusScreen(
                         style = typography.caption,
                         color = colors.textSecondary
                     )
+                    val isPresetSelected: (Int) -> Boolean = { min ->
+                        if (min > 0) selectedFocusDuration == min else (selectedFocusDuration !in listOf(15, 25, 50))
+                    }
+                    val isCustomSelected = selectedFocusDuration !in listOf(15, 25, 50)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -281,23 +291,22 @@ fun FocusScreen(
                         listOf(15 to "Short (15m)", 25 to "Standard (25m)", 50 to "Deep (50m)", 0 to "Custom").forEach { (min, label) ->
                             KintsuFilterChip(
                                 label = label,
-                                selected = selectedPresetLabel == label,
+                                selected = isPresetSelected(min),
                                 onClick = {
-                                    selectedPresetLabel = label
                                     if (min > 0) {
-                                        selectedDuration = min
+                                        selectedFocusDuration = min
                                     } else {
-                                        selectedDuration = customDuration.toInt()
+                                        selectedFocusDuration = customDuration.toInt()
                                     }
                                 }
                             )
                         }
                     }
 
-                    if (selectedPresetLabel == "Custom") {
+                    if (isCustomSelected) {
                         Column(modifier = Modifier.padding(top = spacing.xs)) {
                             Text(
-                                text = "Custom: ${customDuration.toInt()} minutes",
+                                text = "Custom: ${selectedFocusDuration} minutes",
                                 style = typography.caption,
                                 color = colors.textSecondary
                             )
@@ -305,7 +314,7 @@ fun FocusScreen(
                                 value = customDuration,
                                 onValueChange = {
                                     customDuration = it
-                                    selectedDuration = it.toInt()
+                                    selectedFocusDuration = it.toInt()
                                 },
                                 valueRange = 5f..120f,
                                 colors = SliderDefaults.colors(
@@ -334,7 +343,7 @@ fun FocusScreen(
                         selected = isBreakMode,
                         onClick = {
                             isBreakMode = true
-                            selectedDuration = breakLengthMinutes
+                            selectedBreakDuration = breakLengthMinutes
                         }
                     )
                 }
@@ -395,9 +404,10 @@ fun FocusScreen(
                             ) {
                                 tasks.filter { !it.isCompleted }.take(5).forEach { t ->
                                     KintsuFilterChip(
-                                        label = t.title.take(16) + if (t.title.length > 16) "…" else "",
+                                        label = t.title,
                                         selected = false,
-                                        onClick = { linkedTask = t }
+                                        onClick = { linkedTask = t },
+                                        modifier = Modifier.widthIn(max = 240.dp)
                                     )
                                 }
                             }
@@ -427,11 +437,12 @@ fun FocusScreen(
                                 selected = selectedHabitId == null,
                                 onClick = { selectedHabitId = null }
                             )
-                            habits.take(3).forEach { habit ->
+                            habits.take(5).forEach { habit ->
                                 KintsuFilterChip(
-                                    label = habit.name.take(14) + if (habit.name.length > 14) "…" else "",
+                                    label = habit.name,
                                     selected = selectedHabitId == habit.id,
-                                    onClick = { selectedHabitId = habit.id }
+                                    onClick = { selectedHabitId = habit.id },
+                                    modifier = Modifier.widthIn(max = 200.dp)
                                 )
                             }
                         }
@@ -442,10 +453,10 @@ fun FocusScreen(
 
                 // Primary Start Button
                 KintsuButton(
-                    text = if (isBreakMode) "Begin Rest Interval" else "Begin Mindful Focus ($selectedDuration min)",
+                    text = if (isBreakMode) "Begin Rest Interval ($selectedBreakDuration min)" else "Begin Mindful Focus ($selectedFocusDuration min)",
                     onClick = {
                         onStartFocus(
-                            selectedDuration,
+                            activeDuration,
                             if (isBreakMode) null else selectedHabitId,
                             if (isBreakMode) null else linkedTask?.id,
                             if (isBreakMode) null else linkedTask?.title,

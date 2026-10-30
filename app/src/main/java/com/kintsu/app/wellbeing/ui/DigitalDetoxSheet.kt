@@ -73,19 +73,11 @@ fun DigitalDetoxSheet(
         title = "Digital Detox"
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(spacing.xl),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             if (activeDetox == null) {
                 // Configure & Start Detox
-                Text(
-                    text = "Digital Detox",
-                    style = typography.screenTitle,
-                    color = colors.textPrimary
-                )
-                Spacer(modifier = Modifier.height(spacing.xxs))
                 Text(
                     text = "Step away from digital noise and reclaim your stillness.",
                     style = typography.caption,
@@ -226,8 +218,8 @@ fun DigitalDetoxSheet(
                 Spacer(modifier = Modifier.height(spacing.l))
 
                 Text(
-                    text = "Digital Detox in Progress",
-                    style = typography.screenTitle,
+                    text = "Detox in Progress",
+                    style = typography.itemTitle,
                     color = colors.textPrimary
                 )
 

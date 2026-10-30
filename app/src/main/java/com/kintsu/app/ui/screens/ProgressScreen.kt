@@ -129,13 +129,13 @@ fun ProgressScreen(
                 ) {
                     MetricStatCard(
                         title = "Current Streak",
-                        value = "${stats.currentStreak} days",
+                        value = "${stats.currentStreak} ${if (stats.currentStreak == 1) "day" else "days"}",
                         icon = { IconFlame(color = colors.accent, size = 18.dp) },
                         modifier = Modifier.weight(1f)
                     )
                     MetricStatCard(
                         title = "Best Streak",
-                        value = "${stats.bestStreak} days",
+                        value = "${stats.bestStreak} ${if (stats.bestStreak == 1) "day" else "days"}",
                         icon = { IconFlame(color = colors.textTertiary, size = 18.dp) },
                         modifier = Modifier.weight(1f)
                     )
@@ -314,7 +314,13 @@ fun ProgressScreen(
                         ) {
                             insights.weeklyTrends.forEach { pt ->
                                 val isSelected = selectedTrendPoint?.weekStartEpochDay == pt.weekStartEpochDay
-                                val barHeightRatio = pt.completionRate.coerceIn(0.12f, 1f)
+                                val hasData = pt.completionRate > 0.001f
+                                val barHeight = if (hasData) (70 * pt.completionRate.coerceIn(0.08f, 1f)).dp else 2.dp
+                                val barColor = when {
+                                    isSelected -> colors.accent
+                                    hasData -> colors.accentSoft.copy(alpha = 0.65f)
+                                    else -> colors.border.copy(alpha = 0.5f)
+                                }
 
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -328,13 +334,15 @@ fun ProgressScreen(
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .height((70 * barHeightRatio).dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(if (isSelected) colors.accent else colors.accentSoft.copy(alpha = 0.65f))
-                                            .border(
-                                                1.dp,
-                                                if (isSelected) colors.accent else colors.border,
-                                                RoundedCornerShape(6.dp)
+                                            .height(barHeight)
+                                            .clip(RoundedCornerShape(if (hasData) 6.dp else 1.dp))
+                                            .background(barColor)
+                                            .then(
+                                                if (hasData) Modifier.border(
+                                                    1.dp,
+                                                    if (isSelected) colors.accent else colors.border,
+                                                    RoundedCornerShape(6.dp)
+                                                ) else Modifier
                                             )
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -996,22 +1004,12 @@ private fun HeatmapGrid(
                     ) {
                         if (hasGold) {
                             Canvas(modifier = Modifier.fillMaxSize()) {
+                                // Elegant corner gold seam that frames the date without occluding the numeral
                                 drawLine(
                                     color = colors.goldSeam,
-                                    start = Offset(4f, size.height - 4f),
-                                    end = Offset(size.width - 4f, 4f),
-                                    strokeWidth = 2.dp.toPx()
-                                )
-                            }
-                        }
-
-                        if (!hasGold && !hasCompleted && isPast) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                drawLine(
-                                    color = colors.textTertiary.copy(alpha = 0.5f),
-                                    start = Offset(size.width * 0.3f, size.height * 0.2f),
-                                    end = Offset(size.width * 0.7f, size.height * 0.8f),
-                                    strokeWidth = 1.dp.toPx()
+                                    start = Offset(size.width * 0.65f, 3f),
+                                    end = Offset(size.width - 3f, size.height * 0.35f),
+                                    strokeWidth = 2.5.dp.toPx()
                                 )
                             }
                         }
@@ -1021,7 +1019,7 @@ private fun HeatmapGrid(
                             style = KintsuTheme.typography.caption,
                             color = when {
                                 hasGold -> colors.goldSeam
-                                hasCompleted -> colors.background
+                                hasCompleted -> colors.onAccent
                                 else -> colors.textTertiary
                             }
                         )

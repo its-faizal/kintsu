@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,13 +42,16 @@ fun KintsuFilterChip(
     val typography = KintsuTheme.typography
     val motion = KintsuTheme.motion
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
     val bg by animateColorAsState(
         targetValue = if (selected) colors.accentSoft else colors.surfaceElevated,
         animationSpec = tween(durationMillis = motion.fastMs),
         label = "chipBg"
     )
     val textColor by animateColorAsState(
-        targetValue = if (selected) colors.accent else colors.textSecondary,
+        targetValue = if (selected) colors.accentText else colors.textSecondary,
         animationSpec = tween(durationMillis = motion.fastMs),
         label = "chipTextColor"
     )
@@ -58,12 +62,12 @@ fun KintsuFilterChip(
             .clip(KintsuTheme.shapes.full)
             .background(bg)
             .border(
-                width = 0.8.dp,
-                color = if (selected) colors.accent.copy(alpha = 0.6f) else colors.border.copy(alpha = 0.7f),
+                width = if (isFocused) 1.5.dp else 0.8.dp,
+                color = if (isFocused) colors.accentText else if (selected) colors.accent.copy(alpha = 0.6f) else colors.border.copy(alpha = 0.7f),
                 shape = KintsuTheme.shapes.full
             )
             .clickable(
-                interactionSource = remember { MutableInteractionSource() },
+                interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
@@ -83,7 +87,9 @@ fun KintsuFilterChip(
             Text(
                 text = label,
                 style = typography.caption,
-                color = textColor
+                color = textColor,
+                maxLines = 1,
+                softWrap = false
             )
         }
     }
