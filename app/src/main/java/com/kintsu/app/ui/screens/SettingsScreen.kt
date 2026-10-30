@@ -147,6 +147,7 @@ fun SettingsScreen(
     onExportData: suspend () -> String,
     onExportToFile: suspend (Uri) -> Unit = {},
     onImportFromFile: suspend (Uri, ImportMode) -> Result<Unit> = { _, _ -> Result.success(Unit) },
+    onOpenDigitalBalance: () -> Unit = {},
     onOpenWellbeingWizard: () -> Unit = {},
     onOpenDetox: () -> Unit = {},
     onOpenQuitHabits: () -> Unit = {},
@@ -1478,15 +1479,42 @@ fun SettingsScreen(
                     modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
                 )
                 KintsuGroupedSection {
+                    // Central Digital Balance Dashboard Entry
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onOpenDigitalBalance)
+                            .padding(spacing.m),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                            Text(
+                                text = "Digital Balance Dashboard",
+                                style = typography.itemTitle.copy(fontWeight = FontWeight.Bold),
+                                color = colors.goldSeam
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Make your screen time intentional • Apps, Websites, Focus Lock & Insights",
+                                style = typography.secondary,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Text("→", style = typography.itemTitle, color = colors.goldSeam)
+                    }
+
+                    KintsuDivider()
+
                     // Real-time Protection Status Card
                     Box(modifier = Modifier.padding(spacing.m)) {
                         ProtectionStatusCard(
                             isProtectionActive = settings.protectionActive,
                             isFailSafeTripped = settings.protectionFailSafeTripped,
                             missingPermissionName = if (!KintsuAccessibilityBlockerService.isServiceRunning) "Accessibility Service" else null,
-                            onFixPermission = onOpenWellbeingWizard,
+                            onFixPermission = onOpenDigitalBalance,
                             onResetFailSafe = onResetFailSafe,
-                            onOpenWizard = onOpenWellbeingWizard
+                            onOpenWizard = onOpenDigitalBalance
                         )
                     }
 

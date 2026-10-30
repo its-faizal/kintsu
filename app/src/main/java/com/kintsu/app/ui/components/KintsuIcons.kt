@@ -461,3 +461,135 @@ fun IconWidget(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
         drawRoundRect(color, Offset(boxW + gap, boxH + gap), Size(boxW, boxH), r, s)
     }
 }
+
+@Composable
+fun IconBack(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.8f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        drawLine(color, Offset(w * 0.75f, h * 0.5f), Offset(w * 0.25f, h * 0.5f), strokeWidth = 1.8f.dp.toPx(), cap = StrokeCap.Round)
+        val p = Path().apply {
+            moveTo(w * 0.45f, h * 0.28f)
+            lineTo(w * 0.25f, h * 0.5f)
+            lineTo(w * 0.45f, h * 0.72f)
+        }
+        drawPath(p, color = color, style = s)
+    }
+}
+
+@Composable
+fun IconShield(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        val p = Path().apply {
+            moveTo(w * 0.5f, h * 0.15f)
+            lineTo(w * 0.82f, h * 0.25f)
+            lineTo(w * 0.82f, h * 0.55f)
+            cubicTo(
+                w * 0.82f, h * 0.75f,
+                w * 0.5f, h * 0.88f,
+                w * 0.5f, h * 0.88f
+            )
+            cubicTo(
+                w * 0.5f, h * 0.88f,
+                w * 0.18f, h * 0.75f,
+                w * 0.18f, h * 0.55f
+            )
+            lineTo(w * 0.18f, h * 0.25f)
+            close()
+        }
+        drawPath(p, color = color, style = s)
+    }
+}
+
+@Composable
+fun IconGlobe(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        drawCircle(color = color, radius = w * 0.38f, center = Offset(w * 0.5f, h * 0.5f), style = s)
+        drawLine(color, Offset(w * 0.12f, h * 0.5f), Offset(w * 0.88f, h * 0.5f), strokeWidth = 1.5f.dp.toPx())
+
+        val p = Path().apply {
+            moveTo(w * 0.5f, h * 0.12f)
+            cubicTo(w * 0.28f, h * 0.3f, w * 0.28f, h * 0.7f, w * 0.5f, h * 0.88f)
+            cubicTo(w * 0.72f, h * 0.7f, w * 0.72f, h * 0.3f, w * 0.5f, h * 0.12f)
+        }
+        drawPath(p, color = color, style = s)
+    }
+}
+
+@Composable
+fun IconLock(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        // Shackle
+        val shackle = Path().apply {
+            moveTo(w * 0.32f, h * 0.44f)
+            lineTo(w * 0.32f, h * 0.28f)
+            cubicTo(w * 0.32f, h * 0.14f, w * 0.68f, h * 0.14f, w * 0.68f, h * 0.28f)
+            lineTo(w * 0.68f, h * 0.44f)
+        }
+        drawPath(shackle, color = color, style = s)
+
+        // Lock Body
+        val r = CornerRadius(4.dp.toPx(), 4.dp.toPx())
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.20f, h * 0.44f),
+            size = Size(w * 0.60f, h * 0.44f),
+            cornerRadius = r,
+            style = s
+        )
+
+        // Keyhole
+        drawCircle(color = color, radius = w * 0.06f, center = Offset(w * 0.5f, h * 0.62f))
+    }
+}
+
+@Composable
+fun IconSearch(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        drawCircle(color = color, radius = w * 0.28f, center = Offset(w * 0.42f, h * 0.42f), style = s)
+        drawLine(
+            color = color,
+            start = Offset(w * 0.62f, h * 0.62f),
+            end = Offset(w * 0.85f, h * 0.85f),
+            strokeWidth = 2.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun IconSparkle(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+
+        val p = Path().apply {
+            moveTo(w * 0.5f, h * 0.1f)
+            cubicTo(w * 0.5f, h * 0.4f, w * 0.6f, h * 0.5f, w * 0.9f, h * 0.5f)
+            cubicTo(w * 0.6f, h * 0.5f, w * 0.5f, h * 0.6f, w * 0.5f, h * 0.9f)
+            cubicTo(w * 0.5f, h * 0.6f, w * 0.4f, h * 0.5f, w * 0.1f, h * 0.5f)
+            cubicTo(w * 0.4f, h * 0.5f, w * 0.5f, h * 0.4f, w * 0.5f, h * 0.1f)
+            close()
+        }
+        drawPath(p, color = color)
+    }
+}
+

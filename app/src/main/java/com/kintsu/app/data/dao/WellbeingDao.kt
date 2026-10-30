@@ -7,10 +7,14 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
 import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.CommitmentLockEntity
 import com.kintsu.app.data.model.DigitalDetoxEntity
+import com.kintsu.app.data.model.DistractionInterventionLogEntity
+import com.kintsu.app.data.model.FocusLockSessionEntity
+import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
 import com.kintsu.app.data.model.UrgeLogEntity
@@ -171,4 +175,71 @@ interface WellbeingDao {
 
     @Query("DELETE FROM shop_inventory")
     suspend fun clearShopInventory()
+
+    // --- Blocked Websites ---
+    @Query("SELECT * FROM blocked_websites ORDER BY id ASC")
+    fun getAllBlockedWebsites(): Flow<List<BlockedWebsiteEntity>>
+
+    @Query("SELECT * FROM blocked_websites WHERE isEnabled = 1")
+    fun getActiveBlockedWebsites(): Flow<List<BlockedWebsiteEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBlockedWebsite(website: BlockedWebsiteEntity): Long
+
+    @Update
+    suspend fun updateBlockedWebsite(website: BlockedWebsiteEntity)
+
+    @Delete
+    suspend fun deleteBlockedWebsite(website: BlockedWebsiteEntity)
+
+    @Query("DELETE FROM blocked_websites")
+    suspend fun clearBlockedWebsites()
+
+    // --- Focus Lock Sessions ---
+    @Query("SELECT * FROM focus_lock_sessions ORDER BY startTimeMillis DESC")
+    fun getAllFocusLockSessions(): Flow<List<FocusLockSessionEntity>>
+
+    @Query("SELECT * FROM focus_lock_sessions WHERE isCompleted = 0 AND endTimeMillis > :currentTime ORDER BY id DESC LIMIT 1")
+    suspend fun getActiveFocusLockSession(currentTime: Long): FocusLockSessionEntity?
+
+    @Query("SELECT * FROM focus_lock_sessions WHERE isCompleted = 0 AND endTimeMillis > :currentTime ORDER BY id DESC LIMIT 1")
+    fun observeActiveFocusLockSession(currentTime: Long): Flow<FocusLockSessionEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertFocusLockSession(session: FocusLockSessionEntity): Long
+
+    @Update
+    suspend fun updateFocusLockSession(session: FocusLockSessionEntity)
+
+    @Query("DELETE FROM focus_lock_sessions")
+    suspend fun clearFocusLockSessions()
+
+    // --- Distraction Intervention Logs ---
+    @Query("SELECT * FROM distraction_interventions ORDER BY timestampMillis DESC")
+    fun getAllInterventions(): Flow<List<DistractionInterventionLogEntity>>
+
+    @Query("SELECT * FROM distraction_interventions WHERE timestampMillis >= :sinceMillis ORDER BY timestampMillis DESC")
+    fun getInterventionsSince(sinceMillis: Long): Flow<List<DistractionInterventionLogEntity>>
+
+    @Query("SELECT COUNT(*) FROM distraction_interventions WHERE timestampMillis >= :startOfDayMillis")
+    fun getInterventionsCountToday(startOfDayMillis: Long): Flow<Int>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertIntervention(log: DistractionInterventionLogEntity): Long
+
+    @Query("DELETE FROM distraction_interventions")
+    suspend fun clearDistractionInterventions()
+
+    // --- Intentional Breaks ---
+    @Query("SELECT * FROM intentional_breaks ORDER BY timestampMillis DESC")
+    fun getAllBreaks(): Flow<List<IntentionalBreakLogEntity>>
+
+    @Query("SELECT * FROM intentional_breaks WHERE timestampMillis >= :startOfDayMillis ORDER BY timestampMillis DESC")
+    fun getBreaksToday(startOfDayMillis: Long): Flow<List<IntentionalBreakLogEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertBreak(breakLog: IntentionalBreakLogEntity): Long
+
+    @Query("DELETE FROM intentional_breaks")
+    suspend fun clearIntentionalBreaks()
 }

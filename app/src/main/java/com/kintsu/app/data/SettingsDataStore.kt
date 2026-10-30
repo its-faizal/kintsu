@@ -67,7 +67,13 @@ data class KintsuSettings(
     val protectionActive: Boolean = false,
     val protectionFailSafeTripped: Boolean = false,
     val screenTimeGoalMinutes: Int = 120,
-    val deviceAdminEnabled: Boolean = false
+    val deviceAdminEnabled: Boolean = false,
+    val breathingDurationSeconds: Int = 10,
+    val interventionStyle: String = "BREATHING",
+    val reinterventionIntervalMinutes: Int = 10,
+    val wellbeingHapticsEnabled: Boolean = true,
+    val dnsProtectionEnabled: Boolean = false,
+    val dailyScreenTimeBudgetMinutes: Int = 120
 )
 
 class SettingsDataStore(val context: Context) {
@@ -125,6 +131,12 @@ class SettingsDataStore(val context: Context) {
         val PROTECTION_FAILSAFE_TRIPPED = booleanPreferencesKey("protection_failsafe_tripped")
         val SCREEN_TIME_GOAL_MINUTES = intPreferencesKey("screen_time_goal_minutes")
         val DEVICE_ADMIN_ENABLED = booleanPreferencesKey("device_admin_enabled")
+        val BREATHING_DURATION_SECONDS = intPreferencesKey("breathing_duration_seconds")
+        val INTERVENTION_STYLE = stringPreferencesKey("intervention_style")
+        val REINTERVENTION_INTERVAL_MINUTES = intPreferencesKey("reintervention_interval_minutes")
+        val WELLBEING_HAPTICS_ENABLED = booleanPreferencesKey("wellbeing_haptics_enabled")
+        val DNS_PROTECTION_ENABLED = booleanPreferencesKey("dns_protection_enabled")
+        val DAILY_SCREEN_TIME_BUDGET_MINUTES = intPreferencesKey("daily_screen_time_budget_minutes")
     }
 
     val settingsFlow: Flow<KintsuSettings> = context.dataStore.data.map { prefs ->
@@ -224,7 +236,13 @@ class SettingsDataStore(val context: Context) {
             protectionActive = prefs[Keys.PROTECTION_ACTIVE] ?: false,
             protectionFailSafeTripped = prefs[Keys.PROTECTION_FAILSAFE_TRIPPED] ?: false,
             screenTimeGoalMinutes = prefs[Keys.SCREEN_TIME_GOAL_MINUTES] ?: 120,
-            deviceAdminEnabled = prefs[Keys.DEVICE_ADMIN_ENABLED] ?: false
+            deviceAdminEnabled = prefs[Keys.DEVICE_ADMIN_ENABLED] ?: false,
+            breathingDurationSeconds = prefs[Keys.BREATHING_DURATION_SECONDS] ?: 10,
+            interventionStyle = prefs[Keys.INTERVENTION_STYLE] ?: "BREATHING",
+            reinterventionIntervalMinutes = prefs[Keys.REINTERVENTION_INTERVAL_MINUTES] ?: 10,
+            wellbeingHapticsEnabled = prefs[Keys.WELLBEING_HAPTICS_ENABLED] ?: true,
+            dnsProtectionEnabled = prefs[Keys.DNS_PROTECTION_ENABLED] ?: false,
+            dailyScreenTimeBudgetMinutes = prefs[Keys.DAILY_SCREEN_TIME_BUDGET_MINUTES] ?: 120
         )
     }
 
@@ -442,6 +460,30 @@ class SettingsDataStore(val context: Context) {
 
     suspend fun setPermissionsReviewed(reviewed: Boolean) {
         context.dataStore.edit { it[Keys.PERMISSIONS_REVIEWED] = reviewed }
+    }
+
+    suspend fun setBreathingDurationSeconds(seconds: Int) {
+        context.dataStore.edit { it[Keys.BREATHING_DURATION_SECONDS] = seconds }
+    }
+
+    suspend fun setInterventionStyle(style: String) {
+        context.dataStore.edit { it[Keys.INTERVENTION_STYLE] = style }
+    }
+
+    suspend fun setReinterventionIntervalMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.REINTERVENTION_INTERVAL_MINUTES] = minutes }
+    }
+
+    suspend fun setWellbeingHapticsEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.WELLBEING_HAPTICS_ENABLED] = enabled }
+    }
+
+    suspend fun setDnsProtectionEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.DNS_PROTECTION_ENABLED] = enabled }
+    }
+
+    suspend fun setDailyScreenTimeBudgetMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.DAILY_SCREEN_TIME_BUDGET_MINUTES] = minutes }
     }
 
     suspend fun resetSettings() {

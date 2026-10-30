@@ -193,3 +193,93 @@ data class ShopItemEntity(
     val isEquipped: Boolean = false,
     val purchasedAtMillis: Long? = null
 )
+
+/**
+ * Blocked website entry supporting exact host and wildcard subdomains (*.domain.com).
+ */
+@Entity(
+    tableName = "blocked_websites",
+    indices = [
+        Index("domain"),
+        Index("groupName"),
+        Index("isEnabled")
+    ]
+)
+data class BlockedWebsiteEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val domain: String,
+    val groupName: String = "Social",
+    val mode: String = "ALWAYS_BLOCKED", // ALWAYS_BLOCKED, SCHEDULED, FOCUS_ONLY, LIMITED_ACCESS
+    val matchSubdomains: Boolean = true,
+    val isEnabled: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis()
+)
+
+/**
+ * Focus Lock Session extending Focus with strict app & website blocking.
+ */
+@Entity(
+    tableName = "focus_lock_sessions",
+    indices = [
+        Index("isCompleted"),
+        Index("startTimeMillis")
+    ]
+)
+data class FocusLockSessionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String = "Deep Focus",
+    val durationMinutes: Int = 25,
+    val startTimeMillis: Long = System.currentTimeMillis(),
+    val endTimeMillis: Long = System.currentTimeMillis() + 25 * 60 * 1000L,
+    val restrictedAppGroupIds: String = "", // Comma-separated group IDs, or "ALL"
+    val restrictedWebsitesEnabled: Boolean = true,
+    val strictnessMode: String = "COMMITTED", // FLEXIBLE, COMMITTED, DEEP_COMMITMENT
+    val breaksAllowed: Boolean = true,
+    val maxBreaks: Int = 2,
+    val breaksTaken: Int = 0,
+    val isCompleted: Boolean = false,
+    val wasEarlyExit: Boolean = false
+)
+
+/**
+ * Real aggregated log of distraction interventions presented to the user.
+ */
+@Entity(
+    tableName = "distraction_interventions",
+    indices = [
+        Index("packageName"),
+        Index("timestampMillis")
+    ]
+)
+data class DistractionInterventionLogEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val packageName: String,
+    val timestampMillis: Long = System.currentTimeMillis(),
+    val interventionStyle: String = "BREATHING", // BREATHING, INTENTIONAL_CHOICE, GENTLE_DELAY, REFLECTION
+    val userAction: String, // RETURNED_TO_FOCUS, CONTINUED_TO_APP, HEALTHY_ALTERNATIVE
+    val choiceReason: String? = null,
+    val alternativeChosen: String? = null
+)
+
+/**
+ * Intentional break log for temporary access allowances.
+ */
+@Entity(
+    tableName = "intentional_breaks",
+    indices = [
+        Index("timestampMillis")
+    ]
+)
+data class IntentionalBreakLogEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val targetPackageOrDomain: String,
+    val durationMinutes: Int,
+    val timestampMillis: Long = System.currentTimeMillis(),
+    val associatedSessionId: Long? = null,
+    val reason: String? = null
+)
+

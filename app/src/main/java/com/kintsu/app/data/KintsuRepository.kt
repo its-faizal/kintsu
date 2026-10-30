@@ -1,17 +1,21 @@
 package com.kintsu.app.data
 
 import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
 import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.CommitmentLockEntity
 import com.kintsu.app.data.model.DailyIntentionEntity
 import com.kintsu.app.data.model.DigitalDetoxEntity
+import com.kintsu.app.data.model.DistractionInterventionLogEntity
+import com.kintsu.app.data.model.FocusLockSessionEntity
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.FrequencyType
 import com.kintsu.app.data.model.GoalEntity
 import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
+import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -629,6 +633,10 @@ class KintsuRepository(
         wellbeingDao.clearUrgeLogs()
         wellbeingDao.clearCommitmentLocks()
         wellbeingDao.clearShopInventory()
+        wellbeingDao.clearBlockedWebsites()
+        wellbeingDao.clearFocusLockSessions()
+        wellbeingDao.clearDistractionInterventions()
+        wellbeingDao.clearIntentionalBreaks()
         database.syncDao().clearRegistry()
         database.syncDao().clearQueue()
         settingsDataStore.resetSettings()
@@ -811,6 +819,11 @@ class KintsuRepository(
     val allShopItems: Flow<List<ShopItemEntity>> = wellbeingDao.getAllShopItems()
     val allDetoxSessions: Flow<List<DigitalDetoxEntity>> = wellbeingDao.getAllDetoxSessions()
     val activeCommitmentLocks: Flow<List<CommitmentLockEntity>> = wellbeingDao.getActiveCommitmentLocks()
+    val allBlockedWebsites: Flow<List<BlockedWebsiteEntity>> = wellbeingDao.getAllBlockedWebsites()
+    val activeBlockedWebsites: Flow<List<BlockedWebsiteEntity>> = wellbeingDao.getActiveBlockedWebsites()
+    val allFocusLockSessions: Flow<List<FocusLockSessionEntity>> = wellbeingDao.getAllFocusLockSessions()
+    val allInterventions: Flow<List<DistractionInterventionLogEntity>> = wellbeingDao.getAllInterventions()
+    val allBreaks: Flow<List<IntentionalBreakLogEntity>> = wellbeingDao.getAllBreaks()
 
     suspend fun awardCoins(amount: Int) {
         settingsDataStore.addCoins(amount)
@@ -899,7 +912,7 @@ class KintsuRepository(
         groupId: Long,
         mode: String,
         limitMinutes: Int,
-        strictness: String,
+        strictness: String = "GENTLE",
         pauseSeconds: Int = 10,
         pausePrompt: String = "What are you here for?"
     ): Long {
@@ -928,6 +941,10 @@ class KintsuRepository(
                 daysOfWeekMask = daysMask
             )
         )
+    }
+
+    suspend fun addBlockSchedule(ruleId: Long, startMin: Int, endMin: Int, daysMask: Int): Long {
+        return addSchedule(ruleId, startMin, endMin, daysMask)
     }
 
     suspend fun startDigitalDetox(durationMinutes: Int, intention: String, allowedPackages: String, enableDnd: Boolean): Long {
@@ -985,6 +1002,117 @@ class KintsuRepository(
                 intensity = intensity,
                 triggerTags = tags,
                 note = note.ifBlank { null }
+            )
+        )
+    }
+
+    // --- Blocked Websites ---
+    suspend fun addBlockedWebsite(domain: String, groupName: String = "Social", mode: String = "ALWAYS_BLOCKED", matchSubdomains: Boolean = true): Long {
+        return wellbeingDao.insertBlockedWebsite(
+            BlockedWebsiteEntity(
+                domain = domain.trim().lowercase(),
+                groupName = groupName,
+                mode = mode,
+                matchSubdomains = matchSubdomains,
+                isEnabled = true
+            )
+        )
+    }
+
+    suspend fun updateBlockedWebsite(website: BlockedWebsiteEntity) {
+        wellbeingDao.updateBlockedWebsite(website)
+    }
+
+    suspend fun deleteBlockedWebsite(website: BlockedWebsiteEntity) {
+        wellbeingDao.deleteBlockedWebsite(website)
+    }
+
+    // --- Focus Lock Sessions ---
+    suspend fun startFocusLockSession(
+        title: String,
+        durationMinutes: Int,
+        restrictedGroupIds: String,
+        restrictedWebsites: Boolean,
+        strictness: String,
+        breaksAllowed: Boolean,
+        maxBreaks: Int = 2
+    ): Long {
+        val now = System.currentTimeMillis()
+        val endTime = now + (durationMinutes * 60 * 1000L)
+        return wellbeingDao.insertFocusLockSession(
+            FocusLockSessionEntity(
+                title = title,
+                durationMinutes = durationMinutes,
+                startTimeMillis = now,
+                endTimeMillis = endTime,
+                restrictedAppGroupIds = restrictedGroupIds,
+                restrictedWebsitesEnabled = restrictedWebsites,
+                strictnessMode = strictness,
+                breaksAllowed = breaksAllowed,
+                maxBreaks = maxBreaks,
+                breaksTaken = 0,
+                isCompleted = false,
+                wasEarlyExit = false
+            )
+        )
+    }
+
+    suspend fun endFocusLockSession(session: FocusLockSessionEntity, wasEarly: Boolean) {
+        wellbeingDao.updateFocusLockSession(
+            session.copy(
+                isCompleted = true,
+                wasEarlyExit = wasEarly
+            )
+        )
+    }
+
+    fun observeActiveFocusLockSession(): Flow<FocusLockSessionEntity?> {
+        return wellbeingDao.observeActiveFocusLockSession(System.currentTimeMillis())
+    }
+
+    suspend fun getActiveFocusLockSession(): FocusLockSessionEntity? {
+        return wellbeingDao.getActiveFocusLockSession(System.currentTimeMillis())
+    }
+
+    // --- Distraction Interventions ---
+    suspend fun logDistractionIntervention(
+        packageName: String,
+        style: String,
+        userAction: String,
+        reason: String? = null,
+        alternative: String? = null
+    ): Long {
+        return wellbeingDao.insertIntervention(
+            DistractionInterventionLogEntity(
+                packageName = packageName,
+                timestampMillis = System.currentTimeMillis(),
+                interventionStyle = style,
+                userAction = userAction,
+                choiceReason = reason,
+                alternativeChosen = alternative
+            )
+        )
+    }
+
+    fun getInterventionsCountToday(): Flow<Int> {
+        val startOfDay = LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+        return wellbeingDao.getInterventionsCountToday(startOfDay)
+    }
+
+    // --- Intentional Breaks ---
+    suspend fun logIntentionalBreak(
+        target: String,
+        durationMinutes: Int,
+        sessionId: Long? = null,
+        reason: String? = null
+    ): Long {
+        return wellbeingDao.insertBreak(
+            IntentionalBreakLogEntity(
+                targetPackageOrDomain = target,
+                durationMinutes = durationMinutes,
+                timestampMillis = System.currentTimeMillis(),
+                associatedSessionId = sessionId,
+                reason = reason
             )
         )
     }

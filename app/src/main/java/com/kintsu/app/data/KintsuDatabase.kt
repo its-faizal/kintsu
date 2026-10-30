@@ -17,15 +17,19 @@ import com.kintsu.app.data.dao.TaskDao
 import com.kintsu.app.data.dao.WeeklyReviewDao
 import com.kintsu.app.data.dao.WellbeingDao
 import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
 import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.CommitmentLockEntity
 import com.kintsu.app.data.model.DailyIntentionEntity
 import com.kintsu.app.data.model.DigitalDetoxEntity
+import com.kintsu.app.data.model.DistractionInterventionLogEntity
+import com.kintsu.app.data.model.FocusLockSessionEntity
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.GoalEntity
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
+import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -37,6 +41,71 @@ import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS blocked_websites (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                domain TEXT NOT NULL,
+                groupName TEXT NOT NULL DEFAULT 'Social',
+                mode TEXT NOT NULL DEFAULT 'ALWAYS_BLOCKED',
+                matchSubdomains INTEGER NOT NULL DEFAULT 1,
+                isEnabled INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_blocked_websites_domain ON blocked_websites(domain)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_blocked_websites_groupName ON blocked_websites(groupName)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_blocked_websites_isEnabled ON blocked_websites(isEnabled)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS focus_lock_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                title TEXT NOT NULL DEFAULT 'Deep Focus',
+                durationMinutes INTEGER NOT NULL DEFAULT 25,
+                startTimeMillis INTEGER NOT NULL DEFAULT 0,
+                endTimeMillis INTEGER NOT NULL DEFAULT 0,
+                restrictedAppGroupIds TEXT NOT NULL DEFAULT '',
+                restrictedWebsitesEnabled INTEGER NOT NULL DEFAULT 1,
+                strictnessMode TEXT NOT NULL DEFAULT 'COMMITTED',
+                breaksAllowed INTEGER NOT NULL DEFAULT 1,
+                maxBreaks INTEGER NOT NULL DEFAULT 2,
+                breaksTaken INTEGER NOT NULL DEFAULT 0,
+                isCompleted INTEGER NOT NULL DEFAULT 0,
+                wasEarlyExit INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_focus_lock_sessions_isCompleted ON focus_lock_sessions(isCompleted)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_focus_lock_sessions_startTimeMillis ON focus_lock_sessions(startTimeMillis)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS distraction_interventions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                packageName TEXT NOT NULL,
+                timestampMillis INTEGER NOT NULL DEFAULT 0,
+                interventionStyle TEXT NOT NULL DEFAULT 'BREATHING',
+                userAction TEXT NOT NULL,
+                choiceReason TEXT,
+                alternativeChosen TEXT
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_distraction_interventions_packageName ON distraction_interventions(packageName)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_distraction_interventions_timestampMillis ON distraction_interventions(timestampMillis)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS intentional_breaks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                targetPackageOrDomain TEXT NOT NULL,
+                durationMinutes INTEGER NOT NULL,
+                timestampMillis INTEGER NOT NULL DEFAULT 0,
+                associatedSessionId INTEGER,
+                reason TEXT
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_intentional_breaks_timestampMillis ON intentional_breaks(timestampMillis)")
+    }
+}
 
 val MIGRATION_8_9 = object : Migration(8, 9) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -341,9 +410,13 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         QuitHabitEntity::class,
         UrgeLogEntity::class,
         CommitmentLockEntity::class,
-        ShopItemEntity::class
+        ShopItemEntity::class,
+        BlockedWebsiteEntity::class,
+        FocusLockSessionEntity::class,
+        DistractionInterventionLogEntity::class,
+        IntentionalBreakLogEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -377,7 +450,8 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_5_6,
                         MIGRATION_6_7,
                         MIGRATION_7_8,
-                        MIGRATION_8_9
+                        MIGRATION_8_9,
+                        MIGRATION_9_10
                     )
                     .build()
                 INSTANCE = instance

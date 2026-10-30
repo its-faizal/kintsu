@@ -112,6 +112,7 @@ fun HomeScreen(
     onOpenShop: () -> Unit = {},
     onOpenDetox: () -> Unit = {},
     onOpenQuitHabits: () -> Unit = {},
+    onOpenDigitalBalance: () -> Unit = {},
     onOpenWellbeingWizard: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {

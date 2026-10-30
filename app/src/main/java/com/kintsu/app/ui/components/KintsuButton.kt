@@ -37,7 +37,8 @@ enum class KintsuButtonVariant {
     PRIMARY,
     SECONDARY,
     ACCENT_SOFT,
-    TEXT
+    TEXT,
+    DANGER
 }
 
 @Composable
@@ -77,6 +78,9 @@ fun KintsuButton(
         }
         KintsuButtonVariant.TEXT -> {
             Color.Transparent to if (enabled) colors.accentText else colors.textTertiary
+        }
+        KintsuButtonVariant.DANGER -> {
+            if (enabled) colors.error to colors.onError else colors.surface to colors.textTertiary
         }
     }
 

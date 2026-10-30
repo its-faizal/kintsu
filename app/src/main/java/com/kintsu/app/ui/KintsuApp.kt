@@ -41,6 +41,7 @@ import com.kintsu.app.util.PermissionHelper
 import com.kintsu.app.ui.screens.FocusScreen
 import com.kintsu.app.ui.screens.GoalsScreen
 import com.kintsu.app.ui.screens.HabitsScreen
+import com.kintsu.app.wellbeing.ui.DigitalBalanceScreen
 import com.kintsu.app.wellbeing.ui.DigitalDetoxSheet
 import com.kintsu.app.wellbeing.ui.QuitHabitsSheet
 import com.kintsu.app.wellbeing.ui.SanctuaryShopSheet
@@ -93,6 +94,16 @@ fun KintsuApp(
     val isDetoxOpen by viewModel.isDetoxOpen.collectAsState()
     val isQuitHabitsOpen by viewModel.isQuitHabitsOpen.collectAsState()
     val isWellbeingWizardOpen by viewModel.isWellbeingWizardOpen.collectAsState()
+    val isDigitalBalanceOpen by viewModel.isDigitalBalanceOpen.collectAsState()
+    val allAppGroups by viewModel.allAppGroups.collectAsState()
+    val activeBlockRules by viewModel.activeBlockRules.collectAsState()
+    val allBlockSchedules by viewModel.allBlockSchedules.collectAsState()
+    val allBlockedWebsites by viewModel.allBlockedWebsites.collectAsState()
+    val activeFocusLockSession by viewModel.activeFocusLockSession.collectAsState()
+    val allFocusLockSessions by viewModel.allFocusLockSessions.collectAsState()
+    val allInterventions by viewModel.allInterventions.collectAsState()
+    val interventionsTodayCount by viewModel.interventionsTodayCount.collectAsState()
+    val allBreaks by viewModel.allBreaks.collectAsState()
     val allShopItems by viewModel.allShopItems.collectAsState()
     val activeQuitHabits by viewModel.activeQuitHabits.collectAsState()
     val allDetoxSessions by viewModel.allDetoxSessions.collectAsState()
@@ -330,6 +341,7 @@ fun KintsuApp(
                         Result.failure(e)
                     }
                 },
+                onOpenDigitalBalance = { viewModel.setDigitalBalanceOpen(true) },
                 onOpenWellbeingWizard = { viewModel.setWellbeingWizardOpen(true) },
                 onOpenDetox = { viewModel.setDetoxOpen(true) },
                 onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
@@ -431,6 +443,7 @@ fun KintsuApp(
                                     onOpenShop = { viewModel.setShopOpen(true) },
                                     onOpenDetox = { viewModel.setDetoxOpen(true) },
                                     onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
+                                    onOpenDigitalBalance = { viewModel.setDigitalBalanceOpen(true) },
                                     onOpenWellbeingWizard = { viewModel.setWellbeingWizardOpen(true) }
                                 )
                             }
@@ -659,6 +672,43 @@ fun KintsuApp(
                     viewModel.setWellbeingWizardOpen(false)
                     viewModel.setWellbeingEnabled(true)
                 }
+            )
+        }
+
+        if (isDigitalBalanceOpen) {
+            BackHandler {
+                viewModel.setDigitalBalanceOpen(false)
+            }
+            DigitalBalanceScreen(
+                settings = settings,
+                appGroups = allAppGroups,
+                blockRules = activeBlockRules,
+                blockSchedules = allBlockSchedules,
+                blockedWebsites = allBlockedWebsites,
+                activeFocusLock = activeFocusLockSession,
+                allFocusLockSessions = allFocusLockSessions,
+                interventions = allInterventions,
+                breaks = allBreaks,
+                interventionsTodayCount = interventionsTodayCount,
+                onBack = { viewModel.setDigitalBalanceOpen(false) },
+                onSaveAppGroup = { name, cat, pkgs -> viewModel.addAppGroup(name, cat, pkgs) },
+                onSaveRule = { gid, mode, limit -> viewModel.addBlockRule(gid, mode, limit) },
+                onAddWebsite = { domain, group, mode, matchSubs -> viewModel.addBlockedWebsite(domain, group, mode, matchSubs) },
+                onToggleWebsite = { viewModel.updateBlockedWebsite(it) },
+                onDeleteWebsite = { viewModel.deleteBlockedWebsite(it) },
+                onStartFocusLock = { title, dur, groups, webs, strict, breaks ->
+                    viewModel.startFocusLockSession(title, dur, groups, webs, strict, breaks)
+                },
+                onEndFocusLock = { session, wasEarly -> viewModel.endFocusLockSession(session, wasEarly) },
+                onTakeBreak = { session, minutes -> viewModel.takeFocusLockBreak(session, minutes) },
+                onSaveSchedule = { rid, start, end, days -> viewModel.addBlockSchedule(rid, start, end, days) },
+                onToggleSchedule = { viewModel.updateBlockSchedule(it) },
+                onSaveDailyBudget = { viewModel.setDailyScreenTimeBudgetMinutes(it) },
+                onSaveReintervention = { viewModel.setReinterventionIntervalMinutes(it) },
+                onSaveBreathingPreferences = { style, dur, reint, haptics ->
+                    viewModel.setBreathingPreferences(style, dur, reint, haptics)
+                },
+                onToggleDns = { viewModel.setDnsProtectionEnabled(it) }
             )
         }
     }

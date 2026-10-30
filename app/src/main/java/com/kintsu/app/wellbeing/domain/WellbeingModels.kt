@@ -6,6 +6,51 @@ enum class StrictnessLevel {
     STRICT     // Slow 60s emergency exit with confirmation phrase required
 }
 
+enum class InterventionStyle {
+    BREATHING,          // Animated breathing prompt
+    INTENTIONAL_CHOICE, // Intentional question with choices (Why are you opening?)
+    GENTLE_DELAY,       // Simple countdown bar with no distracting bounce
+    REFLECTION          // "Is this how you want to spend the next few minutes?"
+}
+
+enum class FocusLockStrictness {
+    FLEXIBLE,        // Normal pause / end
+    COMMITTED,       // Confirmed duration, confirmation flow to exit
+    DEEP_COMMITMENT  // Friction reflection period before early exit
+}
+
+enum class WebsiteBlockMode {
+    ALWAYS_BLOCKED,
+    SCHEDULED,
+    FOCUS_ONLY,
+    LIMITED_ACCESS
+}
+
+enum class ProtectionState {
+    ACTIVE,
+    PAUSED,
+    NO_RESTRICTIONS,
+    SETUP_REQUIRED
+}
+
+data class InstalledAppItem(
+    val packageName: String,
+    val appName: String,
+    val categoryName: String = "Other",
+    val usageMinutesToday: Long = 0,
+    val isSelected: Boolean = false,
+    val activeRuleMode: String = "ALLOW"
+)
+
+data class DistractionMetricSummary(
+    val screenTimeTodayMinutes: Long = 0,
+    val remainingBudgetMinutes: Long? = null,
+    val distractionsInterruptedToday: Int = 0,
+    val activeFocusLockTitle: String? = null,
+    val activeFocusLockRemainingMinutes: Long? = null
+)
+
+
 enum class BlockMode {
     DAILY_LIMIT,    // Per-app or per-group daily time limit
     SCHEDULE,       // Time windows on chosen weekdays (supports overnight)

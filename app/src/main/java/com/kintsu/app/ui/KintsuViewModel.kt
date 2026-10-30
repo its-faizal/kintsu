@@ -9,17 +9,22 @@ import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.data.ProgressStats
 import com.kintsu.app.data.SettingsDataStore
 import com.kintsu.app.data.model.AppGroupEntity
+import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.CommitmentLockEntity
 import com.kintsu.app.data.model.DailyIntentionEntity
 import com.kintsu.app.data.model.DailyPlanItem
 import com.kintsu.app.data.model.DigitalDetoxEntity
+import com.kintsu.app.data.model.DistractionInterventionLogEntity
+import com.kintsu.app.data.model.FocusLockSessionEntity
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.FrequencyType
 import com.kintsu.app.data.model.GoalEntity
 import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
+import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -96,10 +101,14 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     private val _isWellbeingWizardOpen = MutableStateFlow(false)
     val isWellbeingWizardOpen: StateFlow<Boolean> = _isWellbeingWizardOpen.asStateFlow()
 
+    private val _isDigitalBalanceOpen = MutableStateFlow(false)
+    val isDigitalBalanceOpen: StateFlow<Boolean> = _isDigitalBalanceOpen.asStateFlow()
+
     fun setShopOpen(open: Boolean) { _isShopOpen.value = open }
     fun setDetoxOpen(open: Boolean) { _isDetoxOpen.value = open }
     fun setQuitHabitsOpen(open: Boolean) { _isQuitHabitsOpen.value = open }
     fun setWellbeingWizardOpen(open: Boolean) { _isWellbeingWizardOpen.value = open }
+    fun setDigitalBalanceOpen(open: Boolean) { _isDigitalBalanceOpen.value = open }
 
     val allShopItems: StateFlow<List<ShopItemEntity>> = repository.allShopItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -114,6 +123,27 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeBlockRules: StateFlow<List<BlockRuleEntity>> = repository.activeBlockRules
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allBlockSchedules: StateFlow<List<BlockScheduleEntity>> = repository.wellbeingDao.getAllSchedules()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allBlockedWebsites: StateFlow<List<BlockedWebsiteEntity>> = repository.allBlockedWebsites
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allFocusLockSessions: StateFlow<List<FocusLockSessionEntity>> = repository.allFocusLockSessions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activeFocusLockSession: StateFlow<FocusLockSessionEntity?> = repository.observeActiveFocusLockSession()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val allInterventions: StateFlow<List<DistractionInterventionLogEntity>> = repository.allInterventions
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val interventionsTodayCount: StateFlow<Int> = repository.getInterventionsCountToday()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val allBreaks: StateFlow<List<IntentionalBreakLogEntity>> = repository.allBreaks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeCommitmentLocks: StateFlow<List<CommitmentLockEntity>> = repository.activeCommitmentLocks
@@ -312,6 +342,106 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
 
     fun resetFailSafe() {
         viewModelScope.launch { repository.updateSettings { it.setProtectionFailSafeTripped(false) } }
+    }
+
+    fun addAppGroup(name: String, category: String, packages: String) {
+        viewModelScope.launch { repository.addAppGroup(name, category, packages) }
+    }
+
+    fun addBlockRule(groupId: Long, mode: String, dailyLimitMinutes: Int) {
+        viewModelScope.launch { repository.addBlockRule(groupId, mode, dailyLimitMinutes) }
+    }
+
+    fun addBlockedWebsite(domain: String, group: String, mode: String, matchSubdomains: Boolean) {
+        viewModelScope.launch { repository.addBlockedWebsite(domain, group, mode, matchSubdomains) }
+    }
+
+    fun updateBlockedWebsite(website: BlockedWebsiteEntity) {
+        viewModelScope.launch { repository.updateBlockedWebsite(website) }
+    }
+
+    fun deleteBlockedWebsite(website: BlockedWebsiteEntity) {
+        viewModelScope.launch { repository.deleteBlockedWebsite(website) }
+    }
+
+    fun startFocusLockSession(
+        title: String,
+        durationMinutes: Int,
+        restrictedGroupIds: String,
+        restrictedWebsites: Boolean,
+        strictness: String,
+        breaksAllowed: Boolean
+    ) {
+        viewModelScope.launch {
+            repository.startFocusLockSession(
+                title = title,
+                durationMinutes = durationMinutes,
+                restrictedGroupIds = restrictedGroupIds,
+                restrictedWebsites = restrictedWebsites,
+                strictness = strictness,
+                breaksAllowed = breaksAllowed
+            )
+        }
+    }
+
+    fun endFocusLockSession(session: FocusLockSessionEntity, wasEarly: Boolean) {
+        viewModelScope.launch {
+            repository.endFocusLockSession(session, wasEarly)
+        }
+    }
+
+    fun takeFocusLockBreak(session: FocusLockSessionEntity, minutes: Int) {
+        viewModelScope.launch {
+            val updated = session.copy(breaksTaken = session.breaksTaken + 1)
+            repository.wellbeingDao.updateFocusLockSession(updated)
+            repository.logIntentionalBreak(
+                target = "Focus Lock Break",
+                durationMinutes = minutes,
+                sessionId = session.id,
+                reason = "Mindful break"
+            )
+        }
+    }
+
+    fun addBlockSchedule(ruleId: Long, startMin: Int, endMin: Int, daysMask: Int) {
+        viewModelScope.launch {
+            repository.addBlockSchedule(ruleId, startMin, endMin, daysMask)
+        }
+    }
+
+    fun updateBlockSchedule(schedule: BlockScheduleEntity) {
+        viewModelScope.launch {
+            repository.wellbeingDao.updateSchedule(schedule)
+        }
+    }
+
+    fun setDailyScreenTimeBudgetMinutes(minutes: Int) {
+        viewModelScope.launch {
+            repository.updateSettings { it.setDailyScreenTimeBudgetMinutes(minutes) }
+        }
+    }
+
+    fun setReinterventionIntervalMinutes(minutes: Int) {
+        viewModelScope.launch {
+            repository.updateSettings { it.setReinterventionIntervalMinutes(minutes) }
+        }
+    }
+
+    fun setBreathingPreferences(style: String, durationSec: Int, reinterventionMin: Int, haptics: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings {
+                it.setInterventionStyle(style)
+                it.setBreathingDurationSeconds(durationSec)
+                it.setReinterventionIntervalMinutes(reinterventionMin)
+                it.setWellbeingHapticsEnabled(haptics)
+            }
+        }
+    }
+
+    fun setDnsProtectionEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            repository.updateSettings { it.setDnsProtectionEnabled(enabled) }
+        }
     }
 
     fun setWellbeingStrictness(strictness: String) {

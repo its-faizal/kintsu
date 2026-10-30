@@ -29,6 +29,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val limitTracker = DailyLimitTracker()
     private val temporarilyUnlockedUntil = ConcurrentHashMap<String, Long>()
+    private val lastTriggeredTimeMillis = ConcurrentHashMap<String, Long>()
 
     private var failSafeErrorsIn10Min = 0
     private var lastErrorTimeMillis = 0L
@@ -74,9 +75,16 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         val pkgName = event.packageName?.toString() ?: return
         if (ProtectedApps.isProtected(pkgName)) return
 
+        val now = System.currentTimeMillis()
+        // Anti-flicker throttling: ignore repeated events for same package within 3 seconds
+        val lastTrigger = lastTriggeredTimeMillis[pkgName] ?: 0L
+        if (now - lastTrigger < 3000L) {
+            return
+        }
+
         // Check if currently temporarily unlocked
         val unlockExpiry = temporarilyUnlockedUntil[pkgName]
-        if (unlockExpiry != null && System.currentTimeMillis() < unlockExpiry) {
+        if (unlockExpiry != null && now < unlockExpiry) {
             return
         } else if (unlockExpiry != null) {
             temporarilyUnlockedUntil.remove(pkgName)
@@ -99,22 +107,50 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         val db = KintsuDatabase.getDatabase(applicationContext)
         val nowMillis = System.currentTimeMillis()
 
-        // 1. Check Active Digital Detox
-        val activeDetox = db.wellbeingDao().getActiveDetox(nowMillis)
-        if (activeDetox != null) {
-            val allowedList = activeDetox.allowedPackages.split(",").map { it.trim() }.toSet()
-            if (!allowedList.contains(packageName)) {
+        // 1. Check Active Focus Lock Session
+        val activeFocusLock = db.wellbeingDao().getActiveFocusLockSession(nowMillis)
+        if (activeFocusLock != null) {
+            val allGroups = db.wellbeingDao().getAllAppGroups().first()
+            val matchingGroups = allGroups.filter { group ->
+                group.packageNames.split(",").map { it.trim() }.contains(packageName)
+            }
+            val restrictedIds = activeFocusLock.restrictedAppGroupIds.split(",").map { it.trim() }.toSet()
+            val isRestricted = activeFocusLock.restrictedAppGroupIds == "ALL" ||
+                    matchingGroups.any { restrictedIds.contains(it.id.toString()) }
+
+            if (isRestricted) {
+                lastTriggeredTimeMillis[packageName] = nowMillis
                 triggerBlockScreen(
                     targetPackage = packageName,
-                    ruleMode = "DIGITAL_DETOX",
-                    strictness = settings.wellbeingStrictness,
-                    customPrompt = activeDetox.intention ?: "Digital Detox is active."
+                    ruleMode = "FOCUS_LOCK",
+                    strictness = activeFocusLock.strictnessMode,
+                    customPrompt = "Focus Lock is active: ${activeFocusLock.title}",
+                    pauseDurationSeconds = settings.breathingDurationSeconds,
+                    interventionStyle = settings.interventionStyle
                 )
                 return
             }
         }
 
-        // 2. Check App Groups & Rules
+        // 2. Check Active Digital Detox
+        val activeDetox = db.wellbeingDao().getActiveDetox(nowMillis)
+        if (activeDetox != null) {
+            val allowedList = activeDetox.allowedPackages.split(",").map { it.trim() }.toSet()
+            if (!allowedList.contains(packageName)) {
+                lastTriggeredTimeMillis[packageName] = nowMillis
+                triggerBlockScreen(
+                    targetPackage = packageName,
+                    ruleMode = "DIGITAL_DETOX",
+                    strictness = settings.wellbeingStrictness,
+                    customPrompt = activeDetox.intention ?: "Digital Detox is active.",
+                    pauseDurationSeconds = settings.breathingDurationSeconds,
+                    interventionStyle = settings.interventionStyle
+                )
+                return
+            }
+        }
+
+        // 3. Check App Groups & Rules
         val allGroups = db.wellbeingDao().getAllAppGroups().first()
         val matchingGroups = allGroups.filter { group ->
             group.packageNames.split(",").map { it.trim() }.contains(packageName)
@@ -135,12 +171,14 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
                 val isBlocked = evaluateRule(db, rule, packageName, localTime, dayOfWeek)
                 if (isBlocked) {
+                    lastTriggeredTimeMillis[packageName] = nowMillis
                     triggerBlockScreen(
                         targetPackage = packageName,
                         ruleMode = rule.mode,
                         strictness = rule.strictnessLevel,
                         customPrompt = rule.pauseQuestion,
-                        pauseDurationSeconds = rule.pauseBreathingSeconds
+                        pauseDurationSeconds = if (rule.pauseBreathingSeconds > 0) rule.pauseBreathingSeconds else settings.breathingDurationSeconds,
+                        interventionStyle = settings.interventionStyle
                     )
                     return
                 }
@@ -181,7 +219,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         ruleMode: String,
         strictness: String,
         customPrompt: String,
-        pauseDurationSeconds: Int = 10
+        pauseDurationSeconds: Int = 10,
+        interventionStyle: String = "BREATHING"
     ) {
         val intent = Intent(this, BlockActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -192,6 +231,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             putExtra(BlockActivity.EXTRA_STRICTNESS, strictness)
             putExtra(BlockActivity.EXTRA_PROMPT, customPrompt)
             putExtra(BlockActivity.EXTRA_PAUSE_SECONDS, pauseDurationSeconds)
+            putExtra(BlockActivity.EXTRA_INTERVENTION_STYLE, interventionStyle)
         }
         startActivity(intent)
     }
