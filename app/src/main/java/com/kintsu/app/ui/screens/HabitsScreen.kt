@@ -520,7 +520,7 @@ fun HabitsScreen(
                     )
                 }
             } else {
-                items(displayedHabits, key = { it.id }) { habit ->
+                items(displayedHabits, key = { "habit_${it.id}" }) { habit ->
                     val log = todayLogs.find { it.habitId == habit.id }
                     val isDone = log?.isCompleted == true
                     val isRepaired = log?.isRepairedGold == true

@@ -134,7 +134,7 @@ fun GoalsScreen(
                     )
                 }
             } else {
-                items(goals, key = { it.id }) { goal ->
+                items(goals, key = { "goal_${it.id}" }) { goal ->
                     val linkedTasks = tasks.filter { it.linkedGoalId == goal.id }
                     val linkedHabits = habits.filter { it.linkedGoalId == goal.id }
                     GoalRowItem(

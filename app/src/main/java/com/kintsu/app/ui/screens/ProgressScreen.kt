@@ -581,7 +581,7 @@ fun ProgressScreen(
                     }
                 }
             } else {
-                items(goals, key = { it.id }) { goal ->
+                items(goals, key = { "goal_${it.id}" }) { goal ->
                     val linkedTasks = tasks.filter { it.linkedGoalId == goal.id }
                     val linkedHabits = habits.filter { it.linkedGoalId == goal.id }
                     val totalLinkedItems = linkedTasks.size + linkedHabits.size
@@ -739,7 +739,7 @@ fun ProgressScreen(
                     )
                 }
 
-                items(allWeeklyReviews, key = { it.id }) { review ->
+                items(allWeeklyReviews, key = { "review_${it.id}" }) { review ->
                     val startStr = remember(review.weekStartEpochDay) {
                         LocalDate.ofEpochDay(review.weekStartEpochDay).toString()
                     }
@@ -812,7 +812,7 @@ fun ProgressScreen(
                     )
                 }
 
-                items(allIntentions.take(5), key = { it.id }) { intention ->
+                items(allIntentions.take(5), key = { "intention_${it.id}" }) { intention ->
                     val dateFormatted = remember(intention.dateEpochDay) {
                         LocalDate.ofEpochDay(intention.dateEpochDay).toString()
                     }
@@ -863,7 +863,7 @@ fun ProgressScreen(
                     )
                 }
 
-                items(allJournalEntries.take(5), key = { it.id }) { entry ->
+                items(allJournalEntries.take(5), key = { "journal_${it.id}" }) { entry ->
                     val dateFormatted = remember(entry.dateEpochDay) {
                         LocalDate.ofEpochDay(entry.dateEpochDay).toString()
                     }

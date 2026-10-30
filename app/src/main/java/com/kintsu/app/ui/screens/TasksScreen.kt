@@ -580,7 +580,7 @@ fun TasksScreen(
                                 }
                             }
                         } else {
-                            items(blockTasks, key = { it.id }) { task ->
+                            items(blockTasks, key = { "block_task_${it.id}" }) { task ->
                                 val taskSubtasks = subtasks.filter { it.taskId == task.id }
                                 val linkedGoal = goals.find { it.id == task.linkedGoalId }
                                 TaskRowItem(
@@ -620,7 +620,7 @@ fun TasksScreen(
                         }
                     }
 
-                    items(unscheduledPendingTasks, key = { it.id }) { task ->
+                    items(unscheduledPendingTasks, key = { "unscheduled_task_${it.id}" }) { task ->
                         val taskSubtasks = subtasks.filter { it.taskId == task.id }
                         val linkedGoal = goals.find { it.id == task.linkedGoalId }
                         TaskRowItem(
@@ -658,7 +658,7 @@ fun TasksScreen(
                         )
                     }
                 } else {
-                    items(displayedTasks, key = { it.id }) { task ->
+                    items(displayedTasks, key = { "displayed_task_${it.id}" }) { task ->
                         val taskSubtasks = subtasks.filter { it.taskId == task.id }
                         val linkedGoal = goals.find { it.id == task.linkedGoalId }
                         TaskRowItem(
