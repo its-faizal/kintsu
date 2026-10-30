@@ -119,20 +119,48 @@ fun KintsuApp(
         }
     }
 
-    // Handle App Shortcuts from home launcher
+    // Handle App Shortcuts & Widget Navigation Actions
     LaunchedEffect(shortcutAction) {
         when (shortcutAction) {
-            "com.kintsu.app.shortcut.ADD_TASK" -> {
+            "com.kintsu.app.widget.TAB_HOME" -> {
+                viewModel.selectTab(KintsuNavTab.HOME)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.widget.TAB_HABITS" -> {
+                viewModel.selectTab(KintsuNavTab.HABITS)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.widget.TAB_TASKS" -> {
+                viewModel.selectTab(KintsuNavTab.TASKS)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.widget.TAB_GOALS" -> {
+                viewModel.selectTab(KintsuNavTab.GOALS)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.widget.TAB_PROGRESS" -> {
+                viewModel.selectTab(KintsuNavTab.PROGRESS)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.shortcut.ADD_TASK", "com.kintsu.app.widget.ADD_TASK" -> {
                 externalAddTask = true
                 viewModel.selectTab(KintsuNavTab.TASKS)
                 onShortcutHandled()
             }
-            "com.kintsu.app.shortcut.START_FOCUS" -> {
+            "com.kintsu.app.widget.ADD_HABIT" -> {
+                viewModel.selectTab(KintsuNavTab.HABITS)
+                onShortcutHandled()
+            }
+            "com.kintsu.app.shortcut.START_FOCUS", "com.kintsu.app.widget.OPEN_FOCUS" -> {
                 isFocusOpen = true
                 onShortcutHandled()
             }
-            "com.kintsu.app.shortcut.JOURNAL" -> {
+            "com.kintsu.app.shortcut.JOURNAL", "com.kintsu.app.widget.OPEN_JOURNAL" -> {
                 isJournalOpen = true
+                onShortcutHandled()
+            }
+            "com.kintsu.app.widget.OPEN_INTENTION" -> {
+                viewModel.selectTab(KintsuNavTab.HOME)
                 onShortcutHandled()
             }
         }

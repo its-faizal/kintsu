@@ -157,40 +157,6 @@ class HabitsGlanceWidget : GlanceAppWidget() {
     }
 }
 
-class ToggleHabitWidgetCallback : ActionCallback {
-    override suspend fun onAction(
-        context: Context,
-        glanceId: GlanceId,
-        parameters: ActionParameters
-    ) {
-        val habitId = parameters[HabitIdKey] ?: return
-        val database = KintsuDatabase.getDatabase(context)
-        val todayEpochDay = LocalDate.now().toEpochDay()
-        val currentLog = database.habitDao().getLog(habitId, todayEpochDay)
-
-        if (currentLog == null) {
-            database.habitDao().upsertLog(
-                HabitLogEntity(
-                    habitId = habitId,
-                    epochDay = todayEpochDay,
-                    isCompleted = true,
-                    isRepairedGold = false
-                )
-            )
-        } else {
-            database.habitDao().upsertLog(
-                currentLog.copy(
-                    isCompleted = !currentLog.isCompleted,
-                    isRepairedGold = false
-                )
-            )
-        }
-
-        HabitsGlanceWidget().updateAll(context)
-        StreakGlanceWidget().updateAll(context)
-    }
-}
-
 class HabitsGlanceWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = HabitsGlanceWidget()
 }

@@ -2,6 +2,17 @@
     <string name="app_name">Kintsu</string>
     <string name="widget_habits_desc">Today\'s rituals on your home screen</string>
     <string name="widget_streak_desc">Your quiet streak counter and gold seams</string>
+    <string name="widget_today_overview_desc">Daily dashboard with habits, tasks, goals &amp; focus</string>
+    <string name="widget_focus_timer_desc">Start and manage focus sessions on your home screen</string>
+    <string name="widget_today_tasks_desc">View and complete today\'s tasks directly</string>
+    <string name="widget_daily_habits_desc">Track and complete today\'s scheduled rituals</string>
+    <string name="widget_goals_progress_desc">Track long-term objective progress</string>
+    <string name="widget_daily_quote_desc">Mindful daily intention &amp; calm reflections</string>
+    <string name="widget_daily_progress_desc">Minimal progress ring and completion metrics</string>
+    <string name="widget_quick_add_desc">One-tap shortcuts to tasks, habits, focus &amp; journal</string>
+    <string name="widget_stacked_summary_desc">All-in-one productivity summary across all areas</string>
+    <string name="widget_photo_aesthetic_desc">Calm atmospheric card with today\'s reflection</string>
+    <string name="widget_compact_tasks_desc">Space-efficient 2x2 task completion list</string>
     <string name="shortcut_add_task_short">Add task</string>
     <string name="shortcut_add_task_long">Add a new task</string>
     <string name="shortcut_start_focus_short">Focus</string>

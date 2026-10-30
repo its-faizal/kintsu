@@ -187,6 +187,9 @@ class KintsuRepository(
                 awardCoins(5)
             }
         }
+        try {
+            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
+        } catch (_: Exception) {}
     }
 
     /**
@@ -290,6 +293,9 @@ class KintsuRepository(
                 awardCoins(3)
             }
         }
+        try {
+            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
+        } catch (_: Exception) {}
     }
 
     suspend fun deleteTask(task: TaskEntity) {
@@ -466,6 +472,9 @@ class KintsuRepository(
     // Settings actions
     suspend fun updateSettings(block: suspend (SettingsDataStore) -> Unit) {
         block(settingsDataStore)
+        try {
+            com.kintsu.app.widget.KintsuWidgetUpdater.updateAllWidgets(settingsDataStore.context)
+        } catch (_: Exception) {}
     }
 
     // Stats calculations

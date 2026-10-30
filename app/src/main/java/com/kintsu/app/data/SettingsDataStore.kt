@@ -70,7 +70,7 @@ data class KintsuSettings(
     val deviceAdminEnabled: Boolean = false
 )
 
-class SettingsDataStore(private val context: Context) {
+class SettingsDataStore(val context: Context) {
 
     companion object {
         const val DEFAULT_HOME_SECTION_ORDER = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS"
