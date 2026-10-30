@@ -73,7 +73,22 @@ data class KintsuSettings(
     val reinterventionIntervalMinutes: Int = 10,
     val wellbeingHapticsEnabled: Boolean = true,
     val dnsProtectionEnabled: Boolean = false,
-    val dailyScreenTimeBudgetMinutes: Int = 120
+    val dailyScreenTimeBudgetMinutes: Int = 120,
+    val launcherIconId: String = "icon_original",
+    val widgetSkinId: String = "widget_botanical_sage",
+    val focusTimerFaceId: String = "focus_face_classic_ring",
+    val focusSceneId: String = "focus_scene_none",
+    val focusCompletionEffectId: String = "focus_effect_soft_glow",
+    val profileAvatarId: String = "avatar_botanical",
+    val profileFrameId: String = "frame_classic_thin",
+    val profileBackgroundId: String = "bg_none",
+    val profileTitle: String = "Seeker",
+    val goldRepairStyleId: String = "repair_classic_gold",
+    val habitMarkerId: String = "habit_marker_classic_check",
+    val habitRingId: String = "habit_ring_minimal",
+    val soundPresetHabit: String = "sound_soft_chime",
+    val soundPresetFocus: String = "sound_warm_resonance",
+    val hapticPreset: String = "SUBTLE"
 )
 
 class SettingsDataStore(val context: Context) {
@@ -128,6 +143,21 @@ class SettingsDataStore(val context: Context) {
         val WELLBEING_ENABLED = booleanPreferencesKey("wellbeing_enabled")
         val WELLBEING_STRICTNESS = stringPreferencesKey("wellbeing_strictness")
         val PROTECTION_ACTIVE = booleanPreferencesKey("protection_active")
+        val LAUNCHER_ICON_ID = stringPreferencesKey("launcher_icon_id")
+        val WIDGET_SKIN_ID = stringPreferencesKey("widget_skin_id")
+        val FOCUS_TIMER_FACE_ID = stringPreferencesKey("focus_timer_face_id")
+        val FOCUS_SCENE_ID = stringPreferencesKey("focus_scene_id")
+        val FOCUS_COMPLETION_EFFECT_ID = stringPreferencesKey("focus_completion_effect_id")
+        val PROFILE_AVATAR_ID = stringPreferencesKey("profile_avatar_id")
+        val PROFILE_FRAME_ID = stringPreferencesKey("profile_frame_id")
+        val PROFILE_BACKGROUND_ID = stringPreferencesKey("profile_background_id")
+        val PROFILE_TITLE = stringPreferencesKey("profile_title")
+        val GOLD_REPAIR_STYLE_ID = stringPreferencesKey("gold_repair_style_id")
+        val HABIT_MARKER_ID = stringPreferencesKey("habit_marker_id")
+        val HABIT_RING_ID = stringPreferencesKey("habit_ring_id")
+        val SOUND_PRESET_HABIT = stringPreferencesKey("sound_preset_habit")
+        val SOUND_PRESET_FOCUS = stringPreferencesKey("sound_preset_focus")
+        val HAPTIC_PRESET = stringPreferencesKey("haptic_preset")
         val PROTECTION_FAILSAFE_TRIPPED = booleanPreferencesKey("protection_failsafe_tripped")
         val SCREEN_TIME_GOAL_MINUTES = intPreferencesKey("screen_time_goal_minutes")
         val DEVICE_ADMIN_ENABLED = booleanPreferencesKey("device_admin_enabled")
@@ -242,7 +272,22 @@ class SettingsDataStore(val context: Context) {
             reinterventionIntervalMinutes = prefs[Keys.REINTERVENTION_INTERVAL_MINUTES] ?: 10,
             wellbeingHapticsEnabled = prefs[Keys.WELLBEING_HAPTICS_ENABLED] ?: true,
             dnsProtectionEnabled = prefs[Keys.DNS_PROTECTION_ENABLED] ?: false,
-            dailyScreenTimeBudgetMinutes = prefs[Keys.DAILY_SCREEN_TIME_BUDGET_MINUTES] ?: 120
+            dailyScreenTimeBudgetMinutes = prefs[Keys.DAILY_SCREEN_TIME_BUDGET_MINUTES] ?: 120,
+            launcherIconId = prefs[Keys.LAUNCHER_ICON_ID] ?: "icon_original",
+            widgetSkinId = prefs[Keys.WIDGET_SKIN_ID] ?: "widget_botanical_sage",
+            focusTimerFaceId = prefs[Keys.FOCUS_TIMER_FACE_ID] ?: "focus_face_classic_ring",
+            focusSceneId = prefs[Keys.FOCUS_SCENE_ID] ?: "focus_scene_none",
+            focusCompletionEffectId = prefs[Keys.FOCUS_COMPLETION_EFFECT_ID] ?: "focus_effect_soft_glow",
+            profileAvatarId = prefs[Keys.PROFILE_AVATAR_ID] ?: "avatar_botanical",
+            profileFrameId = prefs[Keys.PROFILE_FRAME_ID] ?: "frame_classic_thin",
+            profileBackgroundId = prefs[Keys.PROFILE_BACKGROUND_ID] ?: "bg_none",
+            profileTitle = prefs[Keys.PROFILE_TITLE] ?: "Seeker",
+            goldRepairStyleId = prefs[Keys.GOLD_REPAIR_STYLE_ID] ?: "repair_classic_gold",
+            habitMarkerId = prefs[Keys.HABIT_MARKER_ID] ?: "habit_marker_classic_check",
+            habitRingId = prefs[Keys.HABIT_RING_ID] ?: "habit_ring_minimal",
+            soundPresetHabit = prefs[Keys.SOUND_PRESET_HABIT] ?: "sound_soft_chime",
+            soundPresetFocus = prefs[Keys.SOUND_PRESET_FOCUS] ?: "sound_warm_resonance",
+            hapticPreset = prefs[Keys.HAPTIC_PRESET] ?: "SUBTLE"
         )
     }
 
@@ -484,6 +529,66 @@ class SettingsDataStore(val context: Context) {
 
     suspend fun setDailyScreenTimeBudgetMinutes(minutes: Int) {
         context.dataStore.edit { it[Keys.DAILY_SCREEN_TIME_BUDGET_MINUTES] = minutes }
+    }
+
+    suspend fun setLauncherIconId(id: String) {
+        context.dataStore.edit { it[Keys.LAUNCHER_ICON_ID] = id }
+    }
+
+    suspend fun setWidgetSkinId(id: String) {
+        context.dataStore.edit { it[Keys.WIDGET_SKIN_ID] = id }
+    }
+
+    suspend fun setFocusTimerFaceId(id: String) {
+        context.dataStore.edit { it[Keys.FOCUS_TIMER_FACE_ID] = id }
+    }
+
+    suspend fun setFocusSceneId(id: String) {
+        context.dataStore.edit { it[Keys.FOCUS_SCENE_ID] = id }
+    }
+
+    suspend fun setFocusCompletionEffectId(id: String) {
+        context.dataStore.edit { it[Keys.FOCUS_COMPLETION_EFFECT_ID] = id }
+    }
+
+    suspend fun setProfileAvatarId(id: String) {
+        context.dataStore.edit { it[Keys.PROFILE_AVATAR_ID] = id }
+    }
+
+    suspend fun setProfileFrameId(id: String) {
+        context.dataStore.edit { it[Keys.PROFILE_FRAME_ID] = id }
+    }
+
+    suspend fun setProfileBackgroundId(id: String) {
+        context.dataStore.edit { it[Keys.PROFILE_BACKGROUND_ID] = id }
+    }
+
+    suspend fun setProfileTitle(title: String) {
+        context.dataStore.edit { it[Keys.PROFILE_TITLE] = title }
+    }
+
+    suspend fun setGoldRepairStyleId(id: String) {
+        context.dataStore.edit { it[Keys.GOLD_REPAIR_STYLE_ID] = id }
+    }
+
+    suspend fun setHabitMarkerId(id: String) {
+        context.dataStore.edit { it[Keys.HABIT_MARKER_ID] = id }
+    }
+
+    suspend fun setHabitRingId(id: String) {
+        context.dataStore.edit { it[Keys.HABIT_RING_ID] = id }
+    }
+
+    suspend fun setSoundPresetHabit(id: String) {
+        context.dataStore.edit { it[Keys.SOUND_PRESET_HABIT] = id }
+    }
+
+    suspend fun setSoundPresetFocus(id: String) {
+        context.dataStore.edit { it[Keys.SOUND_PRESET_FOCUS] = id }
+    }
+
+    suspend fun setHapticPreset(preset: String) {
+        context.dataStore.edit { it[Keys.HAPTIC_PRESET] = preset }
     }
 
     suspend fun resetSettings() {

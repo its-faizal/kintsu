@@ -1,0 +1,57 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="120dp"
+    android:viewportWidth="250"
+    android:viewportHeight="120">
+    <path
+        android:fillColor="#1E231F"
+        android:pathData="M16,0h218a16,16 0 0 1 16,16v88a16,16 0 0 1 -16,16h-218a16,16 0 0 1 -16,-16v-88a16,16 0 0 1 16,-16z"/>
+    <!-- Header title -->
+    <path
+        android:fillColor="#E6ECE8"
+        android:pathData="M24,22h60v6h-60z"/>
+    <path
+        android:fillColor="#8DA382"
+        android:pathData="M24,34h40v4h-40z"/>
+    <!-- 4 Rings -->
+    <!-- Habits Ring -->
+    <path
+        android:strokeColor="#354238"
+        android:strokeWidth="6"
+        android:pathData="M48,80m-20,0a20,20 0 1,1 40,0a20,20 0 1,1 -40,0"/>
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M48,60 A20,20 0 1,1 30,88"/>
+    <!-- Tasks Ring -->
+    <path
+        android:strokeColor="#354238"
+        android:strokeWidth="6"
+        android:pathData="M102,80m-20,0a20,20 0 1,1 40,0a20,20 0 1,1 -40,0"/>
+    <path
+        android:strokeColor="#8DA382"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M102,60 A20,20 0 1,1 118,92"/>
+    <!-- Goals Ring -->
+    <path
+        android:strokeColor="#354238"
+        android:strokeWidth="6"
+        android:pathData="M156,80m-20,0a20,20 0 1,1 40,0a20,20 0 1,1 -40,0"/>
+    <path
+        android:strokeColor="#5E7B93"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M156,60 A20,20 0 1,1 144,95"/>
+    <!-- Focus Ring -->
+    <path
+        android:strokeColor="#354238"
+        android:strokeWidth="6"
+        android:pathData="M210,80m-20,0a20,20 0 1,1 40,0a20,20 0 1,1 -40,0"/>
+    <path
+        android:strokeColor="#C5A059"
+        android:strokeWidth="6"
+        android:strokeLineCap="round"
+        android:pathData="M210,60 A20,20 0 1,1 226,88"/>
+</vector>

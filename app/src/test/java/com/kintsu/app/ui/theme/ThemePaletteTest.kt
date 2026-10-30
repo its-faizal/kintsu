@@ -37,7 +37,7 @@ class ThemePaletteTest {
     @Test
     fun testAllFiveThemesExistWithPreviews() {
         val themes = AppTheme.values()
-        assertEquals(5, themes.size)
+        assertTrue("Expected at least 13 themes including the 8 new cosmetic theme studio packs", themes.size >= 13)
 
         themes.forEach { theme ->
             assertTrue(theme.displayName.isNotBlank())

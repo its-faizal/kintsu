@@ -46,6 +46,7 @@ import com.kintsu.app.wellbeing.ui.DigitalDetoxSheet
 import com.kintsu.app.wellbeing.ui.QuitHabitsSheet
 import com.kintsu.app.wellbeing.ui.SanctuaryShopSheet
 import com.kintsu.app.wellbeing.ui.WellbeingWizardSheet
+import com.kintsu.app.ui.shop.ShopHomeScreen
 import com.kintsu.app.ui.screens.HomeScreen
 import com.kintsu.app.ui.screens.JournalSheet
 import com.kintsu.app.ui.screens.OnboardingScreen
@@ -105,6 +106,9 @@ fun KintsuApp(
     val interventionsTodayCount by viewModel.interventionsTodayCount.collectAsState()
     val allBreaks by viewModel.allBreaks.collectAsState()
     val allShopItems by viewModel.allShopItems.collectAsState()
+    val personalRewards by viewModel.activePersonalRewards.collectAsState()
+    val walletTransactions by viewModel.walletTransactions.collectAsState()
+    val stylePresets by viewModel.allStylePresets.collectAsState()
     val activeQuitHabits by viewModel.activeQuitHabits.collectAsState()
     val allDetoxSessions by viewModel.allDetoxSessions.collectAsState()
     val activeDetox = remember(allDetoxSessions) {
@@ -628,11 +632,37 @@ fun KintsuApp(
         }
 
         if (isShopOpen) {
-            SanctuaryShopSheet(
+            ShopHomeScreen(
                 coinsBalance = settings.coinsBalance,
-                shopItems = allShopItems,
+                coinsEarnedTotal = settings.coinsEarnedTotal,
+                currentSettings = settings,
+                allShopItems = allShopItems,
+                personalRewards = personalRewards,
+                walletTransactions = walletTransactions,
+                stylePresets = stylePresets,
                 onPurchaseItem = { viewModel.purchaseShopItem(it) },
                 onEquipItem = { viewModel.equipShopItem(it) },
+                onCreatePersonalReward = { title, desc, cost, cat, icon ->
+                    viewModel.createPersonalReward(title, desc, cost, cat, icon)
+                },
+                onRedeemPersonalReward = { viewModel.redeemPersonalReward(it) },
+                onArchivePersonalReward = { viewModel.archivePersonalReward(it) },
+                onSaveStylePreset = { name, theme, accent, icon, skin, face ->
+                    viewModel.saveStylePreset(name, theme, accent, icon, skin, face)
+                },
+                onApplyStylePreset = { preset ->
+                    val themeEnum = com.kintsu.app.ui.theme.AppTheme.values().find {
+                        it.displayName.equals(preset.themeName, ignoreCase = true) || it.name.equals(preset.themeName, ignoreCase = true)
+                    }
+                    if (themeEnum != null) {
+                        viewModel.setAppTheme(themeEnum)
+                    }
+                    val itemToEquip = allShopItems.find { it.id == preset.iconId }
+                    if (itemToEquip != null) {
+                        viewModel.equipShopItem(itemToEquip)
+                    }
+                },
+                onDeleteStylePreset = { viewModel.deleteStylePreset(it) },
                 onDismiss = { viewModel.setShopOpen(false) }
             )
         }

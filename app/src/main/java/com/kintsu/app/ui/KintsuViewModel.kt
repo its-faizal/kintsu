@@ -26,14 +26,17 @@ import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
+import com.kintsu.app.data.model.StylePresetEntity
 import com.kintsu.app.data.model.SubtaskEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.data.model.TaskEntity
 import com.kintsu.app.data.model.TaskPriority
 import com.kintsu.app.data.model.TaskRecurrenceType
 import com.kintsu.app.data.model.UrgeLogEntity
+import com.kintsu.app.data.model.WalletTransactionEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.domain.GoldRepairManager
 import com.kintsu.app.domain.HabitRepairState
@@ -111,6 +114,15 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     fun setDigitalBalanceOpen(open: Boolean) { _isDigitalBalanceOpen.value = open }
 
     val allShopItems: StateFlow<List<ShopItemEntity>> = repository.allShopItems
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val activePersonalRewards: StateFlow<List<PersonalRewardEntity>> = repository.getActivePersonalRewards()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val walletTransactions: StateFlow<List<WalletTransactionEntity>> = repository.getAllWalletTransactions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allStylePresets: StateFlow<List<StylePresetEntity>> = repository.getAllStylePresets()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeQuitHabits: StateFlow<List<QuitHabitEntity>> = repository.activeQuitHabits
@@ -304,6 +316,30 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
 
     fun equipShopItem(item: ShopItemEntity) {
         viewModelScope.launch { repository.equipShopItem(item) }
+    }
+
+    fun createPersonalReward(title: String, description: String, cost: Int, category: String, icon: String) {
+        viewModelScope.launch { repository.createPersonalReward(title, description, cost, category, icon) }
+    }
+
+    fun redeemPersonalReward(reward: PersonalRewardEntity) {
+        viewModelScope.launch { repository.redeemPersonalReward(reward) }
+    }
+
+    fun archivePersonalReward(reward: PersonalRewardEntity) {
+        viewModelScope.launch { repository.archivePersonalReward(reward) }
+    }
+
+    fun deletePersonalReward(reward: PersonalRewardEntity) {
+        viewModelScope.launch { repository.deletePersonalReward(reward) }
+    }
+
+    fun saveStylePreset(name: String, theme: String, accent: String, icon: String, skin: String, face: String) {
+        viewModelScope.launch { repository.saveStylePreset(name, theme, accent, icon, skin, face) }
+    }
+
+    fun deleteStylePreset(preset: StylePresetEntity) {
+        viewModelScope.launch { repository.deleteStylePreset(preset) }
     }
 
     fun startDigitalDetox(durationMinutes: Int, intention: String, allowedPackages: String, enableDnd: Boolean) {

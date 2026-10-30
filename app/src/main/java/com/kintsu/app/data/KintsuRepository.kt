@@ -17,15 +17,20 @@ import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
+import com.kintsu.app.data.model.StylePresetEntity
 import com.kintsu.app.data.model.SubtaskEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.data.model.TaskEntity
 import com.kintsu.app.data.model.TaskPriority
 import com.kintsu.app.data.model.TaskRecurrenceType
 import com.kintsu.app.data.model.UrgeLogEntity
+import com.kintsu.app.data.model.WalletTransactionEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
+import com.kintsu.app.ui.theme.AppIconManager
+import com.kintsu.app.ui.theme.AppTheme
 import com.kintsu.app.wellbeing.domain.CommitmentLockManager
 import com.kintsu.app.wellbeing.domain.QuitHabitTracker
 import com.kintsu.app.domain.GoldRepairConfig
@@ -825,16 +830,60 @@ class KintsuRepository(
     val allInterventions: Flow<List<DistractionInterventionLogEntity>> = wellbeingDao.getAllInterventions()
     val allBreaks: Flow<List<IntentionalBreakLogEntity>> = wellbeingDao.getAllBreaks()
 
-    suspend fun awardCoins(amount: Int) {
+    suspend fun awardCoins(
+        amount: Int,
+        reason: String = "Mindful activity completed",
+        sourceActivity: String = "HABIT_COMPLETION",
+        sourceEventId: String = ""
+    ): Boolean {
+        if (amount <= 0) return false
+        if (sourceEventId.isNotBlank()) {
+            val alreadyAwarded = wellbeingDao.countTransactionsForSource(sourceEventId) > 0
+            if (alreadyAwarded) return false
+        }
+
         settingsDataStore.addCoins(amount)
+        wellbeingDao.insertWalletTransaction(
+            WalletTransactionEntity(
+                amount = amount,
+                type = "EARNED",
+                reason = reason,
+                sourceActivity = sourceActivity,
+                sourceEventId = if (sourceEventId.isNotBlank()) sourceEventId else "coin_earn_${System.currentTimeMillis()}"
+            )
+        )
+        return true
     }
 
     suspend fun purchaseShopItem(item: ShopItemEntity): Boolean {
+        if (item.isUnlocked) return true
         val success = settingsDataStore.spendCoins(item.costCoins)
         if (success) {
+            val now = System.currentTimeMillis()
             wellbeingDao.updateShopItem(
-                item.copy(isUnlocked = true, purchasedAtMillis = System.currentTimeMillis())
+                item.copy(isUnlocked = true, purchasedAtMillis = now)
             )
+            wellbeingDao.insertWalletTransaction(
+                WalletTransactionEntity(
+                    amount = -item.costCoins,
+                    type = "SPENT",
+                    reason = "Unlocked ${item.title}",
+                    sourceActivity = "SHOP_PURCHASE",
+                    sourceEventId = "shop_item_${item.id}_$now"
+                )
+            )
+
+            // If it's a bundle, also unlock all items included in this bundle
+            if (item.itemType == "BUNDLE" && item.bundleId.isNotBlank()) {
+                val bundleItems = wellbeingDao.getShopItemsByBundle(item.bundleId)
+                bundleItems.forEach { bi ->
+                    if (!bi.isUnlocked) {
+                        wellbeingDao.updateShopItem(
+                            bi.copy(isUnlocked = true, purchasedAtMillis = now)
+                        )
+                    }
+                }
+            }
         }
         return success
     }
@@ -843,55 +892,117 @@ class KintsuRepository(
         if (!item.isUnlocked) return
         wellbeingDao.unequipAllOfType(item.itemType)
         wellbeingDao.updateShopItem(item.copy(isEquipped = true))
+
+        // Reconcile with persistent settings & system components
+        when (item.itemType) {
+            "THEME" -> {
+                val cleanId = item.id.replace("theme_", "").uppercase()
+                val themeEnum = AppTheme.values().find { it.name.uppercase() == cleanId }
+                if (themeEnum != null) {
+                    settingsDataStore.setAppTheme(themeEnum)
+                }
+            }
+            "APP_ICON" -> {
+                settingsDataStore.setLauncherIconId(item.id)
+                AppIconManager.applyLauncherIcon(settingsDataStore.context, item.id)
+            }
+            "WIDGET_SKIN" -> settingsDataStore.setWidgetSkinId(item.id)
+            "BACKGROUND" -> settingsDataStore.setProfileBackgroundId(item.id)
+            "FOCUS_FACE" -> settingsDataStore.setFocusTimerFaceId(item.id)
+            "FOCUS_SCENE" -> settingsDataStore.setFocusSceneId(item.id)
+            "HABIT_STYLE" -> {
+                if (item.id.startsWith("habit_marker_")) {
+                    settingsDataStore.setHabitMarkerId(item.id)
+                } else if (item.id.startsWith("habit_ring_")) {
+                    settingsDataStore.setHabitRingId(item.id)
+                }
+            }
+            "PROFILE_FRAME" -> settingsDataStore.setProfileFrameId(item.id)
+            "PROFILE_TITLE" -> settingsDataStore.setProfileTitle(item.title.replace("Title: ", ""))
+            "SOUNDSCAPE" -> {
+                if (item.id.contains("resonance") || item.id.contains("piano") || item.id.contains("calm_bell") || item.id.contains("minimal_tone")) {
+                    settingsDataStore.setSoundPresetFocus(item.id)
+                } else {
+                    settingsDataStore.setSoundPresetHabit(item.id)
+                }
+            }
+            "GOLD_REPAIR_STYLE" -> settingsDataStore.setGoldRepairStyleId(item.id)
+        }
     }
 
     suspend fun seedShopCatalogIfEmpty() {
-        val initialItems = listOf(
-            ShopItemEntity(
-                id = "vial_gold_repair",
-                itemType = "GOLD_VIAL",
-                title = "Kintsugi Gold Repair Vial",
-                description = "Restores a cracked habit streak with a golden seam.",
-                costCoins = 30,
-                isUnlocked = true
-            ),
-            ShopItemEntity(
-                id = "theme_twilight",
-                itemType = "THEME",
-                title = "Twilight Indigo Theme",
-                description = "Midnight indigo with radiant warm champagne gold accents.",
-                costCoins = 50
-            ),
-            ShopItemEntity(
-                id = "theme_forest",
-                itemType = "THEME",
-                title = "Forest Moss Zen Theme",
-                description = "Deep woodland pine and calming cedar tones.",
-                costCoins = 50
-            ),
-            ShopItemEntity(
-                id = "sound_fountain",
-                itemType = "SOUNDSCAPE",
-                title = "Bamboo Water Fountain",
-                description = "Gentle shishi-odoshi water drops for deep focus sessions.",
-                costCoins = 40
-            ),
-            ShopItemEntity(
-                id = "sound_singing_bowl",
-                itemType = "SOUNDSCAPE",
-                title = "Temple Singing Bowl",
-                description = "Harmonic bell chime marking mindful intervals.",
-                costCoins = 40
-            ),
-            ShopItemEntity(
-                id = "badge_detox_master",
-                itemType = "BADGE_SLOT",
-                title = "Digital Detox Master Badge",
-                description = "Showcase milestone for completing 24h uninterrupted detox.",
-                costCoins = 75
+        val completeCatalog = ShopCatalog.createCompleteCatalog()
+        wellbeingDao.seedShopItems(completeCatalog)
+    }
+
+    // --- Personal Rewards ---
+    fun getActivePersonalRewards() = wellbeingDao.getActivePersonalRewards()
+    fun getAllPersonalRewards() = wellbeingDao.getAllPersonalRewards()
+
+    suspend fun createPersonalReward(title: String, description: String, cost: Int, category: String, icon: String): Long {
+        return wellbeingDao.insertPersonalReward(
+            PersonalRewardEntity(
+                title = title,
+                description = description,
+                costCoins = cost,
+                category = category,
+                iconName = icon
             )
         )
-        wellbeingDao.seedShopItems(initialItems)
+    }
+
+    suspend fun redeemPersonalReward(reward: PersonalRewardEntity): Boolean {
+        val success = settingsDataStore.spendCoins(reward.costCoins)
+        if (success) {
+            val now = System.currentTimeMillis()
+            wellbeingDao.updatePersonalReward(
+                reward.copy(
+                    redemptionsCount = reward.redemptionsCount + 1,
+                    lastRedeemedAtMillis = now
+                )
+            )
+            wellbeingDao.insertWalletTransaction(
+                WalletTransactionEntity(
+                    amount = -reward.costCoins,
+                    type = "SPENT",
+                    reason = "Redeemed reward: ${reward.title}",
+                    sourceActivity = "PERSONAL_REWARD",
+                    sourceEventId = "personal_reward_${reward.id}_$now"
+                )
+            )
+        }
+        return success
+    }
+
+    suspend fun archivePersonalReward(reward: PersonalRewardEntity) {
+        wellbeingDao.updatePersonalReward(reward.copy(isArchived = true))
+    }
+
+    suspend fun deletePersonalReward(reward: PersonalRewardEntity) {
+        wellbeingDao.deletePersonalReward(reward)
+    }
+
+    // --- Wallet Transactions Ledger ---
+    fun getAllWalletTransactions() = wellbeingDao.getAllWalletTransactions()
+
+    // --- Style Presets ---
+    fun getAllStylePresets() = wellbeingDao.getAllStylePresets()
+
+    suspend fun saveStylePreset(name: String, theme: String, accent: String, icon: String, skin: String, face: String): Long {
+        return wellbeingDao.insertStylePreset(
+            StylePresetEntity(
+                name = name,
+                themeName = theme,
+                accentName = accent,
+                iconId = icon,
+                widgetSkinId = skin,
+                focusFaceId = face
+            )
+        )
+    }
+
+    suspend fun deleteStylePreset(preset: StylePresetEntity) {
+        wellbeingDao.deleteStylePreset(preset)
     }
 
     suspend fun addAppGroup(name: String, category: String, packages: String): Long {

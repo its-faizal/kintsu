@@ -15,9 +15,12 @@ import com.kintsu.app.data.model.DigitalDetoxEntity
 import com.kintsu.app.data.model.DistractionInterventionLogEntity
 import com.kintsu.app.data.model.FocusLockSessionEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
+import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
+import com.kintsu.app.data.model.StylePresetEntity
 import com.kintsu.app.data.model.UrgeLogEntity
+import com.kintsu.app.data.model.WalletTransactionEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -242,4 +245,62 @@ interface WellbeingDao {
 
     @Query("DELETE FROM intentional_breaks")
     suspend fun clearIntentionalBreaks()
+
+    // --- Shop Category & Wishlist ---
+    @Query("SELECT * FROM shop_inventory WHERE category = :category ORDER BY costCoins ASC")
+    fun getShopItemsByCategory(category: String): Flow<List<ShopItemEntity>>
+
+    @Query("SELECT * FROM shop_inventory WHERE bundleId = :bundleId")
+    suspend fun getShopItemsByBundle(bundleId: String): List<ShopItemEntity>
+
+    @Query("UPDATE shop_inventory SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun updateShopItemFavorite(id: String, isFavorite: Boolean)
+
+    // --- Wallet Transactions Ledger ---
+    @Query("SELECT * FROM wallet_transactions ORDER BY timestampMillis DESC")
+    fun getAllWalletTransactions(): Flow<List<WalletTransactionEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWalletTransaction(tx: WalletTransactionEntity): Long
+
+    @Query("SELECT COUNT(*) FROM wallet_transactions WHERE sourceEventId = :sourceEventId")
+    suspend fun countTransactionsForSource(sourceEventId: String): Int
+
+    @Query("DELETE FROM wallet_transactions")
+    suspend fun clearWalletTransactions()
+
+    // --- Personal Rewards ---
+    @Query("SELECT * FROM personal_rewards WHERE isArchived = 0 ORDER BY createdAtMillis DESC")
+    fun getActivePersonalRewards(): Flow<List<PersonalRewardEntity>>
+
+    @Query("SELECT * FROM personal_rewards ORDER BY createdAtMillis DESC")
+    fun getAllPersonalRewards(): Flow<List<PersonalRewardEntity>>
+
+    @Query("SELECT * FROM personal_rewards WHERE id = :id LIMIT 1")
+    suspend fun getPersonalRewardById(id: Long): PersonalRewardEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertPersonalReward(reward: PersonalRewardEntity): Long
+
+    @Update
+    suspend fun updatePersonalReward(reward: PersonalRewardEntity)
+
+    @Delete
+    suspend fun deletePersonalReward(reward: PersonalRewardEntity)
+
+    @Query("DELETE FROM personal_rewards")
+    suspend fun clearPersonalRewards()
+
+    // --- Style Presets ---
+    @Query("SELECT * FROM style_presets ORDER BY createdAtMillis DESC")
+    fun getAllStylePresets(): Flow<List<StylePresetEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStylePreset(preset: StylePresetEntity): Long
+
+    @Delete
+    suspend fun deleteStylePreset(preset: StylePresetEntity)
+
+    @Query("DELETE FROM style_presets")
+    suspend fun clearStylePresets()
 }

@@ -6,6 +6,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_preview_aesthetic_quote"
+    android:previewImage="@drawable/widget_preview_aesthetic_quote"
     android:previewLayout="@layout/widget_preview_aesthetic_quote"
     android:description="@string/widget_aesthetic_quote_desc"
     android:resizeMode="horizontal|vertical"

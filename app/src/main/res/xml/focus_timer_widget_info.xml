@@ -6,6 +6,7 @@
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_preview_focus_timer"
+    android:previewImage="@drawable/widget_preview_focus_timer"
     android:previewLayout="@layout/widget_preview_focus_timer"
     android:description="@string/widget_focus_timer_desc"
     android:resizeMode="horizontal|vertical"

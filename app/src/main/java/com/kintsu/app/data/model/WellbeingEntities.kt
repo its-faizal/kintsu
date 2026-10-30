@@ -185,13 +185,19 @@ data class CommitmentLockEntity(
 data class ShopItemEntity(
     @PrimaryKey
     val id: String, // e.g. "theme_twilight", "sound_singing_bowl", "vial_gold_repair", "badge_zen_master"
-    val itemType: String, // THEME, SOUNDSCAPE, GOLD_VIAL, BADGE_SLOT
+    val itemType: String, // THEME, SOUNDSCAPE, GOLD_VIAL, BADGE_SLOT, APP_ICON, WIDGET_SKIN, BACKGROUND, FOCUS_FACE, HABIT_STYLE, PROFILE_FRAME
     val title: String,
     val description: String,
     val costCoins: Int,
     val isUnlocked: Boolean = false,
     val isEquipped: Boolean = false,
-    val purchasedAtMillis: Long? = null
+    val purchasedAtMillis: Long? = null,
+    val category: String = "THEMES", // THEMES, ICONS, WIDGETS, BACKGROUNDS, FOCUS, HABITS, PROFILE, SOUNDS, COLLECTIONS, GOLD_REPAIR
+    val previewAssetId: String = "",
+    val bundleId: String = "",
+    val collectionName: String = "",
+    val isFavorite: Boolean = false,
+    val tag: String = "" // NEW, FEATURED, BUNDLE, FREE, SIGNATURE
 )
 
 /**
@@ -282,4 +288,73 @@ data class IntentionalBreakLogEntity(
     val associatedSessionId: Long? = null,
     val reason: String? = null
 )
+
+/**
+ * Reward points transaction ledger for Kintsu Gold.
+ * Records all earned and spent transactions with idempotency sourceEventId.
+ */
+@Entity(
+    tableName = "wallet_transactions",
+    indices = [
+        Index("timestampMillis"),
+        Index("sourceEventId"),
+        Index("sourceActivity")
+    ]
+)
+data class WalletTransactionEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val amount: Int, // Positive for earned, negative for spent
+    val type: String, // "EARNED", "SPENT"
+    val reason: String,
+    val sourceActivity: String, // "HABIT_COMPLETION", "TASK_COMPLETION", "FOCUS_SESSION", "WEEKLY_REVIEW", "GOAL_MILESTONE", "SHOP_PURCHASE", "PERSONAL_REWARD"
+    val sourceEventId: String, // Unique idempotency key
+    val timestampMillis: Long = System.currentTimeMillis()
+)
+
+/**
+ * User-created custom reward (e.g. "Watch an episode", "Enjoy creative break").
+ */
+@Entity(
+    tableName = "personal_rewards",
+    indices = [
+        Index("category"),
+        Index("isArchived")
+    ]
+)
+data class PersonalRewardEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val title: String,
+    val description: String = "",
+    val costCoins: Int = 50,
+    val category: String = "Leisure", // "Leisure", "Creative", "Wellness", "Treat", "Social"
+    val iconName: String = "Star",
+    val isArchived: Boolean = false,
+    val redemptionsCount: Int = 0,
+    val lastRedeemedAtMillis: Long? = null,
+    val createdAtMillis: Long = System.currentTimeMillis()
+)
+
+/**
+ * Saved appearance combination (Theme + Accent + Icon + Widget Skin + Focus Face).
+ */
+@Entity(
+    tableName = "style_presets",
+    indices = [
+        Index("name")
+    ]
+)
+data class StylePresetEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val name: String,
+    val themeName: String,
+    val accentName: String,
+    val iconId: String,
+    val widgetSkinId: String,
+    val focusFaceId: String,
+    val createdAtMillis: Long = System.currentTimeMillis()
+)
+
 

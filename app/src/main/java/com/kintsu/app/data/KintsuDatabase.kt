@@ -31,16 +31,76 @@ import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
+import com.kintsu.app.data.model.StylePresetEntity
 import com.kintsu.app.data.model.SubtaskEntity
 import com.kintsu.app.data.model.TaskCompletionEntity
 import com.kintsu.app.data.model.TaskEntity
 import com.kintsu.app.data.model.UrgeLogEntity
+import com.kintsu.app.data.model.WalletTransactionEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
+
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN category TEXT NOT NULL DEFAULT 'THEMES'")
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN previewAssetId TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN bundleId TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN collectionName TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE shop_inventory ADD COLUMN tag TEXT NOT NULL DEFAULT ''")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS wallet_transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                amount INTEGER NOT NULL,
+                type TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                sourceActivity TEXT NOT NULL,
+                sourceEventId TEXT NOT NULL,
+                timestampMillis INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_wallet_transactions_timestampMillis ON wallet_transactions(timestampMillis)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_wallet_transactions_sourceEventId ON wallet_transactions(sourceEventId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_wallet_transactions_sourceActivity ON wallet_transactions(sourceActivity)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS personal_rewards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL DEFAULT '',
+                costCoins INTEGER NOT NULL DEFAULT 50,
+                category TEXT NOT NULL DEFAULT 'Leisure',
+                iconName TEXT NOT NULL DEFAULT 'Star',
+                isArchived INTEGER NOT NULL DEFAULT 0,
+                redemptionsCount INTEGER NOT NULL DEFAULT 0,
+                lastRedeemedAtMillis INTEGER,
+                createdAtMillis INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_personal_rewards_category ON personal_rewards(category)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_personal_rewards_isArchived ON personal_rewards(isArchived)")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS style_presets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL,
+                themeName TEXT NOT NULL,
+                accentName TEXT NOT NULL,
+                iconId TEXT NOT NULL,
+                widgetSkinId TEXT NOT NULL,
+                focusFaceId TEXT NOT NULL,
+                createdAtMillis INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_style_presets_name ON style_presets(name)")
+    }
+}
 
 val MIGRATION_9_10 = object : Migration(9, 10) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -414,9 +474,12 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         BlockedWebsiteEntity::class,
         FocusLockSessionEntity::class,
         DistractionInterventionLogEntity::class,
-        IntentionalBreakLogEntity::class
+        IntentionalBreakLogEntity::class,
+        WalletTransactionEntity::class,
+        PersonalRewardEntity::class,
+        StylePresetEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -451,7 +514,8 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_6_7,
                         MIGRATION_7_8,
                         MIGRATION_8_9,
-                        MIGRATION_9_10
+                        MIGRATION_9_10,
+                        MIGRATION_10_11
                     )
                     .build()
                 INSTANCE = instance

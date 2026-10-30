@@ -1,0 +1,30 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="120dp"
+    android:viewportWidth="250"
+    android:viewportHeight="120">
+    <path
+        android:fillColor="#1E231F"
+        android:pathData="M16,0h218a16,16 0 0 1 16,16v88a16,16 0 0 1 -16,16h-218a16,16 0 0 1 -16,-16v-88a16,16 0 0 1 16,-16z"/>
+    <!-- Stack Card 1 -->
+    <path
+        android:fillColor="#2D3A31"
+        android:pathData="M24,18h202v26h-202z"/>
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M36,28h70v6h-70z"/>
+    <!-- Stack Card 2 -->
+    <path
+        android:fillColor="#26312A"
+        android:pathData="M24,50h202v26h-202z"/>
+    <path
+        android:fillColor="#8DA382"
+        android:pathData="M36,60h90v6h-90z"/>
+    <!-- Stack Card 3 -->
+    <path
+        android:fillColor="#202A24"
+        android:pathData="M24,82h202v26h-202z"/>
+    <path
+        android:fillColor="#9CAAA3"
+        android:pathData="M36,92h60v6h-60z"/>
+</vector>

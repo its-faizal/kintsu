@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="250dp"
+    android:height="60dp"
+    android:viewportWidth="250"
+    android:viewportHeight="60">
+    <path
+        android:fillColor="#1E231F"
+        android:pathData="M14,0h222a14,14 0 0 1 14,14v32a14,14 0 0 1 -14,14h-222a14,14 0 0 1 -14,-14v-32a14,14 0 0 1 14,-14z"/>
+    <!-- Habits Row -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M32,30m-14,0a14,14 0 1,1 28,0a14,14 0 1,1 -28,0"/>
+    <path
+        android:strokeColor="#1E231F"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M26,30 L30,34 L38,26"/>
+    <path
+        android:fillColor="#8DA382"
+        android:pathData="M76,30m-14,0a14,14 0 1,1 28,0a14,14 0 1,1 -28,0"/>
+    <path
+        android:strokeColor="#1E231F"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M70,30 L74,34 L82,26"/>
+    <path
+        android:strokeColor="#8DA382"
+        android:strokeWidth="3"
+        android:pathData="M120,30m-14,0a14,14 0 1,1 28,0a14,14 0 1,1 -28,0"/>
+    <path
+        android:strokeColor="#556B5B"
+        android:strokeWidth="3"
+        android:pathData="M164,30m-14,0a14,14 0 1,1 28,0a14,14 0 1,1 -28,0"/>
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M208,30m-14,0a14,14 0 1,1 28,0a14,14 0 1,1 -28,0"/>
+    <path
+        android:strokeColor="#1E231F"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M202,30 L206,34 L214,26"/>
+</vector>
