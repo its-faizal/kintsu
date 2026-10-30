@@ -311,6 +311,11 @@ fun KintsuApp(
                 onUpdateScreenTimeGoalMinutes = { viewModel.setScreenTimeGoalMinutes(it) },
                 onResetFailSafe = { viewModel.resetFailSafe() },
                 onResetData = { viewModel.resetAllData() },
+                onDeleteAccount = { onResult ->
+                    viewModel.deleteAccount { res ->
+                        onResult(res)
+                    }
+                },
                 onClose = { viewModel.setSettingsOpen(false) }
             )
         } else {

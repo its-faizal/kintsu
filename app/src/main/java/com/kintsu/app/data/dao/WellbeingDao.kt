@@ -168,4 +168,7 @@ interface WellbeingDao {
 
     @Query("DELETE FROM commitment_locks")
     suspend fun clearCommitmentLocks()
+
+    @Query("DELETE FROM shop_inventory")
+    suspend fun clearShopInventory()
 }

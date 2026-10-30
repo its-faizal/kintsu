@@ -585,7 +585,43 @@ class KintsuRepository(
         dailyIntentionDao.clearAll()
         journalDao.clearAll()
         weeklyReviewDao.clearAll()
+        wellbeingDao.clearAppGroups()
+        wellbeingDao.clearBlockRules()
+        wellbeingDao.clearBlockSchedules()
+        wellbeingDao.clearDetoxSessions()
+        wellbeingDao.clearQuitHabits()
+        wellbeingDao.clearUrgeLogs()
+        wellbeingDao.clearCommitmentLocks()
+        wellbeingDao.clearShopInventory()
+        database.syncDao().clearRegistry()
+        database.syncDao().clearQueue()
         settingsDataStore.resetSettings()
+        seedShopCatalogIfEmpty()
+    }
+
+    suspend fun deleteAccount(): Result<Unit> {
+        val settings = settingsDataStore.settingsFlow.first()
+        val token = settings.accountAuthToken
+        val userId = settings.accountUserId
+
+        // 1. Delete remote cloud data and sign out from server if signed in
+        if (!token.isNullOrBlank() && !userId.isNullOrBlank()) {
+            try {
+                cloudClient.deleteCloudData(token, userId)
+            } catch (e: Exception) {
+                // proceed with local wipe even if network fails
+            }
+            try {
+                cloudClient.signOut(token)
+            } catch (e: Exception) {
+                // proceed
+            }
+        }
+
+        // 2. Wipe all local records, wellbeing rules, shop, sync queue, and reset settings
+        resetAllData()
+
+        return Result.success(Unit)
     }
 
     // Default Seed - Brand New Clean First Launch (Zero preloaded goals, tasks, or habits)

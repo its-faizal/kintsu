@@ -692,10 +692,19 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
 
     suspend fun exportDataJson(): String = repository.exportDataAsJson()
 
-    fun resetAllData() {
+    fun resetAllData(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             repository.resetAllData()
             refreshStats()
+            onComplete()
+        }
+    }
+
+    fun deleteAccount(onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            val res = repository.deleteAccount()
+            refreshStats()
+            onResult(res)
         }
     }
 

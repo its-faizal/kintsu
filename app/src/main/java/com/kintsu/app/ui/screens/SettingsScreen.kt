@@ -29,16 +29,25 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.kintsu.app.ui.components.IconTrash
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -102,6 +111,7 @@ fun SettingsScreen(
     onUpdateCloudConfig: (url: String, key: String) -> Unit = { _, _ -> },
     onSignOut: (keepLocalData: Boolean) -> Unit = {},
     onDeleteCloudData: (onResult: (Result<Unit>) -> Unit) -> Unit = {},
+    onDeleteAccount: (onResult: (Result<Unit>) -> Unit) -> Unit = {},
     onUpdateDisplayName: (String) -> Unit,
     onUpdateThemeMode: (ThemeMode) -> Unit,
     onUpdateAppTheme: (AppTheme) -> Unit = {},
@@ -153,7 +163,14 @@ fun SettingsScreen(
 
     var showExportSheet by remember { mutableStateOf(false) }
     var exportedJson by remember { mutableStateOf("") }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var showResetCautionDialog by remember { mutableStateOf(false) }
+    var resetConfirmationText by remember { mutableStateOf("") }
+    var resetConfirmedCheckbox by remember { mutableStateOf(false) }
+
+    var showDeleteAccountStep1 by remember { mutableStateOf(false) }
+    var showDeleteAccountStep2 by remember { mutableStateOf(false) }
+    var deleteAccountConfirmText by remember { mutableStateOf("") }
+    var deleteAccountLoading by remember { mutableStateOf(false) }
 
     var isEditingName by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf(settings.displayName) }
@@ -556,6 +573,40 @@ fun SettingsScreen(
                             KintsuButton(
                                 text = "Delete Cloud Copy",
                                 onClick = { showDeleteCloudDialog = true },
+                                variant = KintsuButtonVariant.TEXT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // Delete Account (2-Step Verification)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(spacing.m),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Delete Account",
+                                    style = typography.itemTitle,
+                                    color = colors.error
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = "Permanently deletes your account, cloud sync data, and wipes all local device records (requires 2-step verification).",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+
+                            KintsuButton(
+                                text = "Delete Account",
+                                onClick = {
+                                    deleteAccountConfirmText = ""
+                                    showDeleteAccountStep1 = true
+                                },
                                 variant = KintsuButtonVariant.TEXT
                             )
                         }
@@ -1941,7 +1992,11 @@ fun SettingsScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { showResetDialog = true }
+                            .clickable {
+                                resetConfirmationText = ""
+                                resetConfirmedCheckbox = false
+                                showResetCautionDialog = true
+                            }
                             .padding(spacing.m),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -1950,13 +2005,127 @@ fun SettingsScreen(
                             Text(
                                 text = "Reset All Data",
                                 style = typography.itemTitle,
-                                color = colors.accent
+                                color = colors.error
                             )
                             Text(
                                 text = "Erase all habits, tasks, logs, and settings",
                                 style = typography.secondary,
                                 color = colors.textSecondary
                             )
+                        }
+                    }
+                }
+            }
+
+            // Danger Zone Section at Bottom of Settings
+            item {
+                Spacer(modifier = Modifier.height(spacing.l))
+                Text(
+                    text = "DANGER ZONE",
+                    style = typography.caption,
+                    color = colors.error,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(KintsuTheme.shapes.large)
+                        .background(colors.error.copy(alpha = 0.05f))
+                        .border(1.5.dp, colors.error.copy(alpha = 0.35f), KintsuTheme.shapes.large)
+                        .padding(spacing.m)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.m)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            IconTrash(color = colors.error, size = 20.dp)
+                            Text(
+                                text = "Factory Reset & Account Deletion",
+                                style = typography.sectionHeader,
+                                color = colors.error
+                            )
+                        }
+
+                        Text(
+                            text = "Actions in this section are destructive and cannot be undone. Please proceed with extreme caution.",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+
+                        // 1. Reset App Data
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(KintsuTheme.shapes.medium)
+                                .background(colors.surfaceElevated)
+                                .padding(spacing.m),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Reset All Data",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Wipes all local habits, tasks, goals, journals, and wellbeing rules. Coins balance reset to 100.",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    resetConfirmationText = ""
+                                    resetConfirmedCheckbox = false
+                                    showResetCautionDialog = true
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.error.copy(alpha = 0.15f),
+                                    contentColor = colors.error
+                                ),
+                                shape = KintsuTheme.shapes.medium
+                            ) {
+                                Text("Reset Data")
+                            }
+                        }
+
+                        // 2. Delete Account (2-Step Verification)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(KintsuTheme.shapes.medium)
+                                .background(colors.surfaceElevated)
+                                .padding(spacing.m),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Delete Account",
+                                    style = typography.itemTitle,
+                                    color = colors.error
+                                )
+                                Text(
+                                    text = "Irrevocably deletes cloud account, purges all remote sync data, and wipes this device (2-step verification).",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    deleteAccountConfirmText = ""
+                                    showDeleteAccountStep1 = true
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = colors.error,
+                                    contentColor = Color.White
+                                ),
+                                shape = KintsuTheme.shapes.medium
+                            ) {
+                                Text("Delete Account")
+                            }
                         }
                     }
                 }
@@ -2003,37 +2172,326 @@ fun SettingsScreen(
         }
     }
 
-    if (showResetDialog) {
+    if (showResetCautionDialog) {
         AlertDialog(
-            onDismissRequest = { showResetDialog = false },
+            onDismissRequest = {
+                showResetCautionDialog = false
+                resetConfirmationText = ""
+                resetConfirmedCheckbox = false
+            },
             title = {
-                Text(
-                    text = "Reset All Data?",
-                    style = typography.sectionHeader,
-                    color = colors.textPrimary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    IconTrash(color = colors.error, size = 22.dp)
+                    Text(
+                        text = "Reset All Data?",
+                        style = typography.sectionHeader,
+                        color = colors.error
+                    )
+                }
             },
             text = {
-                Text(
-                    text = "This will clear all your habits, completed logs, tasks, and goals. This action cannot be undone.",
-                    style = typography.body,
-                    color = colors.textSecondary
-                )
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    Text(
+                        text = "CRITICAL WARNING: This action will permanently wipe ALL local data from this device. It cannot be recovered:",
+                        style = typography.caption,
+                        color = colors.textPrimary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(KintsuTheme.shapes.medium)
+                            .background(colors.error.copy(alpha = 0.08f))
+                            .border(1.dp, colors.error.copy(alpha = 0.25f), KintsuTheme.shapes.medium)
+                            .padding(spacing.s)
+                    ) {
+                        Text(
+                            text = "• All habits, streaks, and repair logs\n• All tasks, subtasks, and schedule blocks\n• All goals, journal entries, and reviews\n• All focus sessions & wellbeing logs\n• All shop purchases (coins reset to 100 starter coins)",
+                            style = typography.secondary,
+                            color = colors.textPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(spacing.xs))
+                    Text(
+                        text = "To confirm, type RESET in all capital letters below:",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+                    OutlinedTextField(
+                        value = resetConfirmationText,
+                        onValueChange = { resetConfirmationText = it },
+                        placeholder = { Text("RESET", color = colors.textSecondary.copy(alpha = 0.5f)) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.error,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { resetConfirmedCheckbox = !resetConfirmedCheckbox }
+                            .padding(vertical = spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = resetConfirmedCheckbox,
+                            onCheckedChange = { resetConfirmedCheckbox = it },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = colors.error,
+                                checkmarkColor = Color.White
+                            )
+                        )
+                        Spacer(modifier = Modifier.width(spacing.xs))
+                        Text(
+                            text = "I understand that all local data will be permanently wiped.",
+                            style = typography.caption,
+                            color = colors.textPrimary
+                        )
+                    }
+                }
             },
             confirmButton = {
-                TextButton(
+                val isResetReady = resetConfirmationText.trim() == "RESET" && resetConfirmedCheckbox
+                Button(
                     onClick = {
                         onResetData()
-                        showResetDialog = false
-                        Toast.makeText(context, "Data has been reset", Toast.LENGTH_SHORT).show()
-                    }
+                        showResetCautionDialog = false
+                        resetConfirmationText = ""
+                        resetConfirmedCheckbox = false
+                        Toast.makeText(context, "All data has been reset to defaults", Toast.LENGTH_LONG).show()
+                    },
+                    enabled = isResetReady,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = Color.White,
+                        disabledContainerColor = colors.error.copy(alpha = 0.2f),
+                        disabledContentColor = Color.White.copy(alpha = 0.5f)
+                    ),
+                    shape = KintsuTheme.shapes.medium
                 ) {
-                    Text("Reset Everything", color = colors.accent)
+                    Text("Wipe & Reset Everything")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
+                TextButton(
+                    onClick = {
+                        showResetCautionDialog = false
+                        resetConfirmationText = ""
+                        resetConfirmedCheckbox = false
+                    }
+                ) {
                     Text("Cancel", color = colors.textPrimary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = KintsuTheme.shapes.large
+        )
+    }
+
+    if (showDeleteAccountStep1) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteAccountStep1 = false
+                deleteAccountConfirmText = ""
+            },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    IconTrash(color = colors.error, size = 22.dp)
+                    Text(
+                        text = "Delete Account (Step 1/2)",
+                        style = typography.sectionHeader,
+                        color = colors.error
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    val accountIdentifier = settings.accountEmail?.takeIf { it.isNotBlank() } ?: settings.displayName.ifBlank { "Local Profile" }
+                    Text(
+                        text = "You are initiating permanent deletion for account: $accountIdentifier",
+                        style = typography.body,
+                        color = colors.textPrimary
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(KintsuTheme.shapes.medium)
+                            .background(colors.error.copy(alpha = 0.08f))
+                            .border(1.dp, colors.error.copy(alpha = 0.25f), KintsuTheme.shapes.medium)
+                            .padding(spacing.s)
+                    ) {
+                        Text(
+                            text = "• All remote cloud sync backups will be permanently purged\n• Authentication session tokens will be permanently revoked\n• All local device data, habits, tasks, and coins will be wiped\n• This action cannot be reversed or undone",
+                            style = typography.secondary,
+                            color = colors.textPrimary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(spacing.xs))
+                    Text(
+                        text = "To proceed to final confirmation, type DELETE below:",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+                    OutlinedTextField(
+                        value = deleteAccountConfirmText,
+                        onValueChange = { deleteAccountConfirmText = it },
+                        placeholder = { Text("DELETE", color = colors.textSecondary.copy(alpha = 0.5f)) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = colors.error,
+                            unfocusedBorderColor = colors.border,
+                            focusedTextColor = colors.textPrimary,
+                            unfocusedTextColor = colors.textPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                val isDeleteReady = deleteAccountConfirmText.trim() == "DELETE"
+                Button(
+                    onClick = {
+                        showDeleteAccountStep1 = false
+                        showDeleteAccountStep2 = true
+                    },
+                    enabled = isDeleteReady,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = Color.White,
+                        disabledContainerColor = colors.error.copy(alpha = 0.2f),
+                        disabledContentColor = Color.White.copy(alpha = 0.5f)
+                    ),
+                    shape = KintsuTheme.shapes.medium
+                ) {
+                    Text("Proceed to Step 2 →")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteAccountStep1 = false
+                        deleteAccountConfirmText = ""
+                    }
+                ) {
+                    Text("Cancel", color = colors.textPrimary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = KintsuTheme.shapes.large
+        )
+    }
+
+    if (showDeleteAccountStep2) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!deleteAccountLoading) {
+                    showDeleteAccountStep2 = false
+                    deleteAccountConfirmText = ""
+                }
+            },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    IconTrash(color = colors.error, size = 22.dp)
+                    Text(
+                        text = "Irreversible Deletion (Step 2/2)",
+                        style = typography.sectionHeader,
+                        color = colors.error
+                    )
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(spacing.s)
+                ) {
+                    Text(
+                        text = "FINAL WARNING: Once you press the button below, your account, credentials, remote backups, and local records will be immediately destroyed.",
+                        style = typography.body,
+                        color = colors.error
+                    )
+                    Text(
+                        text = "There is no undo, recovery window, or grace period.",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+
+                    if (deleteAccountLoading) {
+                        Spacer(modifier = Modifier.height(spacing.s))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = colors.error,
+                                strokeWidth = 2.dp
+                            )
+                            Text(
+                                text = "Purging account & wiping data...",
+                                style = typography.secondary,
+                                color = colors.textPrimary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        deleteAccountLoading = true
+                        onDeleteAccount { result ->
+                            deleteAccountLoading = false
+                            showDeleteAccountStep2 = false
+                            deleteAccountConfirmText = ""
+                            result.fold(
+                                onSuccess = {
+                                    Toast.makeText(context, "Account permanently deleted and device data wiped", Toast.LENGTH_LONG).show()
+                                },
+                                onFailure = { err ->
+                                    Toast.makeText(context, "Device wiped. Notice: ${err.localizedMessage ?: "Completed"}", Toast.LENGTH_LONG).show()
+                                }
+                            )
+                        }
+                    },
+                    enabled = !deleteAccountLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.error,
+                        contentColor = Color.White
+                    ),
+                    shape = KintsuTheme.shapes.medium
+                ) {
+                    Text("Permanently Delete Account")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        if (!deleteAccountLoading) {
+                            showDeleteAccountStep2 = false
+                            deleteAccountConfirmText = ""
+                        }
+                    },
+                    enabled = !deleteAccountLoading
+                ) {
+                    Text("Cancel / Keep Account", color = colors.textPrimary)
                 }
             },
             containerColor = colors.surface,
