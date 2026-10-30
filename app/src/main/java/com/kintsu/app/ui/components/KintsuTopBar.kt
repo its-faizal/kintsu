@@ -54,81 +54,74 @@ fun KintsuTopBar(
             .padding(horizontal = spacing.xl, vertical = spacing.s)
     ) {
         if (onProfileClick != null) {
-            // Home screen top bar layout: Profile avatar and Shop & Coins at TOP-LEFT
+            // Home screen top bar layout: Profile avatar at LEFT, Sanctuary Shop & Coins at RIGHT
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                    // Profile Avatar Button (LEFT)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(colors.surfaceElevated)
+                            .border(1.dp, colors.border, CircleShape)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onProfileClick
+                            )
+                            .semantics {
+                                role = Role.Button
+                                contentDescription = "Profile and Settings"
+                            },
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Profile Avatar Button (48dp touch target)
+                        IconUser(
+                            color = colors.textPrimary,
+                            size = 20.dp
+                        )
+                    }
+
+                    // Kintsugi Coins & Sanctuary Shop Pill (RIGHT)
+                    if (onShopClick != null) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .background(colors.surfaceElevated)
-                                .border(1.dp, colors.border, CircleShape)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(19.dp))
+                                .background(colors.goldSeam.copy(alpha = 0.12f))
+                                .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), RoundedCornerShape(19.dp))
                                 .clickable(
                                     interactionSource = remember { MutableInteractionSource() },
                                     indication = null,
-                                    onClick = onProfileClick
+                                    onClick = onShopClick
                                 )
+                                .padding(horizontal = spacing.m)
                                 .semantics {
                                     role = Role.Button
-                                    contentDescription = "Profile and Settings"
+                                    contentDescription = "Sanctuary Shop, Balance $coinsBalance gold coins"
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            IconUser(
-                                color = colors.textPrimary,
-                                size = 20.dp
-                            )
-                        }
-
-                        // Kintsugi Coins & Sanctuary Shop Pill (48dp accessible height)
-                        if (onShopClick != null) {
-                            Box(
-                                modifier = Modifier
-                                    .height(38.dp)
-                                    .clip(RoundedCornerShape(19.dp))
-                                    .background(colors.goldSeam.copy(alpha = 0.12f))
-                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), RoundedCornerShape(19.dp))
-                                    .clickable(
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = onShopClick
-                                    )
-                                    .padding(horizontal = spacing.m)
-                                    .semantics {
-                                        role = Role.Button
-                                        contentDescription = "Sanctuary Shop, Balance $coinsBalance gold coins"
-                                    },
-                                contentAlignment = Alignment.Center
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
-                                ) {
-                                    IconGoldSeam(color = colors.goldSeam, size = 15.dp)
-                                    Text(
-                                        text = "$coinsBalance",
-                                        style = typography.caption.copy(
-                                            color = colors.goldSeam,
-                                            fontSize = 13.sp
-                                        )
+                                IconGoldSeam(color = colors.goldSeam, size = 15.dp)
+                                Text(
+                                    text = "$coinsBalance",
+                                    style = typography.caption.copy(
+                                        color = colors.goldSeam,
+                                        fontSize = 13.sp
                                     )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    IconShop(color = colors.goldSeam, size = 13.dp)
-                                }
+                                )
+                                Spacer(modifier = Modifier.width(2.dp))
+                                IconShop(color = colors.goldSeam, size = 13.dp)
                             }
                         }
                     }
-
-                    // Optional right side status (can be empty for true minimalism)
                 }
 
                 Spacer(modifier = Modifier.height(spacing.s))
