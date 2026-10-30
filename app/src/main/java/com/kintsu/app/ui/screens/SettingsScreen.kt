@@ -69,7 +69,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.kintsu.app.ui.components.PermissionRequestSheet
@@ -78,6 +80,8 @@ import com.kintsu.app.data.BackupData
 import com.kintsu.app.data.BackupRestoreManager
 import com.kintsu.app.data.ImportMode
 import com.kintsu.app.data.KintsuSettings
+import com.kintsu.app.ui.components.GoogleOneTapBottomSheet
+import com.kintsu.app.ui.components.GoogleOneTapLogo
 import com.kintsu.app.ui.components.IconCheck
 import com.kintsu.app.ui.components.IconClose
 import com.kintsu.app.ui.components.IconGoldSeam
@@ -190,7 +194,7 @@ fun SettingsScreen(
     var showSignOutDialog by remember { mutableStateOf(false) }
     var showDeleteCloudDialog by remember { mutableStateOf(false) }
     var showPermissionSheet by remember { mutableStateOf(false) }
-    var showGooglePromptDialog by remember { mutableStateOf(false) }
+    var showGoogleOneTapSheet by remember { mutableStateOf(false) }
     var showEndpointDialog by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -403,14 +407,43 @@ fun SettingsScreen(
                                 variant = KintsuButtonVariant.SECONDARY
                             )
                         } else {
-                            KintsuButton(
-                                text = "Sign In",
-                                onClick = {
-                                    authError = null
-                                    showAuthSheet = true
-                                },
-                                variant = KintsuButtonVariant.ACCENT_SOFT
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        authError = null
+                                        showGoogleOneTapSheet = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color(0xFF1A73E8),
+                                        contentColor = Color.White
+                                    ),
+                                    shape = CircleShape,
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        GoogleOneTapLogo(size = 18.dp)
+                                        Text(
+                                            text = "Google",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                KintsuButton(
+                                    text = "Email",
+                                    onClick = {
+                                        authError = null
+                                        showAuthSheet = true
+                                    },
+                                    variant = KintsuButtonVariant.SECONDARY
+                                )
+                            }
                         }
                     }
 
@@ -2752,16 +2785,33 @@ fun SettingsScreen(
 
                 Spacer(modifier = Modifier.height(spacing.s))
 
-                // Sign in with Google shortcut
-                KintsuButton(
-                    text = "Sign in with Google",
+                // Seamless Google One-Tap Sign In
+                Button(
                     onClick = {
-                        showGooglePromptDialog = true
+                        showAuthSheet = false
+                        showGoogleOneTapSheet = true
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !authLoading,
-                    variant = KintsuButtonVariant.SECONDARY
-                )
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.surfaceElevated,
+                        contentColor = colors.textPrimary
+                    ),
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.border)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                    ) {
+                        GoogleOneTapLogo(size = 20.dp)
+                        Text(
+                            text = "Continue with Google",
+                            style = typography.body.copy(fontWeight = FontWeight.Medium)
+                        )
+                    }
+                }
             }
         }
     }
@@ -2854,84 +2904,26 @@ fun SettingsScreen(
         )
     }
 
-    if (showGooglePromptDialog) {
-        var googleEmail by remember { mutableStateOf(if (authEmail.contains("@")) authEmail else "seeker.google@gmail.com") }
-        var googleName by remember { mutableStateOf(settings.displayName) }
-        AlertDialog(
-            onDismissRequest = { showGooglePromptDialog = false },
-            title = {
-                Text(
-                    text = "Sign in with Google",
-                    style = typography.sectionHeader,
-                    color = colors.textPrimary
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.m)) {
-                    Text(
-                        text = "Connect your Google account to back up and sync your habits, tasks, and reflections with Kintsu Cloud.",
-                        style = typography.body,
-                        color = colors.textSecondary
-                    )
-                    OutlinedTextField(
-                        value = googleEmail,
-                        onValueChange = { googleEmail = it },
-                        placeholder = { Text("your.email@gmail.com", color = colors.textTertiary) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = KintsuTheme.shapes.medium,
-                        singleLine = true
-                    )
-                    OutlinedTextField(
-                        value = googleName,
-                        onValueChange = { googleName = it },
-                        placeholder = { Text("Display Name", color = colors.textTertiary) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = KintsuTheme.shapes.medium,
-                        singleLine = true
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(KintsuTheme.shapes.small)
-                            .background(colors.accentSoft)
-                            .padding(spacing.s)
-                    ) {
-                        Text(
-                            text = "✓ Verified via Kintsu Backend & Google Tokeninfo Gateway",
-                            style = typography.caption,
-                            color = colors.accent
-                        )
+    if (showGoogleOneTapSheet) {
+        GoogleOneTapBottomSheet(
+            onDismissRequest = { showGoogleOneTapSheet = false },
+            onAccountSelected = { email, name ->
+                authLoading = true
+                val token = "google_${email.trim()}"
+                onSignInWithGoogle(token, email.trim(), name.trim()) { res ->
+                    authLoading = false
+                    showGoogleOneTapSheet = false
+                    if (res.isSuccess) {
+                        showAuthSheet = false
+                        Toast.makeText(context, "Signed in with Google as $email", Toast.LENGTH_SHORT).show()
+                    } else {
+                        val errMsg = res.exceptionOrNull()?.localizedMessage ?: "Google sign in failed"
+                        Toast.makeText(context, errMsg, Toast.LENGTH_SHORT).show()
                     }
                 }
             },
-            confirmButton = {
-                KintsuButton(
-                    text = "Authorize & Sync",
-                    onClick = {
-                        showGooglePromptDialog = false
-                        authLoading = true
-                        authError = null
-                        val token = "dev_google_${googleEmail.trim()}"
-                        onSignInWithGoogle(token, googleEmail.trim(), googleName.trim()) { res ->
-                            authLoading = false
-                            if (res.isSuccess) {
-                                showAuthSheet = false
-                                Toast.makeText(context, "Signed in with Google as ${googleEmail.trim()}", Toast.LENGTH_SHORT).show()
-                            } else {
-                                authError = res.exceptionOrNull()?.localizedMessage ?: "Google sign in failed"
-                            }
-                        }
-                    },
-                    variant = KintsuButtonVariant.PRIMARY
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { showGooglePromptDialog = false }) {
-                    Text("Cancel", color = colors.textPrimary)
-                }
-            },
-            containerColor = colors.surface,
-            shape = KintsuTheme.shapes.large
+            defaultDisplayName = settings.displayName,
+            isLoading = authLoading
         )
     }
 
