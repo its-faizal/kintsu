@@ -16,6 +16,7 @@ import com.kintsu.app.data.dao.TaskCompletionDao
 import com.kintsu.app.data.dao.TaskDao
 import com.kintsu.app.data.dao.WeeklyReviewDao
 import com.kintsu.app.data.dao.WellbeingDao
+import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
@@ -44,6 +45,25 @@ import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
+
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS achievements (
+                id TEXT PRIMARY KEY NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                pointsAwarded INTEGER NOT NULL,
+                badgeIcon TEXT NOT NULL,
+                isEarned INTEGER NOT NULL DEFAULT 0,
+                earnedAtMillis INTEGER,
+                category TEXT NOT NULL DEFAULT 'MILESTONE'
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_achievements_category ON achievements(category)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_achievements_isEarned ON achievements(isEarned)")
+    }
+}
 
 val MIGRATION_10_11 = object : Migration(10, 11) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -477,9 +497,10 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         IntentionalBreakLogEntity::class,
         WalletTransactionEntity::class,
         PersonalRewardEntity::class,
-        StylePresetEntity::class
+        StylePresetEntity::class,
+        AchievementEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -515,7 +536,8 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_7_8,
                         MIGRATION_8_9,
                         MIGRATION_9_10,
-                        MIGRATION_10_11
+                        MIGRATION_10_11,
+                        MIGRATION_11_12
                     )
                     .build()
                 INSTANCE = instance

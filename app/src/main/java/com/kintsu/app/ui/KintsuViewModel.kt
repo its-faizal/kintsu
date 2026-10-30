@@ -3,11 +3,13 @@ package com.kintsu.app.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.kintsu.app.data.AchievementTracker
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.KintsuRepository
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.data.ProgressStats
 import com.kintsu.app.data.SettingsDataStore
+import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
@@ -123,6 +125,14 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allStylePresets: StateFlow<List<StylePresetEntity>> = repository.getAllStylePresets()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val achievementTracker = AchievementTracker(repository)
+
+    val allAchievements: StateFlow<List<AchievementEntity>> = repository.allAchievements
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val earnedAchievements: StateFlow<List<AchievementEntity>> = repository.earnedAchievements
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val activeQuitHabits: StateFlow<List<QuitHabitEntity>> = repository.activeQuitHabits
@@ -307,11 +317,16 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.seedDefaultsIfEmpty()
             repository.seedShopCatalogIfEmpty()
+            repository.seedDefaultStylePresetsIfEmpty()
+            achievementTracker.evaluateAchievements()
         }
     }
 
     fun purchaseShopItem(item: ShopItemEntity) {
-        viewModelScope.launch { repository.purchaseShopItem(item) }
+        viewModelScope.launch {
+            repository.purchaseShopItem(item)
+            achievementTracker.evaluateAchievements()
+        }
     }
 
     fun equipShopItem(item: ShopItemEntity) {
@@ -338,8 +353,24 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { repository.saveStylePreset(name, theme, accent, icon, skin, face) }
     }
 
+    fun renameStylePreset(preset: StylePresetEntity, newName: String) {
+        viewModelScope.launch { repository.renameStylePreset(preset, newName) }
+    }
+
     fun deleteStylePreset(preset: StylePresetEntity) {
         viewModelScope.launch { repository.deleteStylePreset(preset) }
+    }
+
+    fun restoreDefaultStylePresets() {
+        viewModelScope.launch { repository.restoreDefaultStylePresets() }
+    }
+
+    fun applyStylePreset(preset: StylePresetEntity) {
+        viewModelScope.launch { repository.applyStylePreset(preset) }
+    }
+
+    fun evaluateAchievements() {
+        viewModelScope.launch { achievementTracker.evaluateAchievements() }
     }
 
     fun startDigitalDetox(durationMinutes: Int, intention: String, allowedPackages: String, enableDnd: Boolean) {
@@ -513,6 +544,7 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.toggleHabitCompletion(habitId, todayEpochDay, note, mood)
             refreshStats()
+            achievementTracker.evaluateAchievements()
         }
     }
 
@@ -592,6 +624,7 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             repository.toggleTaskCompletion(task)
             refreshStats()
+            achievementTracker.evaluateAchievements()
         }
     }
 

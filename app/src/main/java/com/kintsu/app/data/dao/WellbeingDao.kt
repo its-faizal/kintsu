@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
@@ -303,4 +304,23 @@ interface WellbeingDao {
 
     @Query("DELETE FROM style_presets")
     suspend fun clearStylePresets()
+
+    // --- Achievements ---
+    @Query("SELECT * FROM achievements ORDER BY isEarned DESC, earnedAtMillis DESC, id ASC")
+    fun getAllAchievements(): Flow<List<AchievementEntity>>
+
+    @Query("SELECT * FROM achievements WHERE isEarned = 1")
+    fun getEarnedAchievements(): Flow<List<AchievementEntity>>
+
+    @Query("SELECT * FROM achievements WHERE id = :id LIMIT 1")
+    suspend fun getAchievementById(id: String): AchievementEntity?
+
+    @Query("SELECT * FROM achievements")
+    suspend fun getAllAchievementsList(): List<AchievementEntity>
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertAchievements(achievements: List<AchievementEntity>)
+
+    @Update
+    suspend fun updateAchievement(achievement: AchievementEntity)
 }

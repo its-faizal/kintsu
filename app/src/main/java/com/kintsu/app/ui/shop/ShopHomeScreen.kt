@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.data.ShopCatalog
+import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.ShopItemEntity
 import com.kintsu.app.data.model.StylePresetEntity
@@ -69,14 +70,17 @@ fun ShopHomeScreen(
     personalRewards: List<PersonalRewardEntity>,
     walletTransactions: List<WalletTransactionEntity>,
     stylePresets: List<StylePresetEntity>,
+    allAchievements: List<AchievementEntity> = emptyList(),
     onPurchaseItem: (ShopItemEntity) -> Unit,
     onEquipItem: (ShopItemEntity) -> Unit,
     onCreatePersonalReward: (title: String, desc: String, cost: Int, category: String, icon: String) -> Unit,
     onRedeemPersonalReward: (PersonalRewardEntity) -> Unit,
     onArchivePersonalReward: (PersonalRewardEntity) -> Unit,
     onSaveStylePreset: (name: String, theme: String, accent: String, icon: String, skin: String, face: String) -> Unit,
+    onRenameStylePreset: (StylePresetEntity, String) -> Unit = { _, _ -> },
     onApplyStylePreset: (StylePresetEntity) -> Unit,
     onDeleteStylePreset: (StylePresetEntity) -> Unit,
+    onRestoreDefaultPresets: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -96,6 +100,7 @@ fun ShopHomeScreen(
     var showPersonalRewardsSheet by remember { mutableStateOf(false) }
     var showMyCollectionSheet by remember { mutableStateOf(false) }
     var showPresetsSheet by remember { mutableStateOf(false) }
+    var showAchievementsSheet by remember { mutableStateOf(false) }
 
     // Filter items based on active criteria
     val displayedItems = remember(
@@ -200,6 +205,16 @@ fun ShopHomeScreen(
                                 .padding(horizontal = spacing.s, vertical = spacing.xs)
                         ) {
                             Text("Presets", style = typography.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.SemiBold))
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.surfaceElevated)
+                                .clickable { showAchievementsSheet = true }
+                                .padding(horizontal = spacing.s, vertical = spacing.xs)
+                        ) {
+                            Text("Milestones", style = typography.caption.copy(color = colors.accent, fontWeight = FontWeight.SemiBold))
                         }
                     }
                 }
@@ -618,9 +633,19 @@ fun ShopHomeScreen(
             presets = stylePresets,
             currentSettings = currentSettings,
             onSavePreset = onSaveStylePreset,
+            onRenamePreset = onRenameStylePreset,
             onApplyPreset = onApplyStylePreset,
             onDeletePreset = onDeleteStylePreset,
+            onRestoreDefaults = onRestoreDefaultPresets,
             onDismiss = { showPresetsSheet = false }
+        )
+    }
+
+    // Modal Achievements & Collectibles Sheet
+    if (showAchievementsSheet) {
+        AchievementsGallerySheet(
+            achievements = allAchievements,
+            onDismiss = { showAchievementsSheet = false }
         )
     }
 }

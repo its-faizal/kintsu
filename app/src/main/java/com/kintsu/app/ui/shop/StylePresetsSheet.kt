@@ -39,8 +39,10 @@ fun StylePresetsSheet(
     presets: List<StylePresetEntity>,
     currentSettings: KintsuSettings,
     onSavePreset: (name: String, theme: String, accent: String, icon: String, skin: String, face: String) -> Unit,
+    onRenamePreset: (StylePresetEntity, String) -> Unit = { _, _ -> },
     onApplyPreset: (StylePresetEntity) -> Unit,
     onDeletePreset: (StylePresetEntity) -> Unit,
+    onRestoreDefaults: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -50,16 +52,26 @@ fun StylePresetsSheet(
     var showSaveDialog by remember { mutableStateOf(false) }
     var presetNameInput by remember { mutableStateOf("") }
 
+    var renamingPreset by remember { mutableStateOf<StylePresetEntity?>(null) }
+    var renameInput by remember { mutableStateOf("") }
+
     KintsuBottomSheet(
         onDismissRequest = onDismiss,
         title = "Style Presets",
         scrollable = false,
         trailingAction = {
-            KintsuButton(
-                text = "+ Save Look",
-                onClick = { showSaveDialog = true },
-                variant = KintsuButtonVariant.PRIMARY
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                KintsuButton(
+                    text = "Curated",
+                    onClick = onRestoreDefaults,
+                    variant = KintsuButtonVariant.SECONDARY
+                )
+                KintsuButton(
+                    text = "+ Save Look",
+                    onClick = { showSaveDialog = true },
+                    variant = KintsuButtonVariant.PRIMARY
+                )
+            }
         }
     ) {
         Column(
@@ -79,12 +91,22 @@ fun StylePresetsSheet(
                         .padding(vertical = spacing.xl),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "No saved style presets yet.\nTap '+ Save Look' to save your current theme, icon, and widget configuration.",
-                        style = typography.secondary,
-                        color = colors.textSecondary,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(spacing.m)
+                    ) {
+                        Text(
+                            text = "No saved style presets yet.\nTap 'Curated' to load ready-made designer combinations, or '+ Save Look' to capture your current aesthetic.",
+                            style = typography.secondary,
+                            color = colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        KintsuButton(
+                            text = "Load 6 Ready-Made Presets",
+                            onClick = onRestoreDefaults,
+                            variant = KintsuButtonVariant.PRIMARY
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -96,39 +118,48 @@ fun StylePresetsSheet(
                             modifier = Modifier.fillMaxWidth(),
                             backgroundColor = colors.surfaceElevated
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(spacing.m),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalArrangement = Arrangement.spacedBy(spacing.xs)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(
                                         text = preset.name,
-                                        style = typography.itemTitle.copy(fontSize = 14.sp),
+                                        style = typography.itemTitle.copy(fontSize = 15.sp),
                                         color = colors.textPrimary
                                     )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "${preset.themeName} • ${preset.accentName} • ${preset.widgetSkinId.replace("widget_", "").replace("_", " ").capitalize()}",
-                                        style = typography.caption.copy(fontSize = 11.sp),
-                                        color = colors.textSecondary
-                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                        KintsuButton(
+                                            text = "Apply",
+                                            onClick = { onApplyPreset(preset) },
+                                            variant = KintsuButtonVariant.PRIMARY
+                                        )
+                                        KintsuButton(
+                                            text = "Rename",
+                                            onClick = {
+                                                renamingPreset = preset
+                                                renameInput = preset.name
+                                            },
+                                            variant = KintsuButtonVariant.SECONDARY
+                                        )
+                                        KintsuButton(
+                                            text = "Delete",
+                                            onClick = { onDeletePreset(preset) },
+                                            variant = KintsuButtonVariant.SECONDARY
+                                        )
+                                    }
                                 }
-
-                                Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                    KintsuButton(
-                                        text = "Apply",
-                                        onClick = { onApplyPreset(preset) },
-                                        variant = KintsuButtonVariant.PRIMARY
-                                    )
-                                    KintsuButton(
-                                        text = "Delete",
-                                        onClick = { onDeletePreset(preset) },
-                                        variant = KintsuButtonVariant.SECONDARY
-                                    )
-                                }
+                                Text(
+                                    text = "${preset.themeName} • ${preset.accentName} • ${preset.widgetSkinId.replace("widget_", "").replace("_", " ").replaceFirstChar { it.uppercase() }} • ${preset.focusFaceId.replace("focus_face_", "").replace("_", " ").replaceFirstChar { it.uppercase() }}",
+                                    style = typography.caption.copy(fontSize = 11.sp),
+                                    color = colors.textSecondary
+                                )
                             }
                         }
                     }
@@ -181,6 +212,47 @@ fun StylePresetsSheet(
                     onValueChange = { presetNameInput = it },
                     label = { Text("Preset Name") },
                     placeholder = { Text("e.g. My Morning Zen") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = colors.accent,
+                        unfocusedBorderColor = colors.border
+                    )
+                )
+            }
+        }
+    }
+
+    renamingPreset?.let { preset ->
+        KintsuDialog(
+            title = "Rename Style Preset",
+            onDismissRequest = { renamingPreset = null },
+            confirmButton = {
+                KintsuButton(
+                    text = "Update",
+                    onClick = {
+                        if (renameInput.isNotBlank()) {
+                            onRenamePreset(preset, renameInput.trim())
+                            renamingPreset = null
+                        }
+                    },
+                    enabled = renameInput.isNotBlank(),
+                    variant = KintsuButtonVariant.PRIMARY
+                )
+            },
+            dismissButton = {
+                KintsuButton(
+                    text = "Cancel",
+                    onClick = { renamingPreset = null },
+                    variant = KintsuButtonVariant.SECONDARY
+                )
+            }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.s)) {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("New Name") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(

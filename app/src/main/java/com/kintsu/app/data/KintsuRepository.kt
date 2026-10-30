@@ -1,5 +1,6 @@
 package com.kintsu.app.data
 
+import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockedWebsiteEntity
 import com.kintsu.app.data.model.BlockRuleEntity
@@ -29,6 +30,7 @@ import com.kintsu.app.data.model.TaskRecurrenceType
 import com.kintsu.app.data.model.UrgeLogEntity
 import com.kintsu.app.data.model.WalletTransactionEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
+import com.kintsu.app.ui.theme.AccentOption
 import com.kintsu.app.ui.theme.AppIconManager
 import com.kintsu.app.ui.theme.AppTheme
 import com.kintsu.app.wellbeing.domain.CommitmentLockManager
@@ -79,6 +81,7 @@ class KintsuRepository(
     private val subtaskDao = database.subtaskDao()
     private val taskCompletionDao = database.taskCompletionDao()
     private val syncDao = database.syncDao()
+    val wellbeingDao = database.wellbeingDao()
 
     val cloudClient = KintsuCloudClient()
     val syncEngine = KintsuSyncEngine(database, settingsDataStore, cloudClient)
@@ -96,6 +99,8 @@ class KintsuRepository(
     val allDailyIntentions: Flow<List<DailyIntentionEntity>> = dailyIntentionDao.getAllIntentions()
     val allJournalEntries: Flow<List<JournalEntryEntity>> = journalDao.getAllEntries()
     val allWeeklyReviews: Flow<List<WeeklyReviewEntity>> = weeklyReviewDao.getAllReviews()
+    val allAchievements: Flow<List<AchievementEntity>> = wellbeingDao.getAllAchievements()
+    val earnedAchievements: Flow<List<AchievementEntity>> = wellbeingDao.getEarnedAchievements()
     val settingsFlow: Flow<KintsuSettings> = settingsDataStore.settingsFlow
 
     fun notifyWidgets() {
@@ -817,7 +822,6 @@ class KintsuRepository(
 
     // --- V3 Digital Wellbeing & Sanctuary Shop Operations ---
 
-    val wellbeingDao = database.wellbeingDao()
     val allAppGroups: Flow<List<AppGroupEntity>> = wellbeingDao.getAllAppGroups()
     val activeBlockRules: Flow<List<BlockRuleEntity>> = wellbeingDao.getActiveBlockRules()
     val activeQuitHabits: Flow<List<QuitHabitEntity>> = wellbeingDao.getActiveQuitHabits()
@@ -1001,8 +1005,108 @@ class KintsuRepository(
         )
     }
 
+    suspend fun renameStylePreset(preset: StylePresetEntity, newName: String) {
+        wellbeingDao.insertStylePreset(preset.copy(name = newName))
+    }
+
     suspend fun deleteStylePreset(preset: StylePresetEntity) {
         wellbeingDao.deleteStylePreset(preset)
+    }
+
+    suspend fun seedDefaultStylePresetsIfEmpty() {
+        try {
+            val existing = wellbeingDao.getAllStylePresets().first()
+            if (existing.isEmpty()) {
+                restoreDefaultStylePresets()
+            }
+        } catch (_: Exception) {}
+    }
+
+    suspend fun restoreDefaultStylePresets() {
+        wellbeingDao.clearStylePresets()
+        val curated = listOf(
+            StylePresetEntity(name = "Calm Morning", themeName = "Sage & Ivory", accentName = "SAGE", iconId = "icon_original", widgetSkinId = "widget_botanical_sage", focusFaceId = "focus_face_classic_ring"),
+            StylePresetEntity(name = "Matcha Minimal", themeName = "Matcha Atelier", accentName = "SAGE", iconId = "icon_sage_emblem", widgetSkinId = "widget_botanical_sage", focusFaceId = "focus_face_zen_circle"),
+            StylePresetEntity(name = "Midnight Focus", themeName = "Eclipse Gold", accentName = "GOLD", iconId = "icon_midnight_gold", widgetSkinId = "widget_midnight_bronze", focusFaceId = "focus_face_eclipse_dial"),
+            StylePresetEntity(name = "Warm Studio", themeName = "Rosewood", accentName = "CLAY", iconId = "icon_terracotta_seal", widgetSkinId = "widget_rose_glass", focusFaceId = "focus_face_soft_hourglass"),
+            StylePresetEntity(name = "Sakura Quiet", themeName = "Sakura Dawn", accentName = "LAVENDER", iconId = "icon_sakura_mark", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
+            StylePresetEntity(name = "Pure Monochrome", themeName = "Nordic Frost", accentName = "STONE", iconId = "icon_minimal_ink", widgetSkinId = "widget_minimal_paper", focusFaceId = "focus_face_minimal_digital")
+        )
+        curated.forEach { wellbeingDao.insertStylePreset(it) }
+    }
+
+    suspend fun checkPresetAvailability(preset: StylePresetEntity): List<String> {
+        val missing = mutableListOf<String>()
+        val themeEnum = AppTheme.values().find { it.displayName.equals(preset.themeName, ignoreCase = true) || it.name.equals(preset.themeName, ignoreCase = true) }
+        if (themeEnum != null) {
+            val themeItem = wellbeingDao.getShopItemById("theme_${themeEnum.name.lowercase()}")
+            if (themeItem != null && !themeItem.isUnlocked && themeItem.costCoins > 0) {
+                missing.add("Theme: ${preset.themeName}")
+            }
+        }
+        if (preset.iconId.isNotBlank() && preset.iconId != "icon_original") {
+            val iconItem = wellbeingDao.getShopItemById(preset.iconId)
+            if (iconItem != null && !iconItem.isUnlocked) {
+                missing.add("Icon: ${iconItem.title}")
+            }
+        }
+        if (preset.widgetSkinId.isNotBlank()) {
+            val skinItem = wellbeingDao.getShopItemById(preset.widgetSkinId)
+            if (skinItem != null && !skinItem.isUnlocked) {
+                missing.add("Widget Skin: ${skinItem.title}")
+            }
+        }
+        if (preset.focusFaceId.isNotBlank() && preset.focusFaceId != "focus_face_classic_ring") {
+            val faceItem = wellbeingDao.getShopItemById(preset.focusFaceId)
+            if (faceItem != null && !faceItem.isUnlocked) {
+                missing.add("Focus Dial: ${faceItem.title}")
+            }
+        }
+        return missing
+    }
+
+    suspend fun applyStylePreset(preset: StylePresetEntity) {
+        val themeEnum = AppTheme.values().find { it.displayName.equals(preset.themeName, ignoreCase = true) || it.name.equals(preset.themeName, ignoreCase = true) }
+        if (themeEnum != null) {
+            settingsDataStore.setAppTheme(themeEnum)
+        }
+        try {
+            val accentEnum = AccentOption.valueOf(preset.accentName.uppercase())
+            settingsDataStore.setAccentOption(accentEnum)
+        } catch (_: Exception) {}
+
+        if (preset.iconId.isNotBlank()) {
+            settingsDataStore.setLauncherIconId(preset.iconId)
+            AppIconManager.applyLauncherIcon(settingsDataStore.context, preset.iconId)
+        }
+        if (preset.widgetSkinId.isNotBlank()) {
+            settingsDataStore.setWidgetSkinId(preset.widgetSkinId)
+        }
+        if (preset.focusFaceId.isNotBlank()) {
+            settingsDataStore.setFocusTimerFaceId(preset.focusFaceId)
+        }
+        notifyWidgets()
+    }
+
+    // --- Achievements ---
+    suspend fun getAllAchievementsList(): List<AchievementEntity> = wellbeingDao.getAllAchievementsList()
+    suspend fun seedAchievements(list: List<AchievementEntity>) = wellbeingDao.insertAchievements(list)
+    suspend fun updateAchievement(achievement: AchievementEntity) = wellbeingDao.updateAchievement(achievement)
+
+    suspend fun hasAnyHabitLog(): Boolean = habitDao.getAllLogs().first().isNotEmpty()
+    suspend fun getTotalHabitLogsCount(): Int = habitDao.getAllLogs().first().size
+    suspend fun getCompletedTasksCount(): Int = taskDao.getAllTasks().first().count { it.isCompleted }
+    suspend fun getCompletedGoalsCount(): Int = goalDao.getAllGoals().first().count { it.manualProgressPercent >= 100 }
+    suspend fun getUnlockedThemesCount(): Int {
+        val themes = wellbeingDao.getShopItemsByCategory("THEMES").first()
+        return themes.count { it.isUnlocked && it.costCoins > 0 }
+    }
+    suspend fun getMaxHabitStreak(): Int {
+        val habits = habitDao.getActiveHabits().first()
+        val logs = habitDao.getAllLogs().first()
+        val today = java.time.LocalDate.now().toEpochDay()
+        val streakResult = StreakCalculator.calculateStreaks(habits, logs, today)
+        return maxOf(streakResult.currentStreak, streakResult.bestStreak)
     }
 
     suspend fun addAppGroup(name: String, category: String, packages: String): Long {

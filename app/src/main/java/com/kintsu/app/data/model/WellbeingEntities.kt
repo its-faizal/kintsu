@@ -357,4 +357,27 @@ data class StylePresetEntity(
     val createdAtMillis: Long = System.currentTimeMillis()
 )
 
+/**
+ * Earned or locked achievements with non-competitive collectible badges and gold rewards.
+ */
+@Entity(
+    tableName = "achievements",
+    indices = [
+        Index("category"),
+        Index("isEarned")
+    ]
+)
+data class AchievementEntity(
+    @PrimaryKey
+    val id: String, // e.g. "FIRST_HABIT", "FIRST_GOAL", "FIRST_FOCUS", "SEVEN_HABITS", "FIRST_REVIEW", "TEN_TASKS", "FIRST_THEME"
+    val title: String,
+    val description: String,
+    val pointsAwarded: Int,
+    val badgeIcon: String,
+    val isEarned: Boolean = false,
+    val earnedAtMillis: Long? = null,
+    val category: String = "MILESTONE" // "MILESTONE", "CONSISTENCY", "DISCOVERY"
+)
+
+
 

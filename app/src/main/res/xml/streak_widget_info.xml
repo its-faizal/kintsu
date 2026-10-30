@@ -5,6 +5,9 @@
     android:targetCellWidth="2"
     android:targetCellHeight="2"
     android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_preview_daily_progress"
+    android:previewImage="@drawable/widget_preview_streak"
+    android:previewLayout="@layout/widget_preview_daily_progress"
     android:description="@string/widget_streak_desc"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

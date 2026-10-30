@@ -152,6 +152,7 @@ fun SettingsScreen(
     onOpenDetox: () -> Unit = {},
     onOpenQuitHabits: () -> Unit = {},
     onOpenShop: () -> Unit = {},
+    allAchievements: List<com.kintsu.app.data.model.AchievementEntity> = emptyList(),
     onUpdateWellbeingEnabled: (Boolean) -> Unit = {},
     onUpdateStrictness: (String) -> Unit = {},
     onUpdateScreenTimeGoalMinutes: (Int) -> Unit = {},
@@ -177,6 +178,7 @@ fun SettingsScreen(
     var deleteAccountConfirmText by remember { mutableStateOf("") }
     var deleteAccountLoading by remember { mutableStateOf(false) }
     var showWidgetShowcaseSheet by remember { mutableStateOf(false) }
+    var showAchievementsSheet by remember { mutableStateOf(false) }
 
     var isEditingName by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf(settings.displayName) }
@@ -1089,6 +1091,75 @@ fun SettingsScreen(
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = "Showcase widgets, view definitions, and pin directly to home screen",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        com.kintsu.app.ui.components.IconChevronRight(
+                            color = colors.textTertiary,
+                            size = 18.dp
+                        )
+                    }
+                }
+            }
+
+            // Achievements & Milestones Section
+            item {
+                Text(
+                    text = "ACHIEVEMENTS & MILESTONES",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAchievementsSheet = true }
+                            .padding(spacing.m),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(colors.accent.copy(alpha = 0.15f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "✨",
+                                fontSize = 18.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(spacing.m))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Achievements & Collectibles",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                val earnedCount = allAchievements.count { it.isEarned }
+                                Box(
+                                    modifier = Modifier
+                                        .background(colors.goldSeamSoft, CircleShape)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "$earnedCount/${allAchievements.size}",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.goldSeam
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "View milestone badges, consistency badges, and gold awards",
                                 style = typography.caption,
                                 color = colors.textSecondary
                             )
@@ -3087,6 +3158,13 @@ fun SettingsScreen(
     if (showWidgetShowcaseSheet) {
         WidgetShowcaseSheet(
             onDismiss = { showWidgetShowcaseSheet = false }
+        )
+    }
+
+    if (showAchievementsSheet) {
+        com.kintsu.app.ui.shop.AchievementsGallerySheet(
+            achievements = allAchievements,
+            onDismiss = { showAchievementsSheet = false }
         )
     }
 }

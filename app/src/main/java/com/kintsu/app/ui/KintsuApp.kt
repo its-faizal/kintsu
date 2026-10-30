@@ -109,6 +109,7 @@ fun KintsuApp(
     val personalRewards by viewModel.activePersonalRewards.collectAsState()
     val walletTransactions by viewModel.walletTransactions.collectAsState()
     val stylePresets by viewModel.allStylePresets.collectAsState()
+    val allAchievements by viewModel.allAchievements.collectAsState()
     val activeQuitHabits by viewModel.activeQuitHabits.collectAsState()
     val allDetoxSessions by viewModel.allDetoxSessions.collectAsState()
     val activeDetox = remember(allDetoxSessions) {
@@ -350,6 +351,7 @@ fun KintsuApp(
                 onOpenDetox = { viewModel.setDetoxOpen(true) },
                 onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
                 onOpenShop = { viewModel.setShopOpen(true) },
+                allAchievements = allAchievements,
                 onUpdateWellbeingEnabled = { viewModel.setWellbeingEnabled(it) },
                 onUpdateStrictness = { viewModel.setWellbeingStrictness(it) },
                 onUpdateScreenTimeGoalMinutes = { viewModel.setScreenTimeGoalMinutes(it) },
@@ -640,6 +642,7 @@ fun KintsuApp(
                 personalRewards = personalRewards,
                 walletTransactions = walletTransactions,
                 stylePresets = stylePresets,
+                allAchievements = allAchievements,
                 onPurchaseItem = { viewModel.purchaseShopItem(it) },
                 onEquipItem = { viewModel.equipShopItem(it) },
                 onCreatePersonalReward = { title, desc, cost, cat, icon ->
@@ -650,19 +653,14 @@ fun KintsuApp(
                 onSaveStylePreset = { name, theme, accent, icon, skin, face ->
                     viewModel.saveStylePreset(name, theme, accent, icon, skin, face)
                 },
+                onRenameStylePreset = { preset, newName ->
+                    viewModel.renameStylePreset(preset, newName)
+                },
                 onApplyStylePreset = { preset ->
-                    val themeEnum = com.kintsu.app.ui.theme.AppTheme.values().find {
-                        it.displayName.equals(preset.themeName, ignoreCase = true) || it.name.equals(preset.themeName, ignoreCase = true)
-                    }
-                    if (themeEnum != null) {
-                        viewModel.setAppTheme(themeEnum)
-                    }
-                    val itemToEquip = allShopItems.find { it.id == preset.iconId }
-                    if (itemToEquip != null) {
-                        viewModel.equipShopItem(itemToEquip)
-                    }
+                    viewModel.applyStylePreset(preset)
                 },
                 onDeleteStylePreset = { viewModel.deleteStylePreset(it) },
+                onRestoreDefaultPresets = { viewModel.restoreDefaultStylePresets() },
                 onDismiss = { viewModel.setShopOpen(false) }
             )
         }
