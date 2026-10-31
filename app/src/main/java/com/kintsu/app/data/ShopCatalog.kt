@@ -134,6 +134,19 @@ object ShopCatalog {
                 collectionName = "Botanical Collection"
             )
         )
+        list.add(
+            ShopItemEntity(
+                id = "theme_metropolis_hero",
+                itemType = "THEME",
+                title = "Metropolis Hero",
+                description = "Midnight navy, crystalline ice, crimson cape and sunburst gold. Heroic resolve and unbreakable fortitude.",
+                costCoins = 60,
+                category = "Themes",
+                bundleId = "bundle_superman",
+                collectionName = "Metropolis Hero Collection",
+                tag = "HERO"
+            )
+        )
 
         // 2. APP ICONS (12 launcher icons)
         list.add(
@@ -267,6 +280,18 @@ object ShopCatalog {
                 category = "App Icons"
             )
         )
+        list.add(
+            ShopItemEntity(
+                id = "icon_superman",
+                itemType = "APP_ICON",
+                title = "Man of Steel",
+                description = "Heroic diamond shield emblem in crimson and gold.",
+                costCoins = 40,
+                category = "App Icons",
+                bundleId = "bundle_superman",
+                collectionName = "Metropolis Hero Collection"
+            )
+        )
 
         // 3. WIDGET SKINS (8 skins)
         list.add(
@@ -354,6 +379,18 @@ object ShopCatalog {
                 costCoins = 35,
                 category = "Widgets",
                 tag = "SIGNATURE"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "widget_superman_hero",
+                itemType = "WIDGET_SKIN",
+                title = "Metropolis Fortress Skin",
+                description = "Midnight crystalline card with gold shield seams and crimson indicators.",
+                costCoins = 40,
+                category = "Widgets",
+                bundleId = "bundle_superman",
+                collectionName = "Metropolis Hero Collection"
             )
         )
 
@@ -522,6 +559,18 @@ object ShopCatalog {
                 description = "Gentle sine wave undulating at the pace of mindful breath.",
                 costCoins = 30,
                 category = "Focus"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "focus_face_hero_shield",
+                itemType = "FOCUS_FACE",
+                title = "Fortress Shield",
+                description = "Concentric hero timer dial with crimson countdown ticks and sunburst gold ring.",
+                costCoins = 35,
+                category = "Focus",
+                bundleId = "bundle_superman",
+                collectionName = "Metropolis Hero Collection"
             )
         )
 
@@ -985,6 +1034,19 @@ object ShopCatalog {
                 category = "Collections",
                 bundleId = "bundle_nordic",
                 collectionName = "Nordic Collection",
+                tag = "BUNDLE"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "bundle_superman",
+                itemType = "BUNDLE",
+                title = "Metropolis Hero Collection",
+                description = "Includes Metropolis Hero Theme, Man of Steel Icon, Fortress Widget Skin, and Fortress Shield Timer Face. 40% hero savings.",
+                costCoins = 120,
+                category = "Collections",
+                bundleId = "bundle_superman",
+                collectionName = "Metropolis Hero Collection",
                 tag = "BUNDLE"
             )
         )

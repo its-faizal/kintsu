@@ -9,7 +9,8 @@ enum class AccentOption(val displayName: String, val color: Color) {
     CLAY("Terracotta Clay", Color(0xFFB86B52)),
     LAVENDER("Muted Lavender", Color(0xFF81729E)),
     STONE("Warm Stone", Color(0xFF7E7569)),
-    TEAL("Misty Slate", Color(0xFF607D8B))
+    TEAL("Misty Slate", Color(0xFF607D8B)),
+    CRIMSON("Crimson Cape", Color(0xFFD62828))
 }
 
 enum class ThemeMode {
@@ -179,6 +180,18 @@ enum class AppTheme(
             Color(0xFFE6E1D7),
             Color(0xFF5B7B69),
             Color(0xFF7A8580)
+        )
+    ),
+    METROPOLIS_HERO(
+        id = "METROPOLIS_HERO",
+        displayName = "Metropolis Hero",
+        subtitle = "Midnight navy, crystalline ice, crimson & heroic gold",
+        defaultAccent = AccentOption.CRIMSON,
+        previewPalette = listOf(
+            Color(0xFF001F54),
+            Color(0xFFD62828),
+            Color(0xFFFFD166),
+            Color(0xFFF8F9FA)
         )
     )
 }
@@ -811,6 +824,51 @@ val BotanicalPaperDarkPalette = KintsuColors(
     warning = Color(0xFFFFB951)
 )
 
+val MetropolisHeroLightPalette = KintsuColors(
+    background = Color(0xFFF4F6FB),
+    surface = Color(0xFFFFFFFF),
+    surfaceElevated = Color(0xFFE9EDF5),
+    surfaceTranslucent = Color(0xF2F4F6FB),
+    border = Color(0xFFD2D8E5),
+    textPrimary = Color(0xFF0A1128),
+    textSecondary = Color(0xFF485671),
+    textTertiary = Color(0xFF78859E),
+    accent = Color(0xFFD62828),
+    accentSoft = Color(0x2AD62828),
+    goldSeam = Color(0xFFFFD166),
+    goldSeamSoft = Color(0x35FFD166),
+    isDark = false,
+    accentText = Color(0xFFD62828),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFBA1A1A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410002),
+    warning = Color(0xFFE38E00)
+)
+val MetropolisHeroDarkPalette = KintsuColors(
+    background = Color(0xFF050A18),
+    surface = Color(0xFF0B142B),
+    surfaceElevated = Color(0xFF14203F),
+    surfaceTranslucent = Color(0xF2050A18),
+    border = Color(0xFF1D2E56),
+    textPrimary = Color(0xFFF8F9FA),
+    textSecondary = Color(0xFFA5B4D0),
+    textTertiary = Color(0xFF6F7E9B),
+    accent = Color(0xFFE63946),
+    accentSoft = Color(0x35E63946),
+    goldSeam = Color(0xFFFFD166),
+    goldSeamSoft = Color(0x40FFD166),
+    isDark = true,
+    accentText = Color(0xFFFF8B94),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFFFB4AB),
+    onError = Color(0xFF690005),
+    errorContainer = Color(0xFF93000A),
+    onErrorContainer = Color(0xFFFFDAD6),
+    warning = Color(0xFFFFC043)
+)
+
 fun getThemePalette(theme: AppTheme, isDark: Boolean): KintsuColors {
     return when (theme) {
         AppTheme.SAGE_IVORY -> if (isDark) SageIvoryDarkPalette else SageIvoryLightPalette
@@ -826,6 +884,7 @@ fun getThemePalette(theme: AppTheme, isDark: Boolean): KintsuColors {
         AppTheme.ECLIPSE_GOLD -> if (isDark) EclipseGoldDarkPalette else EclipseGoldLightPalette
         AppTheme.GOLDEN_HOUR -> if (isDark) GoldenHourDarkPalette else GoldenHourLightPalette
         AppTheme.BOTANICAL_PAPER -> if (isDark) BotanicalPaperDarkPalette else BotanicalPaperLightPalette
+        AppTheme.METROPOLIS_HERO -> if (isDark) MetropolisHeroDarkPalette else MetropolisHeroLightPalette
     }
 }
 

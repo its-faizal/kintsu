@@ -67,6 +67,14 @@ object AchievementCatalog {
             pointsAwarded = 25,
             badgeIcon = "✨",
             category = "CONSISTENCY"
+        ),
+        AchievementEntity(
+            id = "HEROIC_COMMITMENT",
+            title = "Man of Steel",
+            description = "Completed a full day with zero distraction slips and resolute fortitude",
+            pointsAwarded = 30,
+            badgeIcon = "🦸",
+            category = "SUPERHERO"
         )
     )
 }

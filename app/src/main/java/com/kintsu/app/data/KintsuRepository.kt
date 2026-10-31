@@ -1030,7 +1030,8 @@ class KintsuRepository(
             StylePresetEntity(name = "Midnight Focus", themeName = "Eclipse Gold", accentName = "GOLD", iconId = "icon_midnight_gold", widgetSkinId = "widget_midnight_bronze", focusFaceId = "focus_face_eclipse_dial"),
             StylePresetEntity(name = "Warm Studio", themeName = "Rosewood", accentName = "CLAY", iconId = "icon_terracotta_seal", widgetSkinId = "widget_rose_glass", focusFaceId = "focus_face_soft_hourglass"),
             StylePresetEntity(name = "Sakura Quiet", themeName = "Sakura Dawn", accentName = "LAVENDER", iconId = "icon_sakura_mark", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
-            StylePresetEntity(name = "Pure Monochrome", themeName = "Nordic Frost", accentName = "STONE", iconId = "icon_minimal_ink", widgetSkinId = "widget_minimal_paper", focusFaceId = "focus_face_minimal_digital")
+            StylePresetEntity(name = "Pure Monochrome", themeName = "Nordic Frost", accentName = "STONE", iconId = "icon_minimal_ink", widgetSkinId = "widget_minimal_paper", focusFaceId = "focus_face_minimal_digital"),
+            StylePresetEntity(name = "Metropolis Hero", themeName = "Metropolis Hero", accentName = "CRIMSON", iconId = "icon_superman", widgetSkinId = "widget_superman_hero", focusFaceId = "focus_face_hero_shield")
         )
         curated.forEach { wellbeingDao.insertStylePreset(it) }
     }
@@ -1107,6 +1108,12 @@ class KintsuRepository(
         val today = java.time.LocalDate.now().toEpochDay()
         val streakResult = StreakCalculator.calculateStreaks(habits, logs, today)
         return maxOf(streakResult.currentStreak, streakResult.bestStreak)
+    }
+
+    suspend fun isHeroicCommitmentMet(): Boolean {
+        val habitsCompleted = habitDao.getAllLogs().first().size >= 1
+        val focusDone = allFocusSessions.first().isNotEmpty()
+        return habitsCompleted && focusDone
     }
 
     suspend fun addAppGroup(name: String, category: String, packages: String): Long {

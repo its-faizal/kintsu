@@ -29,6 +29,7 @@ class AchievementTracker(private val repository: KintsuRepository) {
                     "FIRST_REVIEW" -> repository.allWeeklyReviews.first().isNotEmpty()
                     "FIRST_THEME" -> repository.getUnlockedThemesCount() >= 1
                     "SEVEN_DAY_STREAK" -> repository.getMaxHabitStreak() >= 7
+                    "HEROIC_COMMITMENT" -> repository.isHeroicCommitmentMet()
                     else -> false
                 }
             } catch (_: Exception) {

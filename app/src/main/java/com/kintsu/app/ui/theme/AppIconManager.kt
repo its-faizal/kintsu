@@ -113,6 +113,14 @@ object AppIconManager {
             aliasName = ".MainActivityAliasPrismaticPearl",
             drawableResId = R.drawable.ic_kintsu_prismatic_pearl,
             costCoins = 45
+        ),
+        LauncherIconInfo(
+            id = "icon_superman",
+            title = "Man of Steel",
+            description = "Heroic diamond shield emblem in crimson and gold",
+            aliasName = ".MainActivityAliasSuperman",
+            drawableResId = R.drawable.ic_kintsu_superman,
+            costCoins = 40
         )
     )
 
