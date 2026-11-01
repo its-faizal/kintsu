@@ -38,7 +38,7 @@ import com.kintsu.app.domain.GoldRepairManager
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
-val HabitIdKey = ActionParameters.Key<Long>("habit_id")
+val HabitIdKey = WidgetHabitIdKey
 
 class HabitsGlanceWidget : GlanceAppWidget() {
 
@@ -49,6 +49,7 @@ class HabitsGlanceWidget : GlanceAppWidget() {
         val todayLogs = database.habitDao().getLogsForDay(todayEpochDay).first().associateBy { it.habitId }
 
         val scheduledToday = habits.filter { GoldRepairManager.isHabitScheduledOn(it, todayEpochDay) }
+        val displayHabits = if (scheduledToday.isNotEmpty()) scheduledToday else habits
 
         provideContent {
             Column(
@@ -85,7 +86,7 @@ class HabitsGlanceWidget : GlanceAppWidget() {
 
                 Spacer(modifier = GlanceModifier.height(10.dp))
 
-                if (scheduledToday.isEmpty()) {
+                if (displayHabits.isEmpty()) {
                     Box(
                         modifier = GlanceModifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
@@ -99,7 +100,7 @@ class HabitsGlanceWidget : GlanceAppWidget() {
                         )
                     }
                 } else {
-                    scheduledToday.take(4).forEach { habit ->
+                    displayHabits.take(4).forEach { habit ->
                         val log = todayLogs[habit.id]
                         val isDone = log?.isCompleted == true
                         val isRepaired = log?.isRepairedGold == true

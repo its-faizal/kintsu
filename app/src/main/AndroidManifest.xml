@@ -359,6 +359,7 @@
 
         <receiver
             android:name=".widget.HabitsGlanceWidgetReceiver"
+            android:label="@string/widget_habits_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
@@ -370,6 +371,7 @@
 
         <receiver
             android:name=".widget.StreakGlanceWidgetReceiver"
+            android:label="@string/widget_streak_name"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

@@ -112,6 +112,7 @@ fun HabitsScreen(
     onArchiveHabit: (Long, Boolean) -> Unit,
     onDeleteHabit: (HabitEntity) -> Unit,
     onOpenSettings: () -> Unit,
+    onBackClick: () -> Unit = {},
     focusState: FocusState = FocusState(),
     onOpenFocus: () -> Unit = {},
     todayIntention: DailyIntentionEntity? = null,
@@ -179,7 +180,9 @@ fun HabitsScreen(
         ) {
             KintsuTopBar(
                 title = "Habits",
-                subtitle = "Good day, $userName"
+                subtitle = "Good day, $userName",
+                showBackButton = true,
+                onBackClick = onBackClick
             )
 
             LazyColumn(

@@ -135,6 +135,7 @@ fun TasksScreen(
     onSaveDailyPlan: (List<DailyPlanItem>) -> Unit = {},
     onStartFocusForTask: (TaskEntity) -> Unit = {},
     onOpenSettings: () -> Unit,
+    onBackClick: () -> Unit = {},
     externalOpenAddSheet: Boolean = false,
     onExternalAddSheetConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -213,7 +214,9 @@ fun TasksScreen(
             .background(colors.background)
     ) {
         KintsuTopBar(
-            title = "Tasks & Plan"
+            title = "Tasks & Plan",
+            showBackButton = true,
+            onBackClick = onBackClick
         )
 
         LazyColumn(

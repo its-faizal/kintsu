@@ -75,6 +75,8 @@ fun KintsuTheme(
             AccentOption.STONE -> androidx.compose.ui.graphics.Color(0xFFC6BEB2)
             AccentOption.TEAL -> androidx.compose.ui.graphics.Color(0xFF9EC0CE)
             AccentOption.CRIMSON -> androidx.compose.ui.graphics.Color(0xFFFF8B94)
+            AccentOption.BLUE -> androidx.compose.ui.graphics.Color(0xFF64D2FF)
+            AccentOption.NEON_GREEN -> androidx.compose.ui.graphics.Color(0xFF1ED760)
         }
     } else {
         when (accentOption) {
@@ -85,6 +87,8 @@ fun KintsuTheme(
             AccentOption.STONE -> androidx.compose.ui.graphics.Color(0xFF544D42)
             AccentOption.TEAL -> androidx.compose.ui.graphics.Color(0xFF355361)
             AccentOption.CRIMSON -> androidx.compose.ui.graphics.Color(0xFF900C18)
+            AccentOption.BLUE -> androidx.compose.ui.graphics.Color(0xFF0071E3)
+            AccentOption.NEON_GREEN -> androidx.compose.ui.graphics.Color(0xFF107C35)
         }
     }
 

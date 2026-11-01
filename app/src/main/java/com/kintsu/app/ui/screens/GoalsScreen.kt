@@ -67,6 +67,7 @@ fun GoalsScreen(
     onUpdateGoal: (GoalEntity) -> Unit,
     onDeleteGoal: (GoalEntity) -> Unit,
     onOpenSettings: () -> Unit,
+    onBackClick: () -> Unit = {},
     externalOpenAddSheet: Boolean = false,
     onExternalAddSheetConsumed: () -> Unit = {},
     modifier: Modifier = Modifier
@@ -92,7 +93,9 @@ fun GoalsScreen(
             .background(colors.background)
     ) {
         KintsuTopBar(
-            title = "Goals"
+            title = "Goals",
+            showBackButton = true,
+            onBackClick = onBackClick
         )
 
         LazyColumn(

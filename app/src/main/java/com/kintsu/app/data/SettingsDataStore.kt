@@ -47,7 +47,7 @@ data class KintsuSettings(
     val journalReminderTime: String = "21:00",
     val weeklyReviewEnabled: Boolean = true,
     val weeklyReviewReminderTime: String = "18:00",
-    val homeSectionOrder: String = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS",
+    val homeSectionOrder: String = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS,ADDICTION",
     val hiddenHomeSections: String = "",
     val quickActionsOrder: String = "ADD_HABIT,ADD_TASK,START_FOCUS,JOURNAL,NEW_GOAL",
     val accountEmail: String? = null,
@@ -94,7 +94,7 @@ data class KintsuSettings(
 class SettingsDataStore(val context: Context) {
 
     companion object {
-        const val DEFAULT_HOME_SECTION_ORDER = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS"
+        const val DEFAULT_HOME_SECTION_ORDER = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS,ADDICTION"
         const val DEFAULT_HIDDEN_HOME_SECTIONS = ""
         const val DEFAULT_QUICK_ACTIONS_ORDER = "ADD_HABIT,ADD_TASK,START_FOCUS,JOURNAL,NEW_GOAL"
     }

@@ -8,7 +8,9 @@ import androidx.room.Query
 import androidx.room.Update
 import com.kintsu.app.data.model.DailyIntentionEntity
 import com.kintsu.app.data.model.FocusSessionEntity
+import com.kintsu.app.data.model.JournalCollectionEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.JournalTemplateEntity
 import com.kintsu.app.data.model.WeeklyReviewEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -53,11 +55,29 @@ interface DailyIntentionDao {
 
 @Dao
 interface JournalDao {
-    @Query("SELECT * FROM journal_entries ORDER BY dateEpochDay DESC")
+    @Query("SELECT * FROM journal_entries ORDER BY dateEpochDay DESC, createdAt DESC")
     fun getAllEntries(): Flow<List<JournalEntryEntity>>
 
-    @Query("SELECT * FROM journal_entries WHERE dateEpochDay = :dateEpochDay LIMIT 1")
+    @Query("SELECT * FROM journal_entries WHERE dateEpochDay = :dateEpochDay ORDER BY createdAt DESC LIMIT 1")
     fun getEntryForDay(dateEpochDay: Long): Flow<JournalEntryEntity?>
+
+    @Query("SELECT * FROM journal_entries WHERE dateEpochDay = :dateEpochDay ORDER BY createdAt DESC")
+    fun getEntriesForDayAll(dateEpochDay: Long): Flow<List<JournalEntryEntity>>
+
+    @Query("SELECT * FROM journal_entries WHERE id = :id LIMIT 1")
+    fun getEntryById(id: Long): Flow<JournalEntryEntity?>
+
+    @Query("SELECT * FROM journal_entries WHERE collectionId = :collectionId ORDER BY dateEpochDay DESC, createdAt DESC")
+    fun getEntriesByCollection(collectionId: Long): Flow<List<JournalEntryEntity>>
+
+    @Query("SELECT * FROM journal_entries WHERE isFavorite = 1 ORDER BY dateEpochDay DESC, createdAt DESC")
+    fun getFavoriteEntries(): Flow<List<JournalEntryEntity>>
+
+    @Query("SELECT * FROM journal_entries WHERE photoUris != '' AND photoUris IS NOT NULL ORDER BY dateEpochDay DESC")
+    fun getEntriesWithPhotos(): Flow<List<JournalEntryEntity>>
+
+    @Query("SELECT * FROM journal_entries WHERE content LIKE '%' || :query || '%' OR title LIKE '%' || :query || '%' OR tags LIKE '%' || :query || '%' ORDER BY dateEpochDay DESC")
+    fun searchEntries(query: String): Flow<List<JournalEntryEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrUpdate(entry: JournalEntryEntity): Long
@@ -67,6 +87,41 @@ interface JournalDao {
 
     @Query("DELETE FROM journal_entries")
     suspend fun clearAll()
+
+    // Collections
+    @Query("SELECT * FROM journal_collections WHERE isArchived = 0 ORDER BY id ASC")
+    fun getAllCollections(): Flow<List<JournalCollectionEntity>>
+
+    @Query("SELECT * FROM journal_collections WHERE id = :id LIMIT 1")
+    fun getCollectionById(id: Long): Flow<JournalCollectionEntity?>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertCollection(collection: JournalCollectionEntity): Long
+
+    @Update
+    suspend fun updateCollection(collection: JournalCollectionEntity)
+
+    @Delete
+    suspend fun deleteCollection(collection: JournalCollectionEntity)
+
+    @Query("UPDATE journal_entries SET collectionId = :toCollectionId WHERE collectionId = :fromCollectionId")
+    suspend fun moveEntriesToCollection(fromCollectionId: Long, toCollectionId: Long)
+
+    // Templates
+    @Query("SELECT * FROM journal_templates ORDER BY isFavorite DESC, id ASC")
+    fun getAllTemplates(): Flow<List<JournalTemplateEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTemplate(template: JournalTemplateEntity): Long
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertTemplates(templates: List<JournalTemplateEntity>)
+
+    @Update
+    suspend fun updateTemplate(template: JournalTemplateEntity)
+
+    @Delete
+    suspend fun deleteTemplate(template: JournalTemplateEntity)
 }
 
 @Dao

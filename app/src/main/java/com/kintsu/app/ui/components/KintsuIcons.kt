@@ -593,3 +593,220 @@ fun IconSparkle(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
     }
 }
 
+@Composable
+fun IconLeaf(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val p = Path().apply {
+            moveTo(w * 0.15f, h * 0.85f)
+            cubicTo(w * 0.15f, h * 0.35f, w * 0.5f, h * 0.15f, w * 0.85f, h * 0.15f)
+            cubicTo(w * 0.85f, h * 0.65f, w * 0.65f, h * 0.85f, w * 0.15f, h * 0.85f)
+            close()
+        }
+        drawPath(p, color = color)
+        drawLine(
+            color = color.copy(alpha = 0.5f),
+            start = androidx.compose.ui.geometry.Offset(w * 0.15f, h * 0.85f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.7f, h * 0.3f),
+            strokeWidth = 1.5.dp.toPx()
+        )
+    }
+}
+
+@Composable
+fun IconFavorite(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val p = Path().apply {
+            moveTo(w * 0.5f, h * 0.15f)
+            lineTo(w * 0.62f, h * 0.38f)
+            lineTo(w * 0.88f, h * 0.42f)
+            lineTo(w * 0.69f, h * 0.61f)
+            lineTo(w * 0.74f, h * 0.87f)
+            lineTo(w * 0.5f, h * 0.75f)
+            lineTo(w * 0.26f, h * 0.87f)
+            lineTo(w * 0.31f, h * 0.61f)
+            lineTo(w * 0.12f, h * 0.42f)
+            lineTo(w * 0.38f, h * 0.38f)
+            close()
+        }
+        drawPath(p, color = color)
+    }
+}
+
+@Composable
+fun IconHistory(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        drawCircle(
+            color = color,
+            radius = w * 0.38f,
+            center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.8.dp.toPx())
+        )
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.28f),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.68f, h * 0.5f),
+            strokeWidth = 1.8.dp.toPx(),
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun IconShare(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val r = 2.5.dp.toPx()
+        val c1 = androidx.compose.ui.geometry.Offset(w * 0.75f, h * 0.25f)
+        val c2 = androidx.compose.ui.geometry.Offset(w * 0.25f, h * 0.5f)
+        val c3 = androidx.compose.ui.geometry.Offset(w * 0.75f, h * 0.75f)
+
+        drawLine(color = color, start = c2, end = c1, strokeWidth = 1.6.dp.toPx())
+        drawLine(color = color, start = c2, end = c3, strokeWidth = 1.6.dp.toPx())
+        drawCircle(color = color, radius = r, center = c1)
+        drawCircle(color = color, radius = r, center = c2)
+        drawCircle(color = color, radius = r, center = c3)
+    }
+}
+
+@Composable
+fun IconMore(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val r = 1.8.dp.toPx()
+        drawCircle(color = color, radius = r, center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.25f))
+        drawCircle(color = color, radius = r, center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.5f))
+        drawCircle(color = color, radius = r, center = androidx.compose.ui.geometry.Offset(w * 0.5f, h * 0.75f))
+    }
+}
+
+@Composable
+fun IconEdit(color: Color, modifier: Modifier = Modifier, size: Dp = 18.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = 1.6.dp.toPx()
+        // Pen body
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(w * 0.25f, h * 0.75f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.75f, h * 0.25f),
+            strokeWidth = stroke,
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+        // Pen tip
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.8f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.25f, h * 0.75f),
+            strokeWidth = stroke,
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+    }
+}
+
+@Composable
+fun IconDelete(color: Color, modifier: Modifier = Modifier, size: Dp = 18.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val stroke = 1.6.dp.toPx()
+        // Lid
+        drawLine(
+            color = color,
+            start = androidx.compose.ui.geometry.Offset(w * 0.2f, h * 0.3f),
+            end = androidx.compose.ui.geometry.Offset(w * 0.8f, h * 0.3f),
+            strokeWidth = stroke,
+            cap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
+        // Body
+        val bodyPath = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.28f, h * 0.35f)
+            lineTo(w * 0.33f, h * 0.82f)
+            lineTo(w * 0.67f, h * 0.82f)
+            lineTo(w * 0.72f, h * 0.35f)
+        }
+        drawPath(
+            path = bodyPath,
+            color = color,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = androidx.compose.ui.graphics.StrokeCap.Round)
+        )
+    }
+}
+
+@Composable
+fun IconCustomizer(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val s = Stroke(width = 1.6f.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        val w = this.size.width
+        val h = this.size.height
+
+        // Main shape - paintbrush/palette hybrid
+        val p = Path().apply {
+            // Brush handle
+            moveTo(w * 0.25f, h * 0.75f)
+            lineTo(w * 0.35f, h * 0.35f)
+            // Ferrule
+            lineTo(w * 0.65f, h * 0.35f)
+            lineTo(w * 0.75f, h * 0.75f)
+            close()
+        }
+        drawPath(p, color = color, style = s)
+
+        // Bristles - three strokes
+        drawLine(
+            color = color,
+            start = Offset(w * 0.38f, h * 0.35f),
+            end = Offset(w * 0.38f, h * 0.18f),
+            strokeWidth = 1.6f.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(w * 0.5f, h * 0.35f),
+            end = Offset(w * 0.5f, h * 0.12f),
+            strokeWidth = 1.6f.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = color,
+            start = Offset(w * 0.62f, h * 0.35f),
+            end = Offset(w * 0.62f, h * 0.18f),
+            strokeWidth = 1.6f.dp.toPx(),
+            cap = StrokeCap.Round
+        )
+
+        // Sparkle accent on brush tip
+        val sparkle = Path().apply {
+            moveTo(w * 0.5f, h * 0.08f)
+            lineTo(w * 0.54f, h * 0.16f)
+            lineTo(w * 0.62f, h * 0.16f)
+            lineTo(w * 0.56f, h * 0.22f)
+            lineTo(w * 0.58f, h * 0.3f)
+            lineTo(w * 0.5f, h * 0.26f)
+            lineTo(w * 0.42f, h * 0.3f)
+            lineTo(w * 0.44f, h * 0.22f)
+            lineTo(w * 0.38f, h * 0.16f)
+            lineTo(w * 0.46f, h * 0.16f)
+            close()
+        }
+        drawPath(sparkle, color = color)
+    }
+}
+
+
+

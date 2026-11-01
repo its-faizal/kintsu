@@ -93,6 +93,7 @@ fun ProgressScreen(
     onDeleteJournalEntry: (JournalEntryEntity) -> Unit = {},
     onDeleteWeeklyReview: (WeeklyReviewEntity) -> Unit = {},
     onOpenSettings: () -> Unit,
+    onBackClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = KintsuTheme.colors
@@ -111,7 +112,9 @@ fun ProgressScreen(
     ) {
         KintsuTopBar(
             title = "Progress & Insights",
-            subtitle = "The Tapestry of Your Journey"
+            subtitle = "The Tapestry of Your Journey",
+            showBackButton = true,
+            onBackClick = onBackClick
         )
 
         LazyColumn(

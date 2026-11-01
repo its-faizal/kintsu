@@ -36,10 +36,12 @@ class AchievementTrackerTest {
             StylePresetEntity(name = "Warm Studio", themeName = "Rosewood", accentName = "CLAY", iconId = "icon_terracotta_seal", widgetSkinId = "widget_rose_glass", focusFaceId = "focus_face_soft_hourglass"),
             StylePresetEntity(name = "Sakura Quiet", themeName = "Sakura Dawn", accentName = "LAVENDER", iconId = "icon_sakura_mark", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
             StylePresetEntity(name = "Pure Monochrome", themeName = "Nordic Frost", accentName = "STONE", iconId = "icon_minimal_ink", widgetSkinId = "widget_minimal_paper", focusFaceId = "focus_face_minimal_digital"),
-            StylePresetEntity(name = "Metropolis Hero", themeName = "Metropolis Hero", accentName = "CRIMSON", iconId = "icon_superman", widgetSkinId = "widget_superman_hero", focusFaceId = "focus_face_hero_shield")
+            StylePresetEntity(name = "Metropolis Hero", themeName = "Metropolis Hero", accentName = "CRIMSON", iconId = "icon_superman", widgetSkinId = "widget_superman_hero", focusFaceId = "focus_face_hero_shield"),
+            StylePresetEntity(name = "Cupertino Fluid", themeName = "Apple Cupertino", accentName = "BLUE", iconId = "icon_prismatic_pearl", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
+            StylePresetEntity(name = "Spotify Pulse", themeName = "Spotify Pulse", accentName = "NEON_GREEN", iconId = "icon_midnight_gold", widgetSkinId = "widget_midnight_bronze", focusFaceId = "focus_face_minimal_digital")
         )
 
-        assertEquals("Expected exactly 7 curated designer style presets", 7, curated.size)
+        assertEquals("Expected exactly 9 curated designer style presets", 9, curated.size)
 
         curated.forEach { preset ->
             assertTrue("Preset name must not be blank", preset.name.isNotBlank())

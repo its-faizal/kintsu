@@ -40,9 +40,15 @@ class CompactTasksWidget : GlanceAppWidget() {
 
         val todayEpochDay = LocalDate.now().toEpochDay()
         val allTasks = database.taskDao().getAllTasks().first()
-        val todayTasks = allTasks.filter {
-            it.plannedDateEpochDay == todayEpochDay || it.dueDateEpochDay == todayEpochDay
-        }.sortedBy { it.isCompleted }
+        val dueOrPlannedToday = allTasks.filter {
+            (it.dueDateEpochDay != null && it.dueDateEpochDay <= todayEpochDay) ||
+            it.plannedDateEpochDay == todayEpochDay
+        }
+        val todayTasks = if (dueOrPlannedToday.isNotEmpty()) {
+            dueOrPlannedToday.sortedBy { it.isCompleted }
+        } else {
+            allTasks.filter { !it.isCompleted }
+        }
 
         val completedCount = todayTasks.count { it.isCompleted }
         val totalCount = todayTasks.size

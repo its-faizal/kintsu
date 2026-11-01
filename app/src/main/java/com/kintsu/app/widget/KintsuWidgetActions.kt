@@ -47,7 +47,7 @@ object WidgetIntents {
 
 class ToggleHabitWidgetCallback : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
-        val habitId = parameters[WidgetHabitIdKey] ?: return
+        val habitId = parameters[WidgetHabitIdKey] ?: parameters[ActionParameters.Key<Long>("habit_id")] ?: return
         val database = KintsuDatabase.getDatabase(context)
         val todayEpochDay = LocalDate.now().toEpochDay()
         val existingLog = database.habitDao().getLog(habitId, todayEpochDay)

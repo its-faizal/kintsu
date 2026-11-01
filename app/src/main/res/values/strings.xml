@@ -11,6 +11,8 @@
     <string name="widget_stacked_summary_name">Stacked Summary</string>
     <string name="widget_aesthetic_quote_name">Aesthetic Intention</string>
     <string name="widget_compact_tasks_name">Compact Tasks</string>
+    <string name="widget_habits_name">Daily Rituals</string>
+    <string name="widget_streak_name">Streak Counter</string>
     <string name="widget_habits_desc">Today\'s rituals on your home screen</string>
     <string name="widget_streak_desc">Your quiet streak counter and gold seams</string>
     <string name="widget_today_overview_desc">Daily dashboard with habits, tasks, goals &amp; focus</string>

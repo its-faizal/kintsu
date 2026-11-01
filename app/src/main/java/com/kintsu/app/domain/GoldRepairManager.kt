@@ -16,7 +16,14 @@ object GoldRepairManager {
      */
     fun isHabitScheduledOn(habit: HabitEntity, epochDay: Long): Boolean {
         if (habit.isArchived) return false
-        val habitCreationEpochDay = habit.createdAt / (86_400_000L)
+        val habitCreationEpochDay = try {
+            java.time.Instant.ofEpochMilli(habit.createdAt)
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .toEpochDay()
+        } catch (_: Exception) {
+            habit.createdAt / 86_400_000L
+        }
         if (epochDay < habitCreationEpochDay) return false
 
         return when (habit.frequencyType) {

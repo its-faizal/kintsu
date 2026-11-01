@@ -27,7 +27,9 @@ import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
+import com.kintsu.app.data.model.JournalCollectionEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.JournalTemplateEntity
 import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -109,11 +111,15 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     private val _isDigitalBalanceOpen = MutableStateFlow(false)
     val isDigitalBalanceOpen: StateFlow<Boolean> = _isDigitalBalanceOpen.asStateFlow()
 
+    private val _isCustomizationOpen = MutableStateFlow(false)
+    val isCustomizationOpen: StateFlow<Boolean> = _isCustomizationOpen.asStateFlow()
+
     fun setShopOpen(open: Boolean) { _isShopOpen.value = open }
     fun setDetoxOpen(open: Boolean) { _isDetoxOpen.value = open }
     fun setQuitHabitsOpen(open: Boolean) { _isQuitHabitsOpen.value = open }
     fun setWellbeingWizardOpen(open: Boolean) { _isWellbeingWizardOpen.value = open }
     fun setDigitalBalanceOpen(open: Boolean) { _isDigitalBalanceOpen.value = open }
+    fun setCustomizationOpen(open: Boolean) { _isCustomizationOpen.value = open }
 
     val allShopItems: StateFlow<List<ShopItemEntity>> = repository.allShopItems
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -220,6 +226,19 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     val allJournalEntries: StateFlow<List<JournalEntryEntity>> = repository.allJournalEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val allJournalCollections: StateFlow<List<JournalCollectionEntity>> = repository.allJournalCollections
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allJournalTemplates: StateFlow<List<JournalTemplateEntity>> = repository.allJournalTemplates
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private val _selectedJournalCollectionId = MutableStateFlow(0L)
+    val selectedJournalCollectionId: StateFlow<Long> = _selectedJournalCollectionId.asStateFlow()
+
+    fun selectJournalCollection(collectionId: Long) {
+        _selectedJournalCollectionId.value = collectionId
+    }
+
     val allWeeklyReviews: StateFlow<List<WeeklyReviewEntity>> = repository.allWeeklyReviews
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -318,6 +337,7 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
             repository.seedDefaultsIfEmpty()
             repository.seedShopCatalogIfEmpty()
             repository.seedDefaultStylePresetsIfEmpty()
+            repository.seedDefaultTemplatesIfNeeded()
             achievementTracker.evaluateAchievements()
         }
     }
@@ -1018,6 +1038,61 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun saveRichJournalEntry(entry: JournalEntryEntity, onDone: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            repository.saveRichJournalEntry(entry)
+            repository.awardCoins(
+                amount = 5,
+                reason = "Mindful Reflection Logged",
+                sourceActivity = "JOURNAL",
+                sourceEventId = "JOURNAL_${entry.dateEpochDay}_${System.currentTimeMillis() / 60000}"
+            )
+            onDone?.invoke()
+        }
+    }
+
+    fun toggleFavoriteJournalEntry(entry: JournalEntryEntity) {
+        viewModelScope.launch {
+            repository.saveRichJournalEntry(entry.copy(isFavorite = !entry.isFavorite))
+        }
+    }
+
+    fun createJournalCollection(name: String, colorHex: String, iconName: String, isPrivate: Boolean = false) {
+        viewModelScope.launch {
+            repository.createJournalCollection(name, colorHex, iconName, isPrivate)
+        }
+    }
+
+    fun updateJournalCollection(collection: JournalCollectionEntity) {
+        viewModelScope.launch {
+            repository.updateJournalCollection(collection)
+        }
+    }
+
+    fun deleteJournalCollection(collection: JournalCollectionEntity) {
+        viewModelScope.launch {
+            repository.deleteJournalCollection(collection)
+        }
+    }
+
+    fun saveJournalTemplate(template: JournalTemplateEntity) {
+        viewModelScope.launch {
+            repository.saveJournalTemplate(template)
+        }
+    }
+
+    fun deleteJournalTemplate(template: JournalTemplateEntity) {
+        viewModelScope.launch {
+            repository.deleteJournalTemplate(template)
+        }
+    }
+
+    fun moveJournalEntry(entry: JournalEntryEntity, targetCollectionId: Long) {
+        viewModelScope.launch {
+            repository.saveRichJournalEntry(entry.copy(collectionId = targetCollectionId, updatedAt = System.currentTimeMillis()))
+        }
+    }
+
     fun deleteJournalEntry(entry: JournalEntryEntity) {
         viewModelScope.launch {
             repository.deleteJournalEntry(entry)
@@ -1025,7 +1100,7 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
                 UndoAction(
                     message = "Journal entry removed",
                     onUndo = {
-                        repository.saveJournalEntry(entry.dateEpochDay, entry.content, entry.mood)
+                        repository.saveRichJournalEntry(entry)
                     }
                 )
             )

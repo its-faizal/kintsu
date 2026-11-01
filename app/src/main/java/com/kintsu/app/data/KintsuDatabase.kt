@@ -31,7 +31,9 @@ import com.kintsu.app.data.model.GoalEntity
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
+import com.kintsu.app.data.model.JournalCollectionEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.JournalTemplateEntity
 import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -45,6 +47,58 @@ import com.kintsu.app.data.model.WeeklyReviewEntity
 import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
+
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        fun addColumnSafe(sql: String) {
+            try { db.execSQL(sql) } catch (_: Exception) {}
+        }
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN title TEXT DEFAULT NULL")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN moodNote TEXT DEFAULT NULL")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN emotions TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN tags TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN photoUris TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN collectionId INTEGER NOT NULL DEFAULT 1")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN linkedHabitIds TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN linkedTaskIds TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN linkedGoalIds TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN linkedFocusSessionId INTEGER DEFAULT NULL")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE journal_entries ADD COLUMN promptUsed TEXT DEFAULT NULL")
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS journal_collections (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                name TEXT NOT NULL,
+                colorHex TEXT NOT NULL DEFAULT '#7F9A83',
+                iconName TEXT NOT NULL DEFAULT 'book',
+                isPrivate INTEGER NOT NULL DEFAULT 0,
+                isArchived INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS journal_templates (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                templateContent TEXT NOT NULL,
+                category TEXT NOT NULL,
+                isCustom INTEGER NOT NULL DEFAULT 0,
+                isFavorite INTEGER NOT NULL DEFAULT 0,
+                createdAt INTEGER NOT NULL DEFAULT 0
+            )
+        """.trimIndent())
+
+        val now = System.currentTimeMillis()
+        db.execSQL("INSERT OR IGNORE INTO journal_collections (id, name, colorHex, iconName, isPrivate, isArchived, createdAt) VALUES (1, 'Personal Journal', '#7F9A83', 'book', 0, 0, $now)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_journal_entries_collectionId ON journal_entries(collectionId)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_journal_entries_dateEpochDay ON journal_entries(dateEpochDay)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_journal_entries_isFavorite ON journal_entries(isFavorite)")
+    }
+}
 
 val MIGRATION_11_12 = object : Migration(11, 12) {
     override fun migrate(db: SupportSQLiteDatabase) {
@@ -498,9 +552,11 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         WalletTransactionEntity::class,
         PersonalRewardEntity::class,
         StylePresetEntity::class,
-        AchievementEntity::class
+        AchievementEntity::class,
+        JournalCollectionEntity::class,
+        JournalTemplateEntity::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -537,9 +593,20 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
-                        MIGRATION_11_12
+                        MIGRATION_11_12,
+                        MIGRATION_12_13
                     )
                     .build()
+                val appContext = context.applicationContext
+                instance.invalidationTracker.addObserver(
+                    object : androidx.room.InvalidationTracker.Observer(
+                        arrayOf("habits", "habit_logs", "tasks", "task_completions", "goals", "focus_sessions", "daily_intentions", "journal_entries")
+                    ) {
+                        override fun onInvalidated(tables: Set<String>) {
+                            com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(appContext)
+                        }
+                    }
+                )
                 INSTANCE = instance
                 instance
             }

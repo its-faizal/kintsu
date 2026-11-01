@@ -68,8 +68,10 @@ import com.kintsu.app.ui.components.IconFlame
 import com.kintsu.app.ui.components.IconGoal
 import com.kintsu.app.ui.components.IconGoldSeam
 import com.kintsu.app.ui.components.IconHabit
+import com.kintsu.app.ui.components.IconLeaf
 import com.kintsu.app.ui.components.IconPlay
 import com.kintsu.app.ui.components.IconProgress
+import com.kintsu.app.ui.components.IconShield
 import com.kintsu.app.ui.components.IconTask
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
@@ -110,6 +112,7 @@ fun HomeScreen(
     onNavigateToProgress: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenShop: () -> Unit = {},
+    onOpenCustomization: () -> Unit = {},
     onOpenDetox: () -> Unit = {},
     onOpenQuitHabits: () -> Unit = {},
     onOpenDigitalBalance: () -> Unit = {},
@@ -197,7 +200,8 @@ fun HomeScreen(
                 subtitle = todayFormatted,
                 onProfileClick = onOpenSettings,
                 coinsBalance = settings.coinsBalance,
-                onShopClick = onOpenShop
+                onShopClick = onOpenShop,
+                onCustomizationClick = onOpenCustomization
             )
 
             LazyColumn(
@@ -599,6 +603,69 @@ fun HomeScreen(
                                 }
                             }
 
+                            "ADDICTION" -> {
+                                item(key = "home_section_addiction") {
+                                    KintsuCard(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onOpenDigitalBalance() }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(spacing.m),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(CircleShape)
+                                                        .background(if (settings.wellbeingEnabled) colors.warning.copy(alpha = 0.15f) else colors.surfaceElevated),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    com.kintsu.app.ui.components.IconShield(
+                                                        color = if (settings.wellbeingEnabled) colors.warning else colors.textTertiary,
+                                                        size = 20.dp
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(spacing.m))
+                                                Column {
+                                                    Text(
+                                                        text = "Addiction Shield",
+                                                        style = typography.itemTitle,
+                                                        color = colors.textPrimary
+                                                    )
+                                                    Text(
+                                                        text = if (settings.wellbeingEnabled) {
+                                                            when (settings.wellbeingStrictness) {
+                                                                "STRICT" -> "Strict protection active"
+                                                                "BALANCED" -> "Balanced protection active"
+                                                                else -> "Gentle protection active"
+                                                            }
+                                                        } else {
+                                                            "Not set up • Tap to configure"
+                                                        },
+                                                        style = typography.caption,
+                                                        color = if (settings.wellbeingEnabled) colors.textSecondary else colors.textTertiary
+                                                    )
+                                                }
+                                            }
+
+                                            KintsuButton(
+                                                text = if (settings.wellbeingEnabled) "Open" else "Set Up",
+                                                onClick = onOpenDigitalBalance,
+                                                variant = KintsuButtonVariant.ACCENT_SOFT
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
                             "KEY_NUMBERS" -> {
                                 item(key = "home_section_key_numbers") {
                                     Row(
@@ -760,6 +827,16 @@ fun HomeScreen(
                                                                 icon = { IconProgress(color = colors.accent, size = 20.dp) },
                                                                 label = "Review",
                                                                 onClick = onOpenWeeklyReview
+                                                            )
+                                                            "DETOX" -> HomeActionButton(
+                                                                icon = { IconLeaf(color = colors.accent, size = 20.dp) },
+                                                                label = "Detox",
+                                                                onClick = onOpenDigitalBalance
+                                                            )
+                                                            "ADDICTION" -> HomeActionButton(
+                                                                icon = { IconLeaf(color = colors.warning, size = 20.dp) },
+                                                                label = "Addiction",
+                                                                onClick = onOpenDigitalBalance
                                                             )
                                                         }
                                                     }

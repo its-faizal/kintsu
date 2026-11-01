@@ -45,11 +45,16 @@ class TodayOverviewWidget : GlanceAppWidget() {
         val habits = database.habitDao().getActiveHabits().first()
         val scheduledHabits = habits.filter { GoldRepairManager.isHabitScheduledOn(it, todayEpochDay) }
         val habitLogs = database.habitDao().getLogsForDay(todayEpochDay).first()
-        val habitsDone = habitLogs.size
+        val scheduledHabitIds = scheduledHabits.map { it.id }.toSet()
+        val habitsDone = habitLogs.count { it.isCompleted && scheduledHabitIds.contains(it.habitId) }
         val habitsTotal = scheduledHabits.size
 
         val tasks = database.taskDao().getAllTasks().first()
-        val todayTasks = tasks.filter { it.plannedDateEpochDay == todayEpochDay || it.dueDateEpochDay == todayEpochDay }
+        val dueOrPlannedToday = tasks.filter {
+            (it.dueDateEpochDay != null && it.dueDateEpochDay <= todayEpochDay) ||
+            it.plannedDateEpochDay == todayEpochDay
+        }
+        val todayTasks = if (dueOrPlannedToday.isNotEmpty()) dueOrPlannedToday else tasks.filter { !it.isCompleted }
         val tasksDone = todayTasks.count { it.isCompleted }
         val tasksTotal = todayTasks.size
 

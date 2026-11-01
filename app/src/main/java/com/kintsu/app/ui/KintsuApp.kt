@@ -487,6 +487,7 @@ fun KintsuApp(
                                     onArchiveHabit = { id, archive -> viewModel.archiveHabit(id, archive) },
                                     onDeleteHabit = { viewModel.deleteHabit(it) },
                                     onOpenSettings = { viewModel.setSettingsOpen(true) },
+                                    onBackClick = { viewModel.popBackStack() },
                                     focusState = focusState,
                                     onOpenFocus = { isFocusOpen = true },
                                     todayIntention = todayIntention,
@@ -549,6 +550,7 @@ fun KintsuApp(
                                         isFocusOpen = true
                                     },
                                     onOpenSettings = { viewModel.setSettingsOpen(true) },
+                                    onBackClick = { viewModel.popBackStack() },
                                     externalOpenAddSheet = externalAddTask,
                                     onExternalAddSheetConsumed = { externalAddTask = false }
                                 )
@@ -566,6 +568,7 @@ fun KintsuApp(
                                     onUpdateGoal = { viewModel.updateGoal(it) },
                                     onDeleteGoal = { viewModel.deleteGoal(it) },
                                     onOpenSettings = { viewModel.setSettingsOpen(true) },
+                                    onBackClick = { viewModel.popBackStack() },
                                     externalOpenAddSheet = externalAddGoal,
                                     onExternalAddSheetConsumed = { externalAddGoal = false }
                                 )
@@ -585,7 +588,8 @@ fun KintsuApp(
                                     allWeeklyReviews = allWeeklyReviews,
                                     onDeleteJournalEntry = { viewModel.deleteJournalEntry(it) },
                                     onDeleteWeeklyReview = { viewModel.deleteWeeklyReview(it) },
-                                    onOpenSettings = { viewModel.setSettingsOpen(true) }
+                                    onOpenSettings = { viewModel.setSettingsOpen(true) },
+                                    onBackClick = { viewModel.popBackStack() }
                                 )
                             }
                         }

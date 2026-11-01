@@ -147,6 +147,32 @@ object ShopCatalog {
                 tag = "HERO"
             )
         )
+        list.add(
+            ShopItemEntity(
+                id = "theme_apple_cupertino",
+                itemType = "THEME",
+                title = "Apple Cupertino",
+                description = "Pure frosted glass, San Francisco slate and California blue. Fluid, interruptible spring interface.",
+                costCoins = 60,
+                category = "Themes",
+                bundleId = "bundle_apple",
+                collectionName = "Cupertino Glass Collection",
+                tag = "FLUID"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "theme_spotify_pulse",
+                itemType = "THEME",
+                title = "Spotify Pulse",
+                description = "Pitch dark obsidian with electric pulse green. Bold typography, high energy and rhythmic focus.",
+                costCoins = 60,
+                category = "Themes",
+                bundleId = "bundle_spotify",
+                collectionName = "Spotify Pulse Collection",
+                tag = "PULSE"
+            )
+        )
 
         // 2. APP ICONS (12 launcher icons)
         list.add(
@@ -1047,6 +1073,32 @@ object ShopCatalog {
                 category = "Collections",
                 bundleId = "bundle_superman",
                 collectionName = "Metropolis Hero Collection",
+                tag = "BUNDLE"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "bundle_apple",
+                itemType = "BUNDLE",
+                title = "Cupertino Glass Collection",
+                description = "Includes Apple Cupertino Theme, Frosted Pearl Skin, Flowing Line Timer Face, and California Blue Accent. 40% bundle savings.",
+                costCoins = 120,
+                category = "Collections",
+                bundleId = "bundle_apple",
+                collectionName = "Cupertino Glass Collection",
+                tag = "BUNDLE"
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "bundle_spotify",
+                itemType = "BUNDLE",
+                title = "Spotify Pulse Collection",
+                description = "Includes Spotify Pulse Theme, Midnight Bronze Skin, Minimal Digital Timer Face, and Electric Green Accent. 40% bundle savings.",
+                costCoins = 120,
+                category = "Collections",
+                bundleId = "bundle_spotify",
+                collectionName = "Spotify Pulse Collection",
                 tag = "BUNDLE"
             )
         )

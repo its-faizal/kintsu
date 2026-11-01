@@ -17,7 +17,9 @@ import com.kintsu.app.data.model.GoalProgressType
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.HabitLogEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
+import com.kintsu.app.data.model.JournalCollectionEntity
 import com.kintsu.app.data.model.JournalEntryEntity
+import com.kintsu.app.data.model.JournalTemplateEntity
 import com.kintsu.app.data.model.PersonalRewardEntity
 import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.data.model.ShopItemEntity
@@ -498,6 +500,98 @@ class KintsuRepository(
     suspend fun deleteJournalEntry(entry: JournalEntryEntity) {
         journalDao.delete(entry)
         notifyWidgets()
+    }
+
+    // Life Journal & Reflection Studio operations
+    val allJournalCollections: Flow<List<JournalCollectionEntity>> = journalDao.getAllCollections()
+    val allJournalTemplates: Flow<List<JournalTemplateEntity>> = journalDao.getAllTemplates()
+
+    fun getJournalEntryById(id: Long): Flow<JournalEntryEntity?> = journalDao.getEntryById(id)
+
+    fun getJournalEntriesByCollection(collectionId: Long): Flow<List<JournalEntryEntity>> =
+        if (collectionId <= 0L) journalDao.getAllEntries() else journalDao.getEntriesByCollection(collectionId)
+
+    fun getFavoriteJournalEntries(): Flow<List<JournalEntryEntity>> = journalDao.getFavoriteEntries()
+
+    fun searchJournalEntries(query: String): Flow<List<JournalEntryEntity>> =
+        if (query.isBlank()) journalDao.getAllEntries() else journalDao.searchEntries(query.trim())
+
+    fun getEntriesWithPhotos(): Flow<List<JournalEntryEntity>> = journalDao.getEntriesWithPhotos()
+
+    suspend fun saveRichJournalEntry(entry: JournalEntryEntity): Long {
+        val id = journalDao.insertOrUpdate(entry.copy(updatedAt = System.currentTimeMillis()))
+        notifyWidgets()
+        return id
+    }
+
+    suspend fun createJournalCollection(name: String, colorHex: String, iconName: String, isPrivate: Boolean = false): Long {
+        return journalDao.insertCollection(
+            JournalCollectionEntity(
+                name = name.trim(),
+                colorHex = colorHex,
+                iconName = iconName,
+                isPrivate = isPrivate,
+                createdAt = System.currentTimeMillis()
+            )
+        )
+    }
+
+    suspend fun updateJournalCollection(collection: JournalCollectionEntity) {
+        journalDao.updateCollection(collection)
+    }
+
+    suspend fun deleteJournalCollection(collection: JournalCollectionEntity, moveEntriesToCollectionId: Long = 1L) {
+        journalDao.moveEntriesToCollection(collection.id, moveEntriesToCollectionId)
+        journalDao.deleteCollection(collection)
+    }
+
+    suspend fun saveJournalTemplate(template: JournalTemplateEntity): Long {
+        return journalDao.insertTemplate(template)
+    }
+
+    suspend fun deleteJournalTemplate(template: JournalTemplateEntity) {
+        journalDao.deleteTemplate(template)
+    }
+
+    suspend fun seedDefaultTemplatesIfNeeded() {
+        try {
+            val existing = journalDao.getAllTemplates().first()
+            if (existing.isEmpty()) {
+                val defaultTemplates = listOf(
+                    JournalTemplateEntity(
+                        title = "Daily Review",
+                        description = "Retrospective check-in on accomplishments, learnings, and next actions.",
+                        category = "Daily Reflection",
+                        templateContent = "### Accomplished Today\n- \n\n### What I Learned\n- \n\n### What Comes Next\n- "
+                    ),
+                    JournalTemplateEntity(
+                        title = "Study Reflection",
+                        description = "Focus on topic retention, key insights, and revision needs.",
+                        category = "Study & Productivity",
+                        templateContent = "### Topic Explored\n\n### Key Concepts & Aha! Moments\n- \n\n### Challenging Areas\n- \n\n### Next Revision Focus\n- "
+                    ),
+                    JournalTemplateEntity(
+                        title = "Gratitude Journal",
+                        description = "Mindful appreciation for 3 positives and moments of grace.",
+                        category = "Gratitude",
+                        templateContent = "### Three Things I Appreciate Today\n1. \n2. \n3. \n\n### Something Unexpectedly Positive\n- "
+                    ),
+                    JournalTemplateEntity(
+                        title = "Weekly Reflection",
+                        description = "High-level summary of highlights, obstacles, and intentions.",
+                        category = "Personal Growth",
+                        templateContent = "### Weekly Highlights\n- \n\n### Obstacles & Overcomes\n- \n\n### Core Wisdom Gained\n- \n\n### Next Week's North Star Intention\n- "
+                    ),
+                    JournalTemplateEntity(
+                        title = "Free Writing",
+                        description = "Clean, unconstrained canvas for flowing thoughts.",
+                        category = "Creativity",
+                        templateContent = ""
+                    )
+                )
+                journalDao.insertTemplates(defaultTemplates)
+            }
+        } catch (_: Exception) {}
     }
 
     // Weekly Review operations
@@ -1031,7 +1125,9 @@ class KintsuRepository(
             StylePresetEntity(name = "Warm Studio", themeName = "Rosewood", accentName = "CLAY", iconId = "icon_terracotta_seal", widgetSkinId = "widget_rose_glass", focusFaceId = "focus_face_soft_hourglass"),
             StylePresetEntity(name = "Sakura Quiet", themeName = "Sakura Dawn", accentName = "LAVENDER", iconId = "icon_sakura_mark", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
             StylePresetEntity(name = "Pure Monochrome", themeName = "Nordic Frost", accentName = "STONE", iconId = "icon_minimal_ink", widgetSkinId = "widget_minimal_paper", focusFaceId = "focus_face_minimal_digital"),
-            StylePresetEntity(name = "Metropolis Hero", themeName = "Metropolis Hero", accentName = "CRIMSON", iconId = "icon_superman", widgetSkinId = "widget_superman_hero", focusFaceId = "focus_face_hero_shield")
+            StylePresetEntity(name = "Metropolis Hero", themeName = "Metropolis Hero", accentName = "CRIMSON", iconId = "icon_superman", widgetSkinId = "widget_superman_hero", focusFaceId = "focus_face_hero_shield"),
+            StylePresetEntity(name = "Cupertino Fluid", themeName = "Apple Cupertino", accentName = "BLUE", iconId = "icon_prismatic_pearl", widgetSkinId = "widget_frosted_pearl", focusFaceId = "focus_face_flowing_line"),
+            StylePresetEntity(name = "Spotify Pulse", themeName = "Spotify Pulse", accentName = "NEON_GREEN", iconId = "icon_midnight_gold", widgetSkinId = "widget_midnight_bronze", focusFaceId = "focus_face_minimal_digital")
         )
         curated.forEach { wellbeingDao.insertStylePreset(it) }
     }

@@ -10,7 +10,9 @@ enum class AccentOption(val displayName: String, val color: Color) {
     LAVENDER("Muted Lavender", Color(0xFF81729E)),
     STONE("Warm Stone", Color(0xFF7E7569)),
     TEAL("Misty Slate", Color(0xFF607D8B)),
-    CRIMSON("Crimson Cape", Color(0xFFD62828))
+    CRIMSON("Crimson Cape", Color(0xFFD62828)),
+    BLUE("California Blue", Color(0xFF0071E3)),
+    NEON_GREEN("Spotify Green", Color(0xFF1DB954))
 }
 
 enum class ThemeMode {
@@ -192,6 +194,30 @@ enum class AppTheme(
             Color(0xFFD62828),
             Color(0xFFFFD166),
             Color(0xFFF8F9FA)
+        )
+    ),
+    APPLE_CUPERTINO(
+        id = "APPLE_CUPERTINO",
+        displayName = "Apple Cupertino",
+        subtitle = "Pure glass, San Francisco slate & California blue",
+        defaultAccent = AccentOption.BLUE,
+        previewPalette = listOf(
+            Color(0xFFFFFFFF),
+            Color(0xFFF2F2F7),
+            Color(0xFF0071E3),
+            Color(0xFF1D1D1F)
+        )
+    ),
+    SPOTIFY_PULSE(
+        id = "SPOTIFY_PULSE",
+        displayName = "Spotify Pulse",
+        subtitle = "Pitch black, dark slate & vibrant pulse green",
+        defaultAccent = AccentOption.NEON_GREEN,
+        previewPalette = listOf(
+            Color(0xFF121212),
+            Color(0xFF181818),
+            Color(0xFF1DB954),
+            Color(0xFFFFFFFF)
         )
     )
 }
@@ -869,6 +895,98 @@ val MetropolisHeroDarkPalette = KintsuColors(
     warning = Color(0xFFFFC043)
 )
 
+val AppleCupertinoLightPalette = KintsuColors(
+    background = Color(0xFFF2F2F7),
+    surface = Color(0xFFFFFFFF),
+    surfaceElevated = Color(0xFFFFFFFF),
+    surfaceTranslucent = Color(0xCCF2F2F7),
+    border = Color(0xFFE5E5EA),
+    textPrimary = Color(0xFF1D1D1F),
+    textSecondary = Color(0xFF6E6E73),
+    textTertiary = Color(0xFF8E8E93),
+    accent = Color(0xFF0071E3),
+    accentSoft = Color(0x260071E3),
+    goldSeam = Color(0xFFC79848),
+    goldSeamSoft = Color(0x30C79848),
+    isDark = false,
+    accentText = Color(0xFF0071E3),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFFF3B30),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFE5E5),
+    onErrorContainer = Color(0xFF8B0000),
+    warning = Color(0xFFFF9500)
+)
+
+val AppleCupertinoDarkPalette = KintsuColors(
+    background = Color(0xFF000000),
+    surface = Color(0xFF1C1C1E),
+    surfaceElevated = Color(0xFF2C2C2E),
+    surfaceTranslucent = Color(0xCC1C1C1E),
+    border = Color(0xFF38383A),
+    textPrimary = Color(0xFFF5F5F7),
+    textSecondary = Color(0xFF86868B),
+    textTertiary = Color(0xFF6E6E73),
+    accent = Color(0xFF2997FF),
+    accentSoft = Color(0x352997FF),
+    goldSeam = Color(0xFFD4AF37),
+    goldSeamSoft = Color(0x35D4AF37),
+    isDark = true,
+    accentText = Color(0xFF64D2FF),
+    onAccent = Color(0xFF000000),
+    error = Color(0xFFFF453A),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFF490003),
+    onErrorContainer = Color(0xFFFFB4AB),
+    warning = Color(0xFFFF9F0A)
+)
+
+val SpotifyPulseLightPalette = KintsuColors(
+    background = Color(0xFFF8F9FA),
+    surface = Color(0xFFFFFFFF),
+    surfaceElevated = Color(0xFFF1F3F5),
+    surfaceTranslucent = Color(0xF2F8F9FA),
+    border = Color(0xFFE0E0E0),
+    textPrimary = Color(0xFF121212),
+    textSecondary = Color(0xFF535353),
+    textTertiary = Color(0xFF7A7A7A),
+    accent = Color(0xFF1DB954),
+    accentSoft = Color(0x261DB954),
+    goldSeam = Color(0xFF1DB954),
+    goldSeamSoft = Color(0x301DB954),
+    isDark = false,
+    accentText = Color(0xFF107C35),
+    onAccent = Color(0xFFFFFFFF),
+    error = Color(0xFFE22134),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFD9DD),
+    onErrorContainer = Color(0xFF5C000B),
+    warning = Color(0xFFFFC107)
+)
+
+val SpotifyPulseDarkPalette = KintsuColors(
+    background = Color(0xFF121212),
+    surface = Color(0xFF181818),
+    surfaceElevated = Color(0xFF282828),
+    surfaceTranslucent = Color(0xEE121212),
+    border = Color(0xFF2A2A2A),
+    textPrimary = Color(0xFFFFFFFF),
+    textSecondary = Color(0xFFB3B3B3),
+    textTertiary = Color(0xFF727272),
+    accent = Color(0xFF1ED760),
+    accentSoft = Color(0x351ED760),
+    goldSeam = Color(0xFF1ED760),
+    goldSeamSoft = Color(0x351ED760),
+    isDark = true,
+    accentText = Color(0xFF1ED760),
+    onAccent = Color(0xFF121212),
+    error = Color(0xFFF15E6C),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFF5C000B),
+    onErrorContainer = Color(0xFFFFD9DD),
+    warning = Color(0xFFFFD54F)
+)
+
 fun getThemePalette(theme: AppTheme, isDark: Boolean): KintsuColors {
     return when (theme) {
         AppTheme.SAGE_IVORY -> if (isDark) SageIvoryDarkPalette else SageIvoryLightPalette
@@ -885,6 +1003,8 @@ fun getThemePalette(theme: AppTheme, isDark: Boolean): KintsuColors {
         AppTheme.GOLDEN_HOUR -> if (isDark) GoldenHourDarkPalette else GoldenHourLightPalette
         AppTheme.BOTANICAL_PAPER -> if (isDark) BotanicalPaperDarkPalette else BotanicalPaperLightPalette
         AppTheme.METROPOLIS_HERO -> if (isDark) MetropolisHeroDarkPalette else MetropolisHeroLightPalette
+        AppTheme.APPLE_CUPERTINO -> if (isDark) AppleCupertinoDarkPalette else AppleCupertinoLightPalette
+        AppTheme.SPOTIFY_PULSE -> if (isDark) SpotifyPulseDarkPalette else SpotifyPulseLightPalette
     }
 }
 
