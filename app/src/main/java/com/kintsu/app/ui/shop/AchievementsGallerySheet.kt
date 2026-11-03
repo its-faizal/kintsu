@@ -35,6 +35,15 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.ui.components.KintsuBottomSheet
 import com.kintsu.app.ui.components.KintsuCard
+import com.kintsu.app.ui.components.IconLeaf
+import com.kintsu.app.ui.components.IconGoal
+import com.kintsu.app.ui.components.IconPlay
+import com.kintsu.app.ui.components.IconHabit
+import com.kintsu.app.ui.components.IconBook
+import com.kintsu.app.ui.components.IconTask
+import com.kintsu.app.ui.components.IconGoldSeam
+import com.kintsu.app.ui.components.IconFlame
+import com.kintsu.app.ui.components.IconShield
 import com.kintsu.app.ui.theme.KintsuTheme
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -86,17 +95,33 @@ fun AchievementsGallerySheet(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            text = "$earnedCount of ${achievements.size} Unlocked",
-                            style = typography.itemTitle.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = "Quiet milestones on your journey of intention.",
-                            style = typography.caption.copy(fontSize = 12.sp),
-                            color = colors.textSecondary
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(spacing.s),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(42.dp)
+                                .clip(CircleShape)
+                                .background(colors.goldSeam.copy(alpha = 0.15f))
+                                .border(1.dp, colors.goldSeam.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconGoldSeam(color = colors.goldSeam, size = 22.dp)
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "$earnedCount of ${achievements.size} Unlocked",
+                                style = typography.itemTitle.copy(fontSize = 15.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "Quiet milestones on your journey of intention.",
+                                style = typography.caption.copy(fontSize = 11.sp),
+                                color = colors.textSecondary
+                            )
+                        }
                     }
 
                     Box(
@@ -183,22 +208,12 @@ fun AchievementsGallerySheet(
                                 horizontalArrangement = Arrangement.spacedBy(spacing.m),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                // Collectible Badge Icon
-                                Box(
-                                    modifier = Modifier
-                                        .size(48.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (ach.isEarned) colors.accent.copy(alpha = 0.2f)
-                                            else colors.border.copy(alpha = 0.3f)
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = ach.badgeIcon,
-                                        fontSize = 22.sp
-                                    )
-                                }
+                                // Collectible Badge Icon (Refined Premium Medal)
+                                AchievementBadgeVisual(
+                                    achievementId = ach.id,
+                                    badgeKey = ach.badgeIcon,
+                                    isEarned = ach.isEarned
+                                )
 
                                 // Details
                                 Column(
@@ -218,10 +233,9 @@ fun AchievementsGallerySheet(
                                             color = colors.textPrimary
                                         )
                                         if (ach.isEarned) {
-                                            Text(
-                                                text = "✦",
-                                                color = colors.accent,
-                                                fontSize = 11.sp
+                                            IconGoldSeam(
+                                                color = colors.goldSeam,
+                                                size = 13.dp
                                             )
                                         }
                                     }
@@ -269,6 +283,62 @@ fun AchievementsGallerySheet(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+@Composable
+fun AchievementBadgeVisual(
+    achievementId: String,
+    badgeKey: String,
+    isEarned: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val colors = KintsuTheme.colors
+    val iconColor = if (isEarned) colors.goldSeam else colors.textTertiary.copy(alpha = 0.6f)
+    val bgColor = if (isEarned) colors.goldSeam.copy(alpha = 0.15f) else colors.surfaceElevated
+    val borderColor = if (isEarned) colors.goldSeam.copy(alpha = 0.6f) else colors.border.copy(alpha = 0.4f)
+
+    Box(
+        modifier = modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(bgColor)
+            .border(1.2.dp, borderColor, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            achievementId == "FIRST_HABIT" || badgeKey.contains("leaf") -> {
+                IconLeaf(color = iconColor, size = 20.dp)
+            }
+            achievementId == "FIRST_GOAL" || badgeKey.contains("star") -> {
+                IconGoal(color = iconColor, size = 20.dp)
+            }
+            achievementId == "FIRST_FOCUS" || badgeKey.contains("focus") -> {
+                IconPlay(color = iconColor, size = 18.dp)
+            }
+            achievementId == "SEVEN_HABITS" || badgeKey.contains("rhythm") -> {
+                IconHabit(color = iconColor, size = 20.dp)
+            }
+            achievementId == "FIRST_REVIEW" || badgeKey.contains("mirror") -> {
+                IconBook(color = iconColor, size = 20.dp)
+            }
+            achievementId == "TEN_TASKS" || badgeKey.contains("task") -> {
+                IconTask(color = iconColor, size = 20.dp)
+            }
+            achievementId == "FIRST_THEME" || badgeKey.contains("palette") -> {
+                IconGoldSeam(color = iconColor, size = 20.dp)
+            }
+            achievementId == "SEVEN_DAY_STREAK" || badgeKey.contains("gold") -> {
+                IconFlame(color = iconColor, size = 20.dp)
+            }
+            achievementId == "HEROIC_COMMITMENT" || badgeKey.contains("shield") -> {
+                IconShield(color = iconColor, size = 20.dp)
+            }
+            else -> {
+                IconGoldSeam(color = iconColor, size = 20.dp)
             }
         }
     }

@@ -51,7 +51,10 @@ data class TaskEntity(
     val recurrenceActive: Boolean = true,
     val plannedDateEpochDay: Long? = null,
     val plannedTimeBlock: String? = null,
-    val planOrder: Int = 0
+    val planOrder: Int = 0,
+    val category: String? = null,
+    val notes: String? = null,
+    val estimatedMinutes: Int? = null
 ) {
     val isRecurring: Boolean
         get() = recurrenceType != TaskRecurrenceType.NEVER

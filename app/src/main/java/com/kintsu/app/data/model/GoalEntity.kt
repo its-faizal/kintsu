@@ -16,5 +16,8 @@ data class GoalEntity(
     val targetDateEpochDay: Long,
     val progressType: GoalProgressType = GoalProgressType.AUTO_FROM_ITEMS,
     val manualProgressPercent: Int = 0,
+    val isCompleted: Boolean = false,
+    val isArchived: Boolean = false,
+    val notes: String? = null,
     val createdAt: Long = System.currentTimeMillis()
 )

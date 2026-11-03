@@ -165,6 +165,9 @@ object BackupRestoreManager {
             obj.put("plannedDateEpochDay", t.plannedDateEpochDay ?: -1L)
             obj.put("plannedTimeBlock", t.plannedTimeBlock ?: "")
             obj.put("planOrder", t.planOrder)
+            obj.put("category", t.category ?: "")
+            obj.put("notes", t.notes ?: "")
+            obj.put("estimatedMinutes", t.estimatedMinutes ?: -1)
             tasksArr.put(obj)
         }
         root.put("tasks", tasksArr)
@@ -201,6 +204,9 @@ object BackupRestoreManager {
             obj.put("targetDateEpochDay", g.targetDateEpochDay)
             obj.put("progressType", g.progressType.name)
             obj.put("manualProgressPercent", g.manualProgressPercent)
+            obj.put("isCompleted", g.isCompleted)
+            obj.put("isArchived", g.isArchived)
+            obj.put("notes", g.notes ?: "")
             obj.put("createdAt", g.createdAt)
             goalsArr.put(obj)
         }
@@ -440,7 +446,10 @@ object BackupRestoreManager {
                         recurrenceActive = t.optBoolean("recurrenceActive", true),
                         plannedDateEpochDay = if (plannedDate > 0) plannedDate else null,
                         plannedTimeBlock = plannedBlock,
-                        planOrder = t.optInt("planOrder", 0)
+                        planOrder = t.optInt("planOrder", 0),
+                        category = t.optString("category").ifBlank { null },
+                        notes = t.optString("notes").ifBlank { null },
+                        estimatedMinutes = t.optInt("estimatedMinutes", -1).let { if (it > 0) it else null }
                     )
                 )
             }
@@ -488,6 +497,9 @@ object BackupRestoreManager {
                         targetDateEpochDay = g.optLong("targetDateEpochDay", 0L),
                         progressType = pType,
                         manualProgressPercent = g.optInt("manualProgressPercent", 0),
+                        isCompleted = g.optBoolean("isCompleted", false),
+                        isArchived = g.optBoolean("isArchived", false),
+                        notes = g.optString("notes").ifBlank { null },
                         createdAt = g.optLong("createdAt", System.currentTimeMillis())
                     )
                 )

@@ -52,6 +52,16 @@ object PermissionStateHelper {
         return pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
+    fun isNotificationListenerGranted(context: Context): Boolean {
+        val flat = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+        return flat != null && flat.contains(context.packageName)
+    }
+
+    fun isDndAccessGranted(context: Context): Boolean {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager ?: return false
+        return nm.isNotificationPolicyAccessGranted
+    }
+
     fun getAllPermissionDetails(context: Context): List<PermissionDetail> {
         val usageGranted = ScreenTimeHelper.hasUsageStatsPermission(context)
         val accessibilityGranted = isAccessibilityEnabled(context)

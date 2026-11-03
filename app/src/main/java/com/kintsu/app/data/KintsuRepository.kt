@@ -257,7 +257,10 @@ class KintsuRepository(
         recurrenceActive: Boolean = true,
         plannedDateEpochDay: Long? = null,
         plannedTimeBlock: String? = null,
-        planOrder: Int = 0
+        planOrder: Int = 0,
+        category: String? = null,
+        notes: String? = null,
+        estimatedMinutes: Int? = null
     ): Long {
         val task = TaskEntity(
             title = title.trim(),
@@ -269,7 +272,10 @@ class KintsuRepository(
             recurrenceActive = recurrenceActive,
             plannedDateEpochDay = plannedDateEpochDay,
             plannedTimeBlock = plannedTimeBlock,
-            planOrder = planOrder
+            planOrder = planOrder,
+            category = category?.trim()?.ifBlank { null },
+            notes = notes?.trim()?.ifBlank { null },
+            estimatedMinutes = estimatedMinutes
         )
         val id = taskDao.insertTask(task)
         syncEngine.recordLocalMutation("tasks", id, SyncOperation.UPSERT, syncEngine.serializeTask(task.copy(id = id)))
@@ -481,7 +487,7 @@ class KintsuRepository(
     }
 
     // Journal operations
-    suspend fun saveJournalEntry(dateEpochDay: Long, content: String, mood: String?): Long {
+    suspend fun saveJournalEntry(dateEpochDay: Long, content: String, mood: String?, tags: String = ""): Long {
         val existing = journalDao.getEntryForDay(dateEpochDay).first()
         val id = journalDao.insertOrUpdate(
             JournalEntryEntity(
@@ -489,6 +495,7 @@ class KintsuRepository(
                 dateEpochDay = dateEpochDay,
                 content = content.trim(),
                 mood = mood,
+                tags = tags,
                 createdAt = existing?.createdAt ?: System.currentTimeMillis(),
                 updatedAt = System.currentTimeMillis()
             )
@@ -1031,6 +1038,7 @@ class KintsuRepository(
     suspend fun seedShopCatalogIfEmpty() {
         val completeCatalog = ShopCatalog.createCompleteCatalog()
         wellbeingDao.seedShopItems(completeCatalog)
+        wellbeingDao.unlockAllShopItems()
     }
 
     // --- Personal Rewards ---

@@ -47,6 +47,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.model.DailyPlanItem
@@ -81,7 +82,7 @@ import java.time.LocalDate
 
 enum class TaskViewMode(val title: String) {
     TODAY("Today"),
-    ALL("All Tasks"),
+    ALL("Upcoming"),
     DONE("Completed")
 }
 
@@ -120,6 +121,9 @@ fun TasksScreen(
         recurrenceActive: Boolean,
         plannedDateEpochDay: Long?,
         plannedTimeBlock: String?,
+        category: String?,
+        notes: String?,
+        estimatedMinutes: Int?,
         initialSubtasks: List<String>
     ) -> Unit,
     onUpdateTask: (TaskEntity) -> Unit,
@@ -152,7 +156,24 @@ fun TasksScreen(
     var taskToEdit by remember { mutableStateOf<TaskEntity?>(null) }
     var prefilledTimeBlock by remember { mutableStateOf<String?>(null) }
 
+    var searchQuery by remember { mutableStateOf("") }
+    var selectedCategoryFilter by remember { mutableStateOf<String?>(null) }
+
     val todayEpochDay = remember { LocalDate.now().toEpochDay() }
+
+    val availableCategories = remember(tasks) {
+        tasks.mapNotNull { it.category?.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+
+    val filterTask: (TaskEntity) -> Boolean = { task ->
+        val matchesSearch = searchQuery.isBlank() ||
+            task.title.contains(searchQuery, ignoreCase = true) ||
+            (task.category?.contains(searchQuery, ignoreCase = true) == true) ||
+            (task.notes?.contains(searchQuery, ignoreCase = true) == true)
+        val matchesCategory = selectedCategoryFilter == null ||
+            task.category.equals(selectedCategoryFilter, ignoreCase = true)
+        matchesSearch && matchesCategory
+    }
 
     LaunchedEffect(externalOpenAddSheet) {
         if (externalOpenAddSheet) {
@@ -162,19 +183,20 @@ fun TasksScreen(
     }
 
     // Categorized Tasks
-    val overdueTasks = remember(tasks, todayEpochDay) {
-        tasks.filter { !it.isCompleted && it.dueDateEpochDay != null && it.dueDateEpochDay < todayEpochDay }
+    val overdueTasks = remember(tasks, todayEpochDay, searchQuery, selectedCategoryFilter) {
+        tasks.filter { !it.isCompleted && it.dueDateEpochDay != null && it.dueDateEpochDay < todayEpochDay && filterTask(it) }
     }
 
-    val plannedForTodayTasks = remember(tasks, todayEpochDay) {
-        tasks.filter { !it.isCompleted && (it.plannedDateEpochDay == todayEpochDay || (it.dueDateEpochDay == todayEpochDay && it.plannedDateEpochDay == null)) }
+    val plannedForTodayTasks = remember(tasks, todayEpochDay, searchQuery, selectedCategoryFilter) {
+        tasks.filter { !it.isCompleted && (it.plannedDateEpochDay == todayEpochDay || (it.dueDateEpochDay == todayEpochDay && it.plannedDateEpochDay == null)) && filterTask(it) }
     }
 
-    val unscheduledPendingTasks = remember(tasks, todayEpochDay) {
+    val unscheduledPendingTasks = remember(tasks, todayEpochDay, searchQuery, selectedCategoryFilter) {
         tasks.filter {
             !it.isCompleted &&
             (it.dueDateEpochDay == null || it.dueDateEpochDay > todayEpochDay) &&
-            it.plannedDateEpochDay != todayEpochDay
+            it.plannedDateEpochDay != todayEpochDay &&
+            filterTask(it)
         }
     }
 
@@ -192,7 +214,7 @@ fun TasksScreen(
             TaskFilterOption.HIGH_PRIORITY -> list.filter { it.priority == TaskPriority.HIGH }
             TaskFilterOption.RECURRING -> list.filter { it.isRecurring }
             TaskFilterOption.HAS_SUBTASKS -> list.filter { t -> subtasks.any { it.taskId == t.id } }
-        }
+        }.filter(filterTask)
 
         // Apply sorting
         when (sortOption) {
@@ -215,9 +237,8 @@ fun TasksScreen(
     ) {
         KintsuTopBar(
             title = "Tasks & Plan",
-            showBackButton = true,
-            onBackClick = onBackClick
-        )
+            subtitle = "Plan • Do • Complete",
+                                )
 
         LazyColumn(
             modifier = Modifier
@@ -288,6 +309,69 @@ fun TasksScreen(
                     }
                 }
             }
+            // Search Bar & Subject Filter
+            item {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = {
+                            Text(
+                                text = "Search tasks, subjects or notes...",
+                                style = typography.caption,
+                                color = colors.textTertiary
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = colors.surface,
+                            unfocusedContainerColor = colors.surface,
+                            focusedBorderColor = colors.accent,
+                            unfocusedBorderColor = colors.border.copy(alpha = 0.5f)
+                        ),
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                KintsuIconButton(
+                                    icon = { IconClose(color = it, size = 14.dp) },
+                                    contentDescription = "Clear search",
+                                    onClick = { searchQuery = "" }
+                                )
+                            }
+                        }
+                    )
+
+                    if (availableCategories.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            KintsuFilterChip(
+                                label = "All",
+                                selected = selectedCategoryFilter == null,
+                                onClick = { selectedCategoryFilter = null }
+                            )
+                            availableCategories.forEach { cat ->
+                                KintsuFilterChip(
+                                    label = cat,
+                                    selected = selectedCategoryFilter == cat,
+                                    onClick = {
+                                        selectedCategoryFilter = if (selectedCategoryFilter == cat) null else cat
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
 
             // Row 3: Filter & Sort Controls (Displayed cleanly on All Tasks & Completed views)
             if (viewMode != TaskViewMode.TODAY) {
@@ -616,7 +700,7 @@ fun TasksScreen(
                             verticalArrangement = Arrangement.spacedBy(spacing.xs)
                         ) {
                             Text(
-                                text = "Unscheduled for Today (${unscheduledPendingTasks.size})",
+                                text = "Later (${unscheduledPendingTasks.size})",
                                 style = typography.sectionHeader,
                                 color = colors.textSecondary
                             )
@@ -699,8 +783,8 @@ fun TasksScreen(
                 showAddSheet = false
                 prefilledTimeBlock = null
             },
-            onSave = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, subtasksList ->
-                onAddTask(title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, subtasksList)
+            onSave = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, cat, nts, est, subtasksList ->
+                onAddTask(title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, cat, nts, est, subtasksList)
                 showAddSheet = false
                 prefilledTimeBlock = null
             }
@@ -713,7 +797,7 @@ fun TasksScreen(
             goals = goals,
             todayEpochDay = todayEpochDay,
             onDismiss = { taskToEdit = null },
-            onSave = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, _ ->
+            onSave = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, cat, nts, est, _ ->
                 onUpdateTask(
                     task.copy(
                         title = title,
@@ -724,7 +808,10 @@ fun TasksScreen(
                         recurrenceWeekdaysMask = mask,
                         recurrenceActive = recActive,
                         plannedDateEpochDay = plannedDate,
-                        plannedTimeBlock = timeBlock
+                        plannedTimeBlock = timeBlock,
+                        category = cat,
+                        notes = nts,
+                        estimatedMinutes = est
                     )
                 )
                 taskToEdit = null
@@ -908,10 +995,10 @@ private fun TaskRowItem(
                             )
                         }
 
-                        if (linkedGoal != null) {
+                                                if (linkedGoal != null) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "•",
+                                    text = "·",
                                     style = typography.caption,
                                     color = colors.textTertiary
                                 )
@@ -919,14 +1006,45 @@ private fun TaskRowItem(
                                 IconGoal(color = colors.accent, size = 12.dp)
                                 Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    text = linkedGoal.title.take(18) + if (linkedGoal.title.length > 18) "…" else "",
+                                    text = linkedGoal.title.take(18) + if (linkedGoal.title.length > 18) " …" else "",
                                     style = typography.caption,
                                     color = colors.accent
                                 )
                             }
                         }
+
+                        // Category / Subject Badge
+                        if (!task.category.isNullOrBlank()) {
+                            Text(
+                                text = "· ${task.category}",
+                                style = typography.caption,
+                                color = colors.accent,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        // Estimated Duration Badge
+                        if (task.estimatedMinutes != null && task.estimatedMinutes > 0) {
+                            Text(
+                                text = "· ${task.estimatedMinutes}m",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
                     }
-                }
+
+                    // Notes preview if present
+                    if (!task.notes.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = task.notes,
+                            style = typography.caption.copy(fontSize = 11.sp),
+                            color = colors.textTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } }
 
                 // Quick Plan button for unscheduled items
                 if (onQuickPlanForToday != null && !task.isCompleted) {
@@ -1091,7 +1209,6 @@ private fun TaskRowItem(
             }
         }
     }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1112,6 +1229,9 @@ private fun TaskEditSheet(
         recurrenceActive: Boolean,
         plannedDate: Long?,
         timeBlock: String?,
+        category: String?,
+        notes: String?,
+        estimatedMinutes: Int?,
         subtasksList: List<String>
     ) -> Unit
 ) {
@@ -1120,6 +1240,9 @@ private fun TaskEditSheet(
     val typography = KintsuTheme.typography
 
     var title by remember { mutableStateOf(task?.title ?: "") }
+    var category by remember { mutableStateOf(task?.category ?: "") }
+    var notes by remember { mutableStateOf(task?.notes ?: "") }
+    var estimatedMinutesText by remember { mutableStateOf(task?.estimatedMinutes?.toString() ?: "") }
     var priority by remember { mutableStateOf(task?.priority ?: TaskPriority.MEDIUM) }
     var selectedDueOffset by remember {
         mutableStateOf(
@@ -1350,6 +1473,93 @@ private fun TaskEditSheet(
                 }
             }
 
+            // Category / Academic Subject
+            Text(
+                text = "Subject / Category",
+                style = typography.caption,
+                color = colors.textSecondary
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+            ) {
+                listOf("Academics", "Math", "Science", "Literature", "Work", "Personal").forEach { suggestion ->
+                    KintsuFilterChip(
+                        label = suggestion,
+                        selected = category.equals(suggestion, ignoreCase = true),
+                        onClick = { category = if (category.equals(suggestion, ignoreCase = true)) "" else suggestion }
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = category,
+                onValueChange = { category = it },
+                placeholder = { Text("Or type custom subject / category...", style = typography.caption, color = colors.textTertiary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = KintsuTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.border
+                )
+            )
+
+            // Estimated Duration
+            Text(
+                text = "Estimated Focus Duration",
+                style = typography.caption,
+                color = colors.textSecondary
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+            ) {
+                listOf(15, 25, 45, 60, 90).forEach { mins ->
+                    val isSelected = estimatedMinutesText == mins.toString()
+                    KintsuFilterChip(
+                        label = "${mins}m",
+                        selected = isSelected,
+                        onClick = { estimatedMinutesText = if (isSelected) "" else mins.toString() }
+                    )
+                }
+            }
+            OutlinedTextField(
+                value = estimatedMinutesText,
+                onValueChange = { if (it.all { ch -> ch.isDigit() }) estimatedMinutesText = it },
+                placeholder = { Text("Duration in minutes (e.g. 25)...", style = typography.caption, color = colors.textTertiary) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                shape = KintsuTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.border
+                )
+            )
+
+            // Study Notes / Context
+            Text(
+                text = "Notes & Context",
+                style = typography.caption,
+                color = colors.textSecondary
+            )
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                placeholder = { Text("Add instructions, key references, study notes...", style = typography.caption, color = colors.textTertiary) },
+                modifier = Modifier.fillMaxWidth(),
+                minLines = 2,
+                maxLines = 4,
+                shape = KintsuTheme.shapes.medium,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.border
+                )
+            )
+
             // Link to Goal
             if (goals.isNotEmpty()) {
                 Text(
@@ -1403,6 +1613,9 @@ private fun TaskEditSheet(
                             recurrenceActive,
                             plannedDate,
                             plannedTimeBlock,
+                            category.trim().ifBlank { null },
+                            notes.trim().ifBlank { null },
+                            estimatedMinutesText.toIntOrNull(),
                             subtasksState
                         )
                     }

@@ -34,8 +34,8 @@ class WeeklyReviewGeneratorTest {
         val today = LocalDate.of(2026, 10, 29).toEpochDay()
         val (weekStart, _) = WeeklyReviewGenerator.getWeekRange(today, weekStartMonday = true)
 
-        val habit1 = HabitEntity(id = 1, name = "Tea Ceremony", frequencyType = FrequencyType.DAILY, weekdaysMask = 127)
-        val habit2 = HabitEntity(id = 2, name = "Running", frequencyType = FrequencyType.DAILY, weekdaysMask = 127)
+        val habit1 = HabitEntity(id = 1, name = "Tea Ceremony", frequencyType = FrequencyType.DAILY, weekdaysMask = 127, createdAt = weekStart * 86_400_000L)
+        val habit2 = HabitEntity(id = 2, name = "Running", frequencyType = FrequencyType.DAILY, weekdaysMask = 127, createdAt = weekStart * 86_400_000L)
 
         val logs = listOf(
             HabitLogEntity(habitId = 1, epochDay = weekStart, isCompleted = true),

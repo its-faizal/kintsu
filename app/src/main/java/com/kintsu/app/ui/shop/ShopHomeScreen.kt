@@ -220,87 +220,6 @@ fun ShopHomeScreen(
                 }
             }
 
-            // Featured Curated Collection Card (Only on "Discover" tab)
-            if (selectedCategory == "Discover" && searchQuery.isBlank()) {
-                item {
-                    val featuredBundle = allShopItems.find { it.id == "bundle_matcha" }
-                    if (featuredBundle != null) {
-                        KintsuCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { selectedItemForDetail = featuredBundle },
-                            backgroundColor = colors.accentSoft.copy(alpha = 0.25f),
-                            borderColor = colors.goldSeam
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(spacing.m),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(4.dp))
-                                                .background(colors.goldSeam)
-                                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        ) {
-                                            Text(
-                                                text = "FEATURED COLLECTION",
-                                                style = typography.caption.copy(color = colors.onAccent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.width(spacing.xs))
-                                        Text(
-                                            text = "5 Included Items",
-                                            style = typography.caption.copy(color = colors.textSecondary)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(spacing.xs))
-                                    Text(
-                                        text = featuredBundle.title,
-                                        style = typography.itemTitle.copy(fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                                        color = colors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = "Japanese wabi-sabi matcha aesthetic: theme, app icon, widget skin, and zen scene.",
-                                        style = typography.secondary.copy(fontSize = 12.sp),
-                                        color = colors.textSecondary,
-                                        maxLines = 2,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(spacing.m))
-
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconGoldSeam(color = colors.goldSeam, size = 14.dp)
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text(
-                                            text = "${featuredBundle.costCoins}",
-                                            style = typography.itemTitle.copy(color = colors.goldSeam, fontSize = 16.sp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.height(spacing.xs))
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(colors.accent)
-                                            .padding(horizontal = spacing.s, vertical = spacing.xs)
-                                    ) {
-                                        Text("Inspect", style = typography.caption.copy(color = colors.onAccent, fontWeight = FontWeight.Bold))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
             // Horizontal Categories Navigation Bar
             item {
                 Row(
@@ -343,7 +262,7 @@ fun ShopHomeScreen(
                             .padding(horizontal = spacing.m, vertical = spacing.xs)
                     ) {
                         Text(
-                            text = "★ Personal Rewards",
+                            text = "Personal Rewards",
                             style = typography.caption.copy(color = colors.goldSeam, fontWeight = FontWeight.Bold)
                         )
                     }

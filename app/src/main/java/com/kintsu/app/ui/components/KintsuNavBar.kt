@@ -76,7 +76,7 @@ fun KintsuNavBar(
                 val isFocused by interactionSource.collectIsFocusedAsState()
 
                 val targetIconColor = when {
-                    isSelected && isHome -> colors.accent
+                    isSelected -> colors.accent
                     isSelected -> colors.accent
                     else -> colors.textTertiary
                 }
@@ -99,7 +99,7 @@ fun KintsuNavBar(
                         .padding(horizontal = 2.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .then(
-                            if (isSelected && isHome) {
+                            if (isSelected) {
                                 Modifier.background(colors.accentSoft.copy(alpha = 0.5f))
                             } else {
                                 Modifier

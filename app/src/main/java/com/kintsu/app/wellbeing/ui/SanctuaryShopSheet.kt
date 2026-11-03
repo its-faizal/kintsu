@@ -153,7 +153,7 @@ fun SanctuaryShopSheet(
                             }
                             else -> {
                                 KintsuButton(
-                                    text = "${item.costCoins} 🪙",
+                                    text = "${item.costCoins} Gold",
                                     onClick = { onPurchaseItem(item) },
                                     enabled = canAfford,
                                     variant = if (canAfford) KintsuButtonVariant.PRIMARY else KintsuButtonVariant.SECONDARY

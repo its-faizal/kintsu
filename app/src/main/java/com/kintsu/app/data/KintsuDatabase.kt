@@ -48,6 +48,20 @@ import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
 
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        fun addColumnSafe(sql: String) {
+            try { db.execSQL(sql) } catch (_: Exception) {}
+        }
+        addColumnSafe("ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT NULL")
+        addColumnSafe("ALTER TABLE tasks ADD COLUMN notes TEXT DEFAULT NULL")
+        addColumnSafe("ALTER TABLE tasks ADD COLUMN estimatedMinutes INTEGER DEFAULT NULL")
+        addColumnSafe("ALTER TABLE goals ADD COLUMN isCompleted INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE goals ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE goals ADD COLUMN notes TEXT DEFAULT NULL")
+    }
+}
+
 val MIGRATION_12_13 = object : Migration(12, 13) {
     override fun migrate(db: SupportSQLiteDatabase) {
         fun addColumnSafe(sql: String) {
@@ -556,7 +570,7 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         JournalCollectionEntity::class,
         JournalTemplateEntity::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -594,7 +608,8 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_9_10,
                         MIGRATION_10_11,
                         MIGRATION_11_12,
-                        MIGRATION_12_13
+                        MIGRATION_12_13,
+                        MIGRATION_13_14
                     )
                     .build()
                 val appContext = context.applicationContext

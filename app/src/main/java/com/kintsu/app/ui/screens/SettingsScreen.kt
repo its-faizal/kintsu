@@ -1,5 +1,9 @@
 package com.kintsu.app.ui.screens
 
+import android.content.Intent
+import android.provider.Settings
+import com.kintsu.app.wellbeing.domain.PermissionStateHelper
+import com.kintsu.app.wellbeing.domain.ScreenTimeHelper
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -31,6 +35,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -48,9 +53,20 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import com.kintsu.app.ui.components.IconTrash
+import com.kintsu.app.ui.components.IconLeaf
+import com.kintsu.app.ui.components.IconGoal
+import com.kintsu.app.ui.components.IconHabit
+import com.kintsu.app.ui.components.IconFlame
+import com.kintsu.app.ui.components.IconBook
+import com.kintsu.app.ui.components.IconShield
+import com.kintsu.app.ui.components.IconUser
+import com.kintsu.app.ui.components.ProfileAvatarVisual
+import com.kintsu.app.ui.components.SIGNATURE_AVATARS_24
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,9 +91,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.kintsu.app.ui.components.PermissionRequestSheet
+import com.kintsu.app.ui.components.VisualPatternCanvas
 import com.kintsu.app.util.PermissionHelper
 import com.kintsu.app.data.BackupData
 import com.kintsu.app.data.BackupRestoreManager
+import com.kintsu.app.security.AppLockManager
+import com.kintsu.app.security.AppLockType
+import com.kintsu.app.data.SecureEncryptedBackupManager
+import com.kintsu.app.data.SecureBackupInfo
 import com.kintsu.app.data.ImportMode
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.ui.components.GoogleOneTapBottomSheet
@@ -117,6 +138,7 @@ fun SettingsScreen(
     onDeleteCloudData: (onResult: (Result<Unit>) -> Unit) -> Unit = {},
     onDeleteAccount: (onResult: (Result<Unit>) -> Unit) -> Unit = {},
     onUpdateDisplayName: (String) -> Unit,
+    onUpdateProfileAvatar: (String) -> Unit = {},
     onUpdateThemeMode: (ThemeMode) -> Unit,
     onUpdateAppTheme: (AppTheme) -> Unit = {},
     onUpdateAccent: (AccentOption) -> Unit,
@@ -144,6 +166,12 @@ fun SettingsScreen(
     onUpdateHiddenHomeSections: (String) -> Unit = {},
     onUpdateQuickActionsOrder: (String) -> Unit = {},
     onResetHomePreferences: () -> Unit = {},
+    onUpdateAppLockEnabled: (Boolean) -> Unit = {},
+    onUpdateAppLockType: (String) -> Unit = {},
+    onUpdateAppLockCode: (String) -> Unit = {},
+    onUpdateAppLockBiometricEnabled: (Boolean) -> Unit = {},
+    onTriggerEncryptedBackup: (onResult: (Result<SecureBackupInfo>) -> Unit) -> Unit = {},
+    onRestoreEncryptedBackup: (onResult: (Result<Int>) -> Unit) -> Unit = {},
     onExportData: suspend () -> String,
     onExportToFile: suspend (Uri) -> Unit = {},
     onImportFromFile: suspend (Uri, ImportMode) -> Result<Unit> = { _, _ -> Result.success(Unit) },
@@ -152,6 +180,12 @@ fun SettingsScreen(
     onOpenDetox: () -> Unit = {},
     onOpenQuitHabits: () -> Unit = {},
     onOpenShop: () -> Unit = {},
+    stylePresets: List<com.kintsu.app.data.model.StylePresetEntity> = emptyList(),
+    onApplyStylePreset: (com.kintsu.app.data.model.StylePresetEntity) -> Unit = {},
+    onSaveStylePreset: (String, String, String, String, String, String) -> Unit = { _, _, _, _, _, _ -> },
+    onDeleteStylePreset: (com.kintsu.app.data.model.StylePresetEntity) -> Unit = {},
+    onRestoreDefaultPresets: () -> Unit = {},
+    onUpdateLauncherIcon: (String) -> Unit = {},
     allAchievements: List<com.kintsu.app.data.model.AchievementEntity> = emptyList(),
     onUpdateWellbeingEnabled: (Boolean) -> Unit = {},
     onUpdateStrictness: (String) -> Unit = {},
@@ -181,6 +215,7 @@ fun SettingsScreen(
     var showAchievementsSheet by remember { mutableStateOf(false) }
 
     var isEditingName by remember { mutableStateOf(false) }
+    var showAvatarPicker by remember { mutableStateOf(false) }
     var tempName by remember { mutableStateOf(settings.displayName) }
 
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
@@ -189,6 +224,12 @@ fun SettingsScreen(
     var importErrorMessage by remember { mutableStateOf<String?>(null) }
 
     var showAuthSheet by remember { mutableStateOf(false) }
+    var showSetPasscodeDialog by remember { mutableStateOf(false) }
+    var tempPasscode by remember { mutableStateOf("") }
+    var tempPasscodeConfirm by remember { mutableStateOf("") }
+    var passcodeDialogError by remember { mutableStateOf<String?>(null) }
+    var showRestoreEncryptedConfirmDialog by remember { mutableStateOf(false) }
+    var isBackingUp by remember { mutableStateOf(false) }
     var authModeIsSignUp by remember { mutableStateOf(false) }
     var authEmail by remember { mutableStateOf("") }
     var authPassword by remember { mutableStateOf("") }
@@ -199,7 +240,7 @@ fun SettingsScreen(
     var showDeleteCloudDialog by remember { mutableStateOf(false) }
     var showPermissionSheet by remember { mutableStateOf(false) }
     var showGoogleOneTapSheet by remember { mutableStateOf(false) }
-    var showEndpointDialog by remember { mutableStateOf(false) }
+    // Endpoint dialog removed
 
     val lifecycleOwner = LocalLifecycleOwner.current
     var hasNotificationPermission by remember {
@@ -211,6 +252,15 @@ fun SettingsScreen(
     var isBatteryUnrestricted by remember {
         mutableStateOf(PermissionHelper.isBatteryOptimizationIgnored(context))
     }
+    var hasUsageAccessPermission by remember {
+        mutableStateOf(ScreenTimeHelper.hasUsageStatsPermission(context))
+    }
+    var hasAccessibilityPermission by remember {
+        mutableStateOf(PermissionStateHelper.isAccessibilityEnabled(context))
+    }
+    var hasOverlayPermission by remember {
+        mutableStateOf(PermissionStateHelper.isOverlayGranted(context))
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -218,6 +268,9 @@ fun SettingsScreen(
                 hasNotificationPermission = PermissionHelper.isNotificationPermissionGranted(context)
                 hasExactAlarmPermission = PermissionHelper.isExactAlarmPermissionGranted(context)
                 isBatteryUnrestricted = PermissionHelper.isBatteryOptimizationIgnored(context)
+                hasUsageAccessPermission = ScreenTimeHelper.hasUsageStatsPermission(context)
+                hasAccessibilityPermission = PermissionStateHelper.isAccessibilityEnabled(context)
+                hasOverlayPermission = PermissionStateHelper.isOverlayGranted(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -363,6 +416,45 @@ fun SettingsScreen(
                             )
                         }
                     }
+                    KintsuDivider()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showAvatarPicker = true }
+                            .padding(spacing.m),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(spacing.m)
+                        ) {
+                            ProfileAvatarVisual(
+                                avatarId = settings.profileAvatarId,
+                                size = 44.dp,
+                                iconSize = 22.dp
+                            )
+                            Column {
+                                Text(
+                                    text = "Profile Picture",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "24 signature avatars or your own photo",
+                                    style = typography.caption,
+                                    color = colors.textSecondary
+                                )
+                            }
+                        }
+
+                        KintsuButton(
+                            text = "Change",
+                            onClick = { showAvatarPicker = true },
+                            variant = KintsuButtonVariant.SECONDARY
+                        )
+                    }
+
                 }
             }
 
@@ -552,9 +644,96 @@ fun SettingsScreen(
                             )
                         }
 
+                        
+
+                    }
+                }
+            }
+
+            // Security & App Lock Section (PIN / Pattern / Password + Biometric)
+            item {
+                Text(
+                    text = "SECURITY & APP LOCK",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    // App Lock Enable Switch
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
+                            Text(
+                                text = "App Lock",
+                                style = typography.itemTitle,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (settings.appLockEnabled) "Sanctuary protected with ${settings.appLockType}" else "Require passcode to access your rituals and journal",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        Switch(
+                            checked = settings.appLockEnabled,
+                            onCheckedChange = { enable ->
+                                if (enable && settings.appLockCode.isBlank()) {
+                                    showSetPasscodeDialog = true
+                                } else {
+                                    onUpdateAppLockEnabled(enable)
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = colors.background,
+                                checkedTrackColor = colors.goldSeam,
+                                uncheckedThumbColor = colors.textTertiary,
+                                uncheckedTrackColor = colors.surfaceElevated
+                            )
+                        )
+                    }
+
+                    if (settings.appLockEnabled || settings.appLockCode.isNotBlank()) {
                         KintsuDivider()
 
-                        // Cloud Server Configuration row
+                        // Lock Type Selector (PIN / Pattern / Password)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(spacing.m),
+                            verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                        ) {
+                            Text(
+                                text = "Lock Mechanism",
+                                style = typography.caption,
+                                color = colors.textSecondary
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                listOf("PIN", "PATTERN", "PASSWORD").forEach { type ->
+                                    val isSelected = settings.appLockType.equals(type, ignoreCase = true)
+                                    KintsuFilterChip(
+                                        label = type,
+                                        selected = isSelected,
+                                        onClick = {
+                                            onUpdateAppLockType(type)
+                                            if (settings.appLockCode.isBlank()) {
+                                                showSetPasscodeDialog = true
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        KintsuDivider()
+
+                        // Passcode Management Button
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -564,28 +743,32 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
                                 Text(
-                                    text = "Cloud Server Endpoint",
+                                    text = if (settings.appLockCode.isNotBlank()) "Change ${settings.appLockType}" else "Set ${settings.appLockType}",
                                     style = typography.itemTitle,
                                     color = colors.textPrimary
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = settings.cloudEndpointUrl,
+                                    text = if (settings.appLockCode.isNotBlank()) "Status: Active & Hashed" else "Action needed: configure passcode",
                                     style = typography.caption,
-                                    color = colors.accent
+                                    color = if (settings.appLockCode.isNotBlank()) colors.accent else colors.warning
                                 )
                             }
 
                             KintsuButton(
-                                text = "Configure",
-                                onClick = { showEndpointDialog = true },
+                                text = if (settings.appLockCode.isNotBlank()) "Change" else "Configure",
+                                onClick = {
+                                    tempPasscode = ""
+                                    tempPasscodeConfirm = ""
+                                    passcodeDialogError = null
+                                    showSetPasscodeDialog = true
+                                },
                                 variant = KintsuButtonVariant.SECONDARY
                             )
                         }
 
                         KintsuDivider()
 
-                        // Delete Cloud Data action
+                        // Biometric Toggle
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -593,59 +776,130 @@ fun SettingsScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
                                 Text(
-                                    text = "Delete Cloud Data",
+                                    text = "Biometric Authentication",
                                     style = typography.itemTitle,
                                     color = colors.textPrimary
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Wipes your backed up records from the cloud. Local data on this device will remain intact.",
+                                    text = "Unlock seamlessly using Fingerprint or Face ID",
                                     style = typography.caption,
                                     color = colors.textSecondary
                                 )
                             }
 
-                            KintsuButton(
-                                text = "Delete Cloud Copy",
-                                onClick = { showDeleteCloudDialog = true },
-                                variant = KintsuButtonVariant.TEXT
+                            Switch(
+                                checked = settings.appLockBiometricEnabled,
+                                onCheckedChange = { onUpdateAppLockBiometricEnabled(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = colors.background,
+                                    checkedTrackColor = colors.accent,
+                                    uncheckedThumbColor = colors.textTertiary,
+                                    uncheckedTrackColor = colors.surfaceElevated
+                                )
                             )
                         }
+                    }
+                }
+            }
 
-                        KintsuDivider()
+            // Secure Encrypted Compressed Auto-Backup Section
+            item {
+                Text(
+                    text = "ENCRYPTED AUTO-BACKUP & CLOUD STORAGE",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        verticalArrangement = Arrangement.spacedBy(spacing.m)
+                    ) {
+                        Text(
+                            text = "Kintsu Cryptographic Vault",
+                            style = typography.itemTitle,
+                            color = colors.goldSeam
+                        )
+                        Text(
+                            text = "Backups are compressed with GZIP and encrypted with AES-256-GCM. Stored in sandboxed mobile storage strictly accessible to Kintsu, and automatically saved to your cloud account whenever logged in.",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
 
-                        // Delete Account (2-Step Verification)
+                        val backupInfo = remember(settings.lastAutoBackupTime, isBackingUp) { SecureEncryptedBackupManager.getBackupInfo(context) }
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(spacing.m),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (backupInfo.exists) colors.accentSoft.copy(alpha = 0.5f) else colors.surfaceElevated)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (backupInfo.exists) colors.accent.copy(alpha = 0.35f) else colors.border.copy(alpha = 0.3f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = if (backupInfo.exists) "Secured locally (${backupInfo.fileSizeBytes / 1024} KB encrypted)" else "No local encrypted vault yet",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        color = if (backupInfo.exists) colors.accent else colors.textTertiary
+                                    )
+                                }
+                                val lastSaveText = if (settings.lastAutoBackupTime > 0L) {
+                                    val diffMin = (System.currentTimeMillis() - settings.lastAutoBackupTime) / 60000
+                                    "Last Auto-Save: ${if (diffMin < 2) "Just now" else "$diffMin mins ago"}"
+                                } else {
+                                    "Compressed GZIP & AES-256 encrypted"
+                                }
                                 Text(
-                                    text = "Delete Account",
-                                    style = typography.itemTitle,
-                                    color = colors.error
-                                )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Text(
-                                    text = "Permanently deletes your account, cloud sync data, and wipes all local device records (requires 2-step verification).",
-                                    style = typography.caption,
+                                    text = lastSaveText,
+                                    style = typography.secondary,
                                     color = colors.textSecondary
                                 )
                             }
 
-                            KintsuButton(
-                                text = "Delete Account",
-                                onClick = {
-                                    deleteAccountConfirmText = ""
-                                    showDeleteAccountStep1 = true
-                                },
-                                variant = KintsuButtonVariant.TEXT
-                            )
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                KintsuButton(
+                                    text = if (isBackingUp) "Saving..." else "Backup",
+                                    onClick = {
+                                        isBackingUp = true
+                                        onTriggerEncryptedBackup { res ->
+                                            isBackingUp = false
+                                            if (res.isSuccess) {
+                                                val info = res.getOrNull()
+                                                Toast.makeText(context, "Encrypted backup created (${(info?.fileSizeBytes ?: 0) / 1024} KB AES-GCM)", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Backup failed: ${res.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    },
+                                    variant = KintsuButtonVariant.ACCENT_SOFT
+                                )
+
+                                if (backupInfo.exists) {
+                                    KintsuButton(
+                                        text = "Restore",
+                                        onClick = { showRestoreEncryptedConfirmDialog = true },
+                                        variant = KintsuButtonVariant.SECONDARY
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -666,20 +920,20 @@ fun SettingsScreen(
                             .padding(spacing.m),
                         verticalArrangement = Arrangement.spacedBy(spacing.m)
                     ) {
-                        // Notifications
+                        // 1. Notifications
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
                                 Text(
                                     text = "Mindful Notifications",
                                     style = typography.itemTitle,
                                     color = colors.textPrimary
                                 )
                                 Text(
-                                    text = "Reminders, intentions & focus timer cues",
+                                    text = "Habit alerts, intentions & focus timer intervals",
                                     style = typography.secondary,
                                     color = colors.textSecondary
                                 )
@@ -697,20 +951,22 @@ fun SettingsScreen(
                             )
                         }
 
-                        // Exact Alarms
+                        KintsuDivider()
+
+                        // 2. Exact Alarms
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
                                 Text(
                                     text = "Exact Alarms & Timers",
                                     style = typography.itemTitle,
                                     color = colors.textPrimary
                                 )
                                 Text(
-                                    text = "Accurate ritual timing without delays",
+                                    text = "Accurate ritual timing without system delays",
                                     style = typography.secondary,
                                     color = colors.textSecondary
                                 )
@@ -724,13 +980,15 @@ fun SettingsScreen(
                             )
                         }
 
-                        // Background Execution / Battery Optimization
+                        KintsuDivider()
+
+                        // 3. Background Execution / Battery Optimization
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
                                 Text(
                                     text = "Unrestricted Background",
                                     style = typography.itemTitle,
@@ -751,287 +1009,104 @@ fun SettingsScreen(
                             )
                         }
 
-                        // Review All Permissions button
-                        KintsuButton(
-                            text = "Review All Permissions",
-                            onClick = { showPermissionSheet = true },
-                            variant = KintsuButtonVariant.TEXT,
-                            modifier = Modifier.align(Alignment.End)
-                        )
-                    }
-                }
-            }
+                        KintsuDivider()
 
-            // Appearance Section
-            item {
-                Text(
-                    text = "APPEARANCE",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    // App Theme Previews
-                    Column(modifier = Modifier.padding(spacing.m)) {
-                        Text(
-                            text = "App Theme",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.xs))
-                        Text(
-                            text = "Five curated atmospheric palettes crafted for mindful clarity.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.m))
-
-                        Column(verticalArrangement = Arrangement.spacedBy(spacing.s)) {
-                            AppTheme.values().forEach { theme ->
-                                val isSelected = settings.appTheme == theme
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(KintsuTheme.shapes.medium)
-                                        .background(if (isSelected) colors.surfaceElevated else Color.Transparent)
-                                        .border(
-                                            width = if (isSelected) 1.5.dp else 1.dp,
-                                            color = if (isSelected) colors.accent else colors.border,
-                                            shape = KintsuTheme.shapes.medium
-                                        )
-                                        .clickable { onUpdateAppTheme(theme) }
-                                        .padding(horizontal = spacing.m, vertical = spacing.s)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
-                                                    text = theme.displayName,
-                                                    style = typography.itemTitle,
-                                                    color = if (isSelected) colors.accent else colors.textPrimary
-                                                )
-                                                if (theme == AppTheme.SAGE_IVORY) {
-                                                    Spacer(modifier = Modifier.width(spacing.xs))
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(KintsuTheme.shapes.full)
-                                                            .background(colors.accentSoft)
-                                                            .padding(horizontal = spacing.xs, vertical = 2.dp)
-                                                    ) {
-                                                        Text(
-                                                            text = "Default",
-                                                            style = typography.caption,
-                                                            color = colors.accent
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                            Spacer(modifier = Modifier.height(2.dp))
-                                            Text(
-                                                text = theme.subtitle,
-                                                style = typography.caption,
-                                                color = colors.textSecondary
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(spacing.s))
-
-                                        // 4 Representative Palette Swatches
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            theme.previewPalette.forEach { swatch ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(16.dp)
-                                                        .clip(CircleShape)
-                                                        .background(swatch)
-                                                        .border(0.5.dp, colors.border.copy(alpha = 0.5f), CircleShape)
-                                                )
-                                            }
-
-                                            Spacer(modifier = Modifier.width(spacing.xs))
-
-                                            // Selected Indicator
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(22.dp)
-                                                    .clip(CircleShape)
-                                                    .border(
-                                                        width = 1.5.dp,
-                                                        color = if (isSelected) colors.accent else colors.border,
-                                                        shape = CircleShape
-                                                    )
-                                                    .background(if (isSelected) colors.accent else Color.Transparent),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                if (isSelected) {
-                                                    IconCheck(color = colors.background, size = 12.dp)
-                                                }
-                                            }
-                                        }
+                        // 4. App Usage Access (Digital Balance)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "App Usage Access",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Track screen time and enforce Addiction Shield limits",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasUsageAccessPermission) "Granted" else "Allow",
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
-                                }
-                            }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasUsageAccessPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
                         }
-                    }
 
-                    KintsuDivider()
+                        KintsuDivider()
 
-                    // Theme Mode Selector
-                    Column(modifier = Modifier.padding(spacing.m)) {
-                        Text(
-                            text = "Theme Mode",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.s))
-                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                            ThemeMode.values().forEach { mode ->
-                                KintsuFilterChip(
-                                    label = mode.name.lowercase().replaceFirstChar { it.uppercase() },
-                                    selected = settings.themeMode == mode,
-                                    onClick = { onUpdateThemeMode(mode) }
+                        // 5. App Intervention Service (Accessibility)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "App Intervention Service",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Recognise distracting apps to present mindful pauses",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
                                 )
                             }
+                            KintsuButton(
+                                text = if (hasAccessibilityPermission) "Active" else "Enable",
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasAccessibilityPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
                         }
-                    }
 
-                    KintsuDivider()
+                        KintsuDivider()
 
-                    // Accent Color Picker
-                    Column(modifier = Modifier.padding(spacing.m)) {
-                        Text(
-                            text = "Accent Color",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.s))
-                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.s)) {
-                            AccentOption.values().forEach { accent ->
-                                val isSelected = settings.accentOption == accent
-                                Box(
-                                    modifier = Modifier
-                                        .size(38.dp)
-                                        .clip(CircleShape)
-                                        .background(accent.color)
-                                        .clickable(onClickLabel = "Select ${accent.displayName}") { onUpdateAccent(accent) }
-                                        .then(
-                                            if (isSelected) Modifier.border(2.5.dp, colors.textPrimary, CircleShape) else Modifier
-                                        )
-                                        .semantics {
-                                            role = Role.RadioButton
-                                            selected = isSelected
-                                            contentDescription = "${accent.displayName} accent"
-                                        }
+                        // 6. Display Over Other Apps (Overlay)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Display Over Other Apps",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Present calm breathing pauses over blocked apps",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
                                 )
                             }
-                        }
-                    }
-
-                    KintsuDivider()
-
-                    // Content Density Selector
-                    Column(modifier = Modifier.padding(spacing.m)) {
-                        Text(
-                            text = "Content Density",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Choose comfortable roominess or compact view for more content.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.s))
-                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                            com.kintsu.app.data.ContentDensity.values().forEach { density ->
-                                val label = if (density == com.kintsu.app.data.ContentDensity.COMFORTABLE) "Comfortable" else "Compact"
-                                KintsuFilterChip(
-                                    label = label,
-                                    selected = settings.contentDensity == density,
-                                    onClick = { onUpdateContentDensity(density) }
-                                )
-                            }
-                        }
-                    }
-
-                    KintsuDivider()
-
-                    // Haptic Feedback Switch
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
-                            Text(
-                                text = "Haptic Feedback",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Subtle tactile feedback for completing rituals and pressing buttons.",
-                                style = typography.caption,
-                                color = colors.textSecondary
+                            KintsuButton(
+                                text = if (hasOverlayPermission) "Granted" else "Allow",
+                                onClick = {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    ).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasOverlayPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
                             )
                         }
-
-                        Switch(
-                            checked = settings.hapticsEnabled,
-                            onCheckedChange = onUpdateHapticsEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    KintsuDivider()
-
-                    // Reduced Motion Switch
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
-                            Text(
-                                text = "Reduced Motion",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Minimise decorative transitions and animations for a still experience.",
-                                style = typography.caption,
-                                color = colors.textSecondary
-                            )
-                        }
-
-                        Switch(
-                            checked = settings.reducedMotion,
-                            onCheckedChange = onUpdateReducedMotion,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
                     }
                 }
             }
@@ -1127,7 +1202,7 @@ fun SettingsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "✨",
+                                text = "",
                                 fontSize = 18.sp
                             )
                         }
@@ -1212,639 +1287,6 @@ fun SettingsScreen(
                                 uncheckedTrackColor = colors.surfaceElevated
                             )
                         )
-                    }
-                }
-            }
-
-            // Home Hub Customization Section
-            item {
-                Text(
-                    text = "HOME HUB",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m)
-                    ) {
-                        Text(
-                            text = "Visible Elements",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = "Header and Today rituals stay fixed at the top. Reorder or toggle the rest.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(spacing.m))
-
-                        val allSections = listOf(
-                            "DAILY_INTENTION" to "Daily Intention",
-                            "FOCUS" to "Focus Quick-Start",
-                            "KEY_NUMBERS" to "Key Numbers",
-                            "QUICK_ACTIONS" to "Quick Actions",
-                            "ADDICTION" to "Addiction Shield"
-                        )
-                        val currentOrder = settings.homeSectionOrder.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-                        val hiddenSet = settings.hiddenHomeSections.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-
-                        currentOrder.forEachIndexed { index, secId ->
-                            val secTitle = allSections.find { it.first == secId }?.second ?: secId
-                            val isVisible = !hiddenSet.contains(secId)
-
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "↑",
-                                        modifier = Modifier
-                                            .clickable(enabled = index > 0) {
-                                                val newOrder = currentOrder.toMutableList()
-                                                val temp = newOrder[index]
-                                                newOrder[index] = newOrder[index - 1]
-                                                newOrder[index - 1] = temp
-                                                onUpdateHomeSectionOrder(newOrder.joinToString(","))
-                                            }
-                                            .padding(horizontal = spacing.xs, vertical = spacing.xxs),
-                                        style = typography.itemTitle,
-                                        color = if (index > 0) colors.accent else colors.textTertiary
-                                    )
-                                    Text(
-                                        text = "↓",
-                                        modifier = Modifier
-                                            .clickable(enabled = index < currentOrder.size - 1) {
-                                                val newOrder = currentOrder.toMutableList()
-                                                val temp = newOrder[index]
-                                                newOrder[index] = newOrder[index + 1]
-                                                newOrder[index + 1] = temp
-                                                onUpdateHomeSectionOrder(newOrder.joinToString(","))
-                                            }
-                                            .padding(horizontal = spacing.xs, vertical = spacing.xxs),
-                                        style = typography.itemTitle,
-                                        color = if (index < currentOrder.size - 1) colors.accent else colors.textTertiary
-                                    )
-                                    Spacer(modifier = Modifier.width(spacing.xs))
-                                    Text(
-                                        text = secTitle,
-                                        style = typography.body,
-                                        color = if (isVisible) colors.textPrimary else colors.textTertiary
-                                    )
-                                }
-
-                                Switch(
-                                    checked = isVisible,
-                                    onCheckedChange = { checked ->
-                                        val newHidden = if (checked) {
-                                            hiddenSet - secId
-                                        } else {
-                                            hiddenSet + secId
-                                        }
-                                        onUpdateHiddenHomeSections(newHidden.joinToString(","))
-                                    },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = colors.background,
-                                        checkedTrackColor = colors.accent,
-                                        uncheckedThumbColor = colors.textTertiary,
-                                        uncheckedTrackColor = colors.surfaceElevated
-                                    )
-                                )
-                            }
-                        }
-
-                        KintsuDivider(modifier = Modifier.padding(vertical = spacing.m))
-
-                        Text(
-                            text = "Quick Actions (up to 5)",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Text(
-                            text = "Choose which shortcuts appear on your home hub.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-
-                        Spacer(modifier = Modifier.height(spacing.s))
-
-                        val availableActions = listOf(
-                            "ADD_HABIT" to "Habit",
-                            "ADD_TASK" to "Task",
-                            "START_FOCUS" to "Focus",
-                            "JOURNAL" to "Journal",
-                            "NEW_GOAL" to "Goal",
-                            "WEEKLY_REVIEW" to "Review",
-                            "ADDICTION" to "Addiction"
-                        )
-                        val activeActions = settings.quickActionsOrder.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            availableActions.take(3).forEach { (actId, actName) ->
-                                val isSelected = activeActions.contains(actId)
-                                KintsuFilterChip(
-                                    label = actName,
-                                    selected = isSelected,
-                                    onClick = {
-                                        val newActions = if (isSelected) {
-                                            if (activeActions.size > 1) activeActions - actId else activeActions
-                                        } else {
-                                            if (activeActions.size < 5) activeActions + actId else activeActions
-                                        }
-                                        onUpdateQuickActionsOrder(newActions.joinToString(","))
-                                    }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(spacing.xs))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            availableActions.drop(3).forEach { (actId, actName) ->
-                                val isSelected = activeActions.contains(actId)
-                                KintsuFilterChip(
-                                    label = actName,
-                                    selected = isSelected,
-                                    onClick = {
-                                        val newActions = if (isSelected) {
-                                            if (activeActions.size > 1) activeActions - actId else activeActions
-                                        } else {
-                                            if (activeActions.size < 5) activeActions + actId else activeActions
-                                        }
-                                        onUpdateQuickActionsOrder(newActions.joinToString(","))
-                                    }
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(spacing.m))
-
-                        KintsuButton(
-                            text = "Reset Home Layout",
-                            onClick = onResetHomePreferences,
-                            variant = KintsuButtonVariant.SECONDARY,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                }
-            }
-
-            // Rhythm & Notifications Section
-            item {
-                Text(
-                    text = "RHYTHM & NOTIFICATIONS",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Daily Reminders",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = if (settings.notificationsEnabled) "Active at ${settings.defaultReminderTime}" else "Quiet / Off",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-
-                        Switch(
-                            checked = settings.notificationsEnabled,
-                            onCheckedChange = onUpdateNotifications,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    if (settings.notificationsEnabled) {
-                        KintsuDivider()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(spacing.m),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
-                                Text(
-                                    text = "Only If Incomplete",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Skip notification if the ritual is already done today",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-
-                            Switch(
-                                checked = settings.notifyOnlyIfNotDone,
-                                onCheckedChange = onUpdateNotifyOnlyIfNotDone,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.background,
-                                    checkedTrackColor = colors.accent,
-                                    uncheckedThumbColor = colors.textTertiary,
-                                    uncheckedTrackColor = colors.surfaceElevated
-                                )
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(spacing.m),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.m)) {
-                                Text(
-                                    text = "Gentle Repair Alerts",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Notify when a missed day can be mended with gold",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-
-                            Switch(
-                                checked = settings.goldRepairReminderEnabled,
-                                onCheckedChange = onUpdateGoldRepairReminderEnabled,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.background,
-                                    checkedTrackColor = colors.goldSeam,
-                                    uncheckedThumbColor = colors.textTertiary,
-                                    uncheckedTrackColor = colors.surfaceElevated
-                                )
-                            )
-                        }
-                    }
-
-                    KintsuDivider()
-
-                    // Week Start Day
-                    Column(modifier = Modifier.padding(spacing.m)) {
-                        Text(
-                            text = "First Day of the Week",
-                            style = typography.itemTitle,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(spacing.s))
-                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                            KintsuFilterChip(
-                                label = "Monday",
-                                selected = settings.weekStartMonday,
-                                onClick = { onUpdateWeekStartMonday(true) }
-                            )
-                            KintsuFilterChip(
-                                label = "Sunday",
-                                selected = !settings.weekStartMonday,
-                                onClick = { onUpdateWeekStartMonday(false) }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Mindful Focus Timer
-            item {
-                Text(
-                    text = "MINDFUL FOCUS",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Focus Timer Module",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Conscious intervals with foreground tracking",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-                        Switch(
-                            checked = settings.focusEnabled,
-                            onCheckedChange = onUpdateFocusEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    if (settings.focusEnabled) {
-                        KintsuDivider()
-
-                        Column(modifier = Modifier.padding(spacing.m)) {
-                            Text(
-                                text = "Default Session Length",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(spacing.xs))
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                listOf(15, 25, 45).forEach { min ->
-                                    KintsuFilterChip(
-                                        label = "$min min",
-                                        selected = settings.focusDefaultPresetMinutes == min,
-                                        onClick = { onUpdateFocusDefaultPreset(min) }
-                                    )
-                                }
-                            }
-                        }
-
-                        KintsuDivider()
-
-                        Column(modifier = Modifier.padding(spacing.m)) {
-                            Text(
-                                text = "Short Rest Interval",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(spacing.xs))
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                listOf(3, 5, 10).forEach { min ->
-                                    KintsuFilterChip(
-                                        label = "$min min",
-                                        selected = settings.focusBreakMinutes == min,
-                                        onClick = { onUpdateFocusBreakMinutes(min) }
-                                    )
-                                }
-                            }
-                        }
-
-                        KintsuDivider()
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(spacing.m),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Vibration Cue",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Gentle haptic pulse on completion",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            Switch(
-                                checked = settings.focusVibrationEnabled,
-                                onCheckedChange = onUpdateFocusVibrationEnabled,
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = colors.background,
-                                    checkedTrackColor = colors.accent,
-                                    uncheckedThumbColor = colors.textTertiary,
-                                    uncheckedTrackColor = colors.surfaceElevated
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Daily Intention
-            item {
-                Text(
-                    text = "DAILY INTENTION",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Daily Intention Prompt",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Morning intention on Home (\"What matters most?\")",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-                        Switch(
-                            checked = settings.dailyIntentionEnabled,
-                            onCheckedChange = onUpdateDailyIntentionEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    if (settings.dailyIntentionEnabled) {
-                        KintsuDivider()
-                        Column(modifier = Modifier.padding(spacing.m)) {
-                            Text(
-                                text = "Morning Intention Reminder",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(spacing.xs))
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                listOf("07:00", "08:00", "09:00").forEach { time ->
-                                    KintsuFilterChip(
-                                        label = time,
-                                        selected = settings.dailyIntentionReminderTime == time,
-                                        onClick = { onUpdateDailyIntentionReminderTime(time) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Quiet Journal
-            item {
-                Text(
-                    text = "QUIET JOURNAL",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Evening Reflection",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "Private, local end-of-day journal",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-                        Switch(
-                            checked = settings.journalEnabled,
-                            onCheckedChange = onUpdateJournalEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    if (settings.journalEnabled) {
-                        KintsuDivider()
-                        Column(modifier = Modifier.padding(spacing.m)) {
-                            Text(
-                                text = "Evening Reflection Reminder",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(spacing.xs))
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                listOf("20:00", "21:00", "22:00").forEach { time ->
-                                    KintsuFilterChip(
-                                        label = time,
-                                        selected = settings.journalReminderTime == time,
-                                        onClick = { onUpdateJournalReminderTime(time) }
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Weekly Review
-            item {
-                Text(
-                    text = "WEEKLY REVIEW & PERSPECTIVE",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Weekly Review",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Text(
-                                text = "End-of-week perspective from real stored data",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-                        Switch(
-                            checked = settings.weeklyReviewEnabled,
-                            onCheckedChange = onUpdateWeeklyReviewEnabled,
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = colors.background,
-                                checkedTrackColor = colors.accent,
-                                uncheckedThumbColor = colors.textTertiary,
-                                uncheckedTrackColor = colors.surfaceElevated
-                            )
-                        )
-                    }
-
-                    if (settings.weeklyReviewEnabled) {
-                        KintsuDivider()
-                        Column(modifier = Modifier.padding(spacing.m)) {
-                            Text(
-                                text = "Weekend Review Reminder",
-                                style = typography.itemTitle,
-                                color = colors.textPrimary
-                            )
-                            Spacer(modifier = Modifier.height(spacing.xs))
-                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                                listOf("17:00", "18:00", "19:00", "20:00").forEach { time ->
-                                    KintsuFilterChip(
-                                        label = time,
-                                        selected = settings.weeklyReviewReminderTime == time,
-                                        onClick = { onUpdateWeeklyReviewReminderTime(time) }
-                                    )
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -1938,38 +1380,10 @@ fun SettingsScreen(
                             )
                         }
                     }
-
-                    KintsuDivider()
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                resetConfirmationText = ""
-                                resetConfirmedCheckbox = false
-                                showResetCautionDialog = true
-                            }
-                            .padding(spacing.m),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "Reset All Data",
-                                style = typography.itemTitle,
-                                color = colors.error
-                            )
-                            Text(
-                                text = "Erase all habits, tasks, logs, and settings",
-                                style = typography.secondary,
-                                color = colors.textSecondary
-                            )
-                        }
-                    }
                 }
             }
 
-            // Danger Zone Section at Bottom of Settings
+// Danger Zone Section at Bottom of Settings
             item {
                 Spacer(modifier = Modifier.height(spacing.l))
                 Text(
@@ -2040,6 +1454,44 @@ fun SettingsScreen(
                                 shape = KintsuTheme.shapes.medium
                             ) {
                                 Text("Reset Data")
+                            }
+                        }
+
+
+                        // Delete Cloud Backup (if signed in)
+                        val isSignedIn = !settings.accountEmail.isNullOrBlank()
+                        if (isSignedIn) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(KintsuTheme.shapes.medium)
+                                    .background(colors.surfaceElevated)
+                                    .padding(spacing.m),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                    Text(
+                                        text = "Delete Cloud Backup",
+                                        style = typography.itemTitle,
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "Wipes your backed up records from the cloud. Local data on this device will remain intact.",
+                                        style = typography.caption,
+                                        color = colors.textSecondary
+                                    )
+                                }
+                                Button(
+                                    onClick = { showDeleteCloudDialog = true },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = colors.error.copy(alpha = 0.15f),
+                                        contentColor = colors.error
+                                    ),
+                                    shape = KintsuTheme.shapes.medium
+                                ) {
+                                    Text("Delete Cloud Data")
+                                }
                             }
                         }
 
@@ -2816,6 +2268,562 @@ fun SettingsScreen(
         )
     }
 
+    if (showRestoreEncryptedConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreEncryptedConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Restore Encrypted Backup",
+                    style = typography.sectionHeader,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "Decrypt and restore your entire journal, habits, and tasks from the local AES-256 encrypted vault? Current data will be safely updated.",
+                    style = typography.body,
+                    color = colors.textSecondary
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showRestoreEncryptedConfirmDialog = false
+                        onRestoreEncryptedBackup { res ->
+                            if (res.isSuccess) {
+                                Toast.makeText(context, "Successfully restored from encrypted backup!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Restore failed: ${res.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text("Restore Now", color = colors.accent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreEncryptedConfirmDialog = false }) {
+                    Text("Cancel", color = colors.textPrimary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = KintsuTheme.shapes.large
+        )
+    }
+
+    if (showSetPasscodeDialog) {
+        val lockType = settings.appLockType
+        var patternGridSize by remember { mutableStateOf(3) }
+        var patternStep by remember { mutableStateOf(1) }
+        val firstPattern = remember { mutableStateListOf<Int>() }
+        val currentDrawnPattern = remember { mutableStateListOf<Int>() }
+        var patternConfirmed by remember { mutableStateOf(false) }
+        var showPasswordPlaintext by remember { mutableStateOf(false) }
+        var showConfirmPasswordPlaintext by remember { mutableStateOf(false) }
+
+        AlertDialog(
+            onDismissRequest = { showSetPasscodeDialog = false },
+            title = {
+                Text(
+                    text = when (lockType) {
+                        "PIN" -> "Set PIN (Up to 24 Digits)"
+                        "PATTERN" -> "Draw Unlock Pattern (${patternGridSize} × ${patternGridSize})"
+                        else -> "Set Sanctuary Password"
+                    },
+                    style = typography.sectionHeader,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(spacing.m),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    when (lockType) {
+                        "PIN" -> {
+                            Text(
+                                text = "Enter a numeric PIN between 4 and 24 digits to protect your sanctuary.",
+                                style = typography.body,
+                                color = colors.textSecondary,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = tempPasscode,
+                                onValueChange = { input ->
+                                    if (input.all { it.isDigit() } && input.length <= 24) {
+                                        tempPasscode = input
+                                        passcodeDialogError = null
+                                    }
+                                },
+                                label = { Text("New PIN (4–24 digits)") },
+                                supportingText = {
+                                    Text("${tempPasscode.length} / 24 digits", color = colors.textSecondary)
+                                },
+                                visualTransformation = if (showPasswordPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    Text(
+                                        text = if (showPasswordPlaintext) "Hide" else "Show",
+                                        fontSize = 12.sp,
+                                        color = colors.accent,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .clickable { showPasswordPlaintext = !showPasswordPlaintext }
+                                            .padding(8.dp)
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = tempPasscodeConfirm,
+                                onValueChange = { input ->
+                                    if (input.all { it.isDigit() } && input.length <= 24) {
+                                        tempPasscodeConfirm = input
+                                        passcodeDialogError = null
+                                    }
+                                },
+                                label = { Text("Confirm PIN") },
+                                supportingText = {
+                                    Text("${tempPasscodeConfirm.length} / 24 digits", color = colors.textSecondary)
+                                },
+                                visualTransformation = if (showConfirmPasswordPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    Text(
+                                        text = if (showConfirmPasswordPlaintext) "Hide" else "Show",
+                                        fontSize = 12.sp,
+                                        color = colors.accent,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .clickable { showConfirmPasswordPlaintext = !showConfirmPasswordPlaintext }
+                                            .padding(8.dp)
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        "PATTERN" -> {
+                            // Grid selector (3x3 or 5x5)
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(colors.surfaceElevated)
+                                    .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                    .padding(2.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                listOf(3 to "3 × 3 Grid", 5 to "5 × 5 Grid").forEach { (size, label) ->
+                                    val isSelected = patternGridSize == size
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isSelected) colors.accentSoft else Color.Transparent)
+                                            .clickable {
+                                                if (patternGridSize != size) {
+                                                    patternGridSize = size
+                                                    patternStep = 1
+                                                    firstPattern.clear()
+                                                    currentDrawnPattern.clear()
+                                                    patternConfirmed = false
+                                                    passcodeDialogError = null
+                                                }
+                                            }
+                                            .padding(horizontal = 14.dp, vertical = 6.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = label,
+                                            style = typography.caption,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = if (isSelected) colors.accent else colors.textSecondary
+                                        )
+                                    }
+                                }
+                            }
+
+                            val instructionText = when {
+                                patternConfirmed -> "✓ Pattern verified and matched!"
+                                patternStep == 1 -> "Step 1: Draw a pattern (min 4 dots)"
+                                else -> "Step 2: Redraw exact pattern to confirm"
+                            }
+                            Text(
+                                text = instructionText,
+                                style = typography.body,
+                                color = if (patternConfirmed) colors.accent else colors.textPrimary,
+                                fontWeight = FontWeight.Medium
+                            )
+
+                            // Touch visual pattern canvas
+                            VisualPatternCanvas(
+                                gridSize = patternGridSize,
+                                selectedNodes = currentDrawnPattern,
+                                onNodeSelected = { node ->
+                                    currentDrawnPattern.add(node)
+                                },
+                                onDragStarted = {
+                                    currentDrawnPattern.clear()
+                                    passcodeDialogError = null
+                                },
+                                onDragEnded = {
+                                    if (currentDrawnPattern.size < 4) {
+                                        passcodeDialogError = "Connect at least 4 dots"
+                                        currentDrawnPattern.clear()
+                                    } else {
+                                        if (patternStep == 1) {
+                                            firstPattern.clear()
+                                            firstPattern.addAll(currentDrawnPattern)
+                                            currentDrawnPattern.clear()
+                                            patternStep = 2
+                                            passcodeDialogError = null
+                                        } else if (patternStep == 2) {
+                                            if (currentDrawnPattern.toList() == firstPattern.toList()) {
+                                                patternConfirmed = true
+                                                passcodeDialogError = null
+                                            } else {
+                                                passcodeDialogError = "Pattern did not match. Please redraw or start over."
+                                                currentDrawnPattern.clear()
+                                            }
+                                        }
+                                    }
+                                },
+                                canvasSize = 250.dp
+                            )
+
+                            TextButton(
+                                onClick = {
+                                    patternStep = 1
+                                    firstPattern.clear()
+                                    currentDrawnPattern.clear()
+                                    patternConfirmed = false
+                                    passcodeDialogError = null
+                                }
+                            ) {
+                                Text("Clear & Draw Again", color = colors.accent, style = typography.caption)
+                            }
+                        }
+
+                        else -> { // PASSWORD
+                            Text(
+                                text = "Enter a case-sensitive password. Letters (a-z, A-Z), numbers (0-9), and special characters (!@#$%^&*...) are supported.",
+                                style = typography.body,
+                                color = colors.textSecondary,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = tempPasscode,
+                                onValueChange = {
+                                    tempPasscode = it
+                                    passcodeDialogError = null
+                                },
+                                label = { Text("New Password (case-sensitive)") },
+                                visualTransformation = if (showPasswordPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    Text(
+                                        text = if (showPasswordPlaintext) "Hide" else "Show",
+                                        fontSize = 12.sp,
+                                        color = colors.accent,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .clickable { showPasswordPlaintext = !showPasswordPlaintext }
+                                            .padding(8.dp)
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    autoCorrect = false
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            OutlinedTextField(
+                                value = tempPasscodeConfirm,
+                                onValueChange = {
+                                    tempPasscodeConfirm = it
+                                    passcodeDialogError = null
+                                },
+                                label = { Text("Confirm Password") },
+                                visualTransformation = if (showConfirmPasswordPlaintext) VisualTransformation.None else PasswordVisualTransformation(),
+                                trailingIcon = {
+                                    Text(
+                                        text = if (showConfirmPasswordPlaintext) "Hide" else "Show",
+                                        fontSize = 12.sp,
+                                        color = colors.accent,
+                                        fontWeight = FontWeight.Medium,
+                                        modifier = Modifier
+                                            .clickable { showConfirmPasswordPlaintext = !showConfirmPasswordPlaintext }
+                                            .padding(8.dp)
+                                    )
+                                },
+                                keyboardOptions = KeyboardOptions(
+                                    keyboardType = KeyboardType.Password,
+                                    autoCorrect = false
+                                ),
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    if (passcodeDialogError != null) {
+                        Text(
+                            text = passcodeDialogError ?: "",
+                            style = typography.caption,
+                            color = colors.error,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                KintsuButton(
+                    text = "Save",
+                    onClick = {
+                        when (lockType) {
+                            "PATTERN" -> {
+                                if (!patternConfirmed || firstPattern.size < 4) {
+                                    passcodeDialogError = if (patternStep == 1) "Please draw a pattern" else "Please redraw and confirm pattern"
+                                    return@KintsuButton
+                                }
+                                val patternStr = AppLockManager.patternToString(firstPattern.toList(), patternGridSize)
+                                val hash = AppLockManager.hashSecret(patternStr)
+                                onUpdateAppLockCode(hash)
+                                onUpdateAppLockEnabled(true)
+                                showSetPasscodeDialog = false
+                                Toast.makeText(context, "Pattern (${patternGridSize}x${patternGridSize}) saved successfully!", Toast.LENGTH_SHORT).show()
+                            }
+                            "PIN" -> {
+                                if (tempPasscode.length < 4) {
+                                    passcodeDialogError = "PIN must be between 4 and 24 digits"
+                                    return@KintsuButton
+                                }
+                                if (tempPasscode.length > 24) {
+                                    passcodeDialogError = "PIN cannot exceed 24 digits"
+                                    return@KintsuButton
+                                }
+                                if (tempPasscode != tempPasscodeConfirm) {
+                                    passcodeDialogError = "PINs do not match"
+                                    return@KintsuButton
+                                }
+                                val hash = AppLockManager.hashSecret(tempPasscode)
+                                onUpdateAppLockCode(hash)
+                                onUpdateAppLockEnabled(true)
+                                showSetPasscodeDialog = false
+                                Toast.makeText(context, "PIN code saved successfully!", Toast.LENGTH_SHORT).show()
+                            }
+                            else -> { // PASSWORD
+                                if (tempPasscode.isEmpty()) {
+                                    passcodeDialogError = "Password cannot be blank"
+                                    return@KintsuButton
+                                }
+                                if (tempPasscode.length < 4) {
+                                    passcodeDialogError = "Password must be at least 4 characters"
+                                    return@KintsuButton
+                                }
+                                if (tempPasscode != tempPasscodeConfirm) {
+                                    passcodeDialogError = "Passwords do not match (passwords are case-sensitive)"
+                                    return@KintsuButton
+                                }
+                                val hash = AppLockManager.hashSecret(tempPasscode)
+                                onUpdateAppLockCode(hash)
+                                onUpdateAppLockEnabled(true)
+                                showSetPasscodeDialog = false
+                                Toast.makeText(context, "Password saved successfully!", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    variant = KintsuButtonVariant.PRIMARY
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = { showSetPasscodeDialog = false }) {
+                    Text("Cancel", color = colors.textPrimary)
+                }
+            },
+            containerColor = colors.surface,
+            shape = KintsuTheme.shapes.large
+        )
+    }
+
+
+    // Avatar Selector Dialog: 24 Signature Avatars + Custom Device Photo
+    val customPhotoLauncher = rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            try {
+                val avatarFile = java.io.File(context.filesDir, "profile_avatar.jpg")
+                context.contentResolver.openInputStream(it)?.use { input ->
+                    avatarFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                onUpdateProfileAvatar("custom:${avatarFile.absolutePath}")
+                showAvatarPicker = false
+                android.widget.Toast.makeText(context, "Custom profile picture applied", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "Failed to load photo", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    if (showAvatarPicker) {
+        AlertDialog(
+            onDismissRequest = { showAvatarPicker = false },
+            title = {
+                Text(
+                    text = "Profile Picture",
+                    style = typography.itemTitle,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(spacing.m)
+                ) {
+                    Text(
+                        text = "Choose your own personal photo or select from 24 signature emblems.",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+
+                    // Option 1: On their own (Custom Photo from Gallery)
+                    val isCustom = settings.profileAvatarId.startsWith("custom:")
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isCustom) colors.accentSoft else colors.surfaceElevated)
+                            .border(
+                                width = 1.dp,
+                                color = if (isCustom) colors.accent else colors.border.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { customPhotoLauncher.launch("image/*") }
+                            .padding(horizontal = spacing.m, vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                            ) {
+                                if (isCustom) {
+                                    ProfileAvatarVisual(avatarId = settings.profileAvatarId, size = 36.dp)
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(CircleShape)
+                                            .background(colors.accent.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        IconUser(color = colors.accent, size = 18.dp)
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = "Upload Your Own Photo",
+                                        style = typography.itemTitle.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = if (isCustom) "Custom photo currently active" else "Choose from device gallery",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+
+                            Text(
+                                text = if (isCustom) "Active" else "Browse",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = colors.accent
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "OR 24 SIGNATURE AVATARS",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp,
+                        color = colors.textTertiary
+                    )
+
+                    // Option 2: 24 Signature Avatars
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                    ) {
+                        items(SIGNATURE_AVATARS_24.size) { index ->
+                            val item = SIGNATURE_AVATARS_24[index]
+                            val isSelected = settings.profileAvatarId == item.id
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isSelected) colors.goldSeam.copy(alpha = 0.2f) else colors.surfaceElevated)
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 1.dp,
+                                        color = if (isSelected) colors.goldSeam else colors.border.copy(alpha = 0.3f),
+                                        shape = RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable {
+                                        onUpdateProfileAvatar(item.id)
+                                        showAvatarPicker = false
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    ProfileAvatarVisual(
+                                        avatarId = item.id,
+                                        size = 34.dp,
+                                        iconSize = 18.dp
+                                    )
+                                    Text(
+                                        text = item.title,
+                                        style = typography.caption.copy(fontSize = 10.sp),
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) colors.goldSeam else colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAvatarPicker = false }) {
+                    Text("Close", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.background,
+            shape = KintsuTheme.shapes.large
+        )
+    }
+
     if (showPermissionSheet) {
         PermissionRequestSheet(
             onDismissRequest = { showPermissionSheet = false },
@@ -2843,66 +2851,6 @@ fun SettingsScreen(
             },
             defaultDisplayName = settings.displayName,
             isLoading = authLoading
-        )
-    }
-
-    if (showEndpointDialog) {
-        var tempEndpoint by remember { mutableStateOf(settings.cloudEndpointUrl) }
-        AlertDialog(
-            onDismissRequest = { showEndpointDialog = false },
-            title = {
-                Text(
-                    text = "Cloud Server Endpoint",
-                    style = typography.sectionHeader,
-                    color = colors.textPrimary
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.m)) {
-                    Text(
-                        text = "Specify the backend sync server URL. Select a quick preset or enter custom host.",
-                        style = typography.body,
-                        color = colors.textSecondary
-                    )
-                    OutlinedTextField(
-                        value = tempEndpoint,
-                        onValueChange = { tempEndpoint = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = KintsuTheme.shapes.medium,
-                        singleLine = true
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.s)) {
-                        KintsuButton(
-                            text = "USB Reverse",
-                            onClick = { tempEndpoint = "http://127.0.0.1:8080" },
-                            variant = KintsuButtonVariant.SECONDARY
-                        )
-                        KintsuButton(
-                            text = "Wi-Fi LAN",
-                            onClick = { tempEndpoint = "http://192.168.29.155:8080" },
-                            variant = KintsuButtonVariant.SECONDARY
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                KintsuButton(
-                    text = "Save Endpoint",
-                    onClick = {
-                        onUpdateCloudConfig(tempEndpoint.trim().trimEnd('/'), settings.cloudApiKey)
-                        showEndpointDialog = false
-                        Toast.makeText(context, "Server endpoint updated", Toast.LENGTH_SHORT).show()
-                    },
-                    variant = KintsuButtonVariant.PRIMARY
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { showEndpointDialog = false }) {
-                    Text("Cancel", color = colors.textPrimary)
-                }
-            },
-            containerColor = colors.surface,
-            shape = KintsuTheme.shapes.large
         )
     }
 

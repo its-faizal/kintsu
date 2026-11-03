@@ -9,7 +9,7 @@ object AchievementCatalog {
             title = "First Step Taken",
             description = "Completed your first habit ritual",
             pointsAwarded = 10,
-            badgeIcon = "🌱",
+            badgeIcon = "icon_leaf",
             category = "MILESTONE"
         ),
         AchievementEntity(
@@ -17,7 +17,7 @@ object AchievementCatalog {
             title = "North Star Aligned",
             description = "Achieved your first long-term objective",
             pointsAwarded = 25,
-            badgeIcon = "🌟",
+            badgeIcon = "icon_star",
             category = "MILESTONE"
         ),
         AchievementEntity(
@@ -25,7 +25,7 @@ object AchievementCatalog {
             title = "Deep Sanctuary",
             description = "Completed your first mindful focus session",
             pointsAwarded = 10,
-            badgeIcon = "⏳",
+            badgeIcon = "icon_focus",
             category = "FOCUS"
         ),
         AchievementEntity(
@@ -33,7 +33,7 @@ object AchievementCatalog {
             title = "Unbroken Rhythm",
             description = "Logged seven scheduled habit ritual completions",
             pointsAwarded = 20,
-            badgeIcon = "🌿",
+            badgeIcon = "icon_rhythm",
             category = "CONSISTENCY"
         ),
         AchievementEntity(
@@ -41,7 +41,7 @@ object AchievementCatalog {
             title = "Mirror of Reflection",
             description = "Completed your first weekly retrospective review",
             pointsAwarded = 15,
-            badgeIcon = "🪞",
+            badgeIcon = "icon_mirror",
             category = "REFLECTION"
         ),
         AchievementEntity(
@@ -49,7 +49,7 @@ object AchievementCatalog {
             title = "Clarity of Action",
             description = "Completed ten intentional focus tasks",
             pointsAwarded = 15,
-            badgeIcon = "🎯",
+            badgeIcon = "icon_task",
             category = "PRODUCTIVITY"
         ),
         AchievementEntity(
@@ -57,7 +57,7 @@ object AchievementCatalog {
             title = "Atelier Aesthetic",
             description = "Unlocked your first custom Kintsu cosmetic theme",
             pointsAwarded = 15,
-            badgeIcon = "🎨",
+            badgeIcon = "icon_palette",
             category = "PERSONALISATION"
         ),
         AchievementEntity(
@@ -65,7 +65,7 @@ object AchievementCatalog {
             title = "Kintsugi Gold Seam",
             description = "Maintained a 7-day unbroken habit streak",
             pointsAwarded = 25,
-            badgeIcon = "✨",
+            badgeIcon = "icon_gold",
             category = "CONSISTENCY"
         ),
         AchievementEntity(
@@ -73,7 +73,7 @@ object AchievementCatalog {
             title = "Man of Steel",
             description = "Completed a full day with zero distraction slips and resolute fortitude",
             pointsAwarded = 30,
-            badgeIcon = "🦸",
+            badgeIcon = "icon_shield",
             category = "SUPERHERO"
         )
     )

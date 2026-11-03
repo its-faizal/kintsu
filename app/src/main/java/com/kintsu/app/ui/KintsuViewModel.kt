@@ -427,6 +427,89 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { repository.updateSettings { it.setWellbeingEnabled(enabled) } }
     }
 
+    fun setShortFormBlockingEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setShortFormBlockingEnabled(enabled) } }
+    }
+
+    fun setBlockShortFormPlatforms(yt: Boolean, ig: Boolean, tt: Boolean, fb: Boolean, snap: Boolean, web: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setBlockShortFormPlatforms(yt, ig, tt, fb, snap, web) } }
+    }
+
+    fun setMaxContinuousSessionMinutes(minutes: Int) {
+        viewModelScope.launch { repository.updateSettings { it.setMaxContinuousSessionMinutes(minutes) } }
+    }
+
+    fun setSessionCooldownMinutes(minutes: Int) {
+        viewModelScope.launch { repository.updateSettings { it.setSessionCooldownMinutes(minutes) } }
+    }
+
+    fun setAppLaunchLimitEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setAppLaunchLimitEnabled(enabled) } }
+    }
+
+    fun setDefaultAppMaxLaunches(maxLaunches: Int) {
+        viewModelScope.launch { repository.updateSettings { it.setDefaultAppMaxLaunches(maxLaunches) } }
+    }
+
+    fun setBedtimeLock(enabled: Boolean, startHour: Int, endHour: Int) {
+        viewModelScope.launch { repository.updateSettings { it.setBedtimeLock(enabled, startHour, endHour) } }
+    }
+
+    fun setMindfulPauseOnLaunch(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setMindfulPauseOnLaunch(enabled) } }
+    }
+
+    fun setBlockNsfw(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setBlockNsfw(enabled) } }
+    }
+
+    fun setBedtimeSchedule(enabled: Boolean, startHour: Int, endHour: Int, daysMask: Int, dnd: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setBedtimeSchedule(enabled, startHour, endHour, daysMask, dnd) } }
+    }
+
+    fun setNotificationBatching(
+        enabled: Boolean,
+        storeAll: Boolean,
+        historyDays: Int,
+        recapType: String,
+        morning: Boolean,
+        afternoon: Boolean,
+        evening: Boolean
+    ) {
+        viewModelScope.launch {
+            repository.updateSettings {
+                it.setNotificationBatching(enabled, storeAll, historyDays, recapType, morning, afternoon, evening)
+            }
+        }
+    }
+
+    fun setInvincibleMode(
+        enabled: Boolean,
+        windowHour: Int,
+        windowMinute: Int,
+        includeShorts: Boolean,
+        includeBedtime: Boolean
+    ) {
+        viewModelScope.launch {
+            repository.updateSettings {
+                it.setInvincibleMode(enabled, windowHour, windowMinute, includeShorts, includeBedtime)
+            }
+        }
+    }
+
+    fun setParentalControlsProtection(
+        protectedAccess: Boolean,
+        tamperProtection: Boolean,
+        uninstallHour: Int,
+        uninstallMinute: Int
+    ) {
+        viewModelScope.launch {
+            repository.updateSettings {
+                it.setParentalControlsProtection(protectedAccess, tamperProtection, uninstallHour, uninstallMinute)
+            }
+        }
+    }
+
     fun resetFailSafe() {
         viewModelScope.launch { repository.updateSettings { it.setProtectionFailSafeTripped(false) } }
     }
@@ -551,6 +634,12 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         return navigationBackStack.pop()
     }
 
+    fun updateProfileAvatarId(avatarId: String) {
+        viewModelScope.launch {
+            repository.updateSettings { it.setProfileAvatarId(avatarId) }
+        }
+    }
+
     fun setSettingsOpen(open: Boolean) {
         _isSettingsOpen.value = open
     }
@@ -659,6 +748,9 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         plannedDateEpochDay: Long? = null,
         plannedTimeBlock: String? = null,
         planOrder: Int = 0,
+        category: String? = null,
+        notes: String? = null,
+        estimatedMinutes: Int? = null,
         initialSubtasks: List<String> = emptyList()
     ) {
         viewModelScope.launch {
@@ -672,7 +764,10 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
                 recurrenceActive = recurrenceActive,
                 plannedDateEpochDay = plannedDateEpochDay,
                 plannedTimeBlock = plannedTimeBlock,
-                planOrder = planOrder
+                planOrder = planOrder,
+                category = category,
+                notes = notes,
+                estimatedMinutes = estimatedMinutes
             )
             initialSubtasks.forEachIndexed { index, subtaskTitle ->
                 if (subtaskTitle.isNotBlank()) {
@@ -827,6 +922,13 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     fun setAppTheme(theme: AppTheme) {
         viewModelScope.launch {
             repository.updateSettings { it.setAppTheme(theme) }
+        }
+    }
+
+    fun setLauncherIcon(iconId: String, context: android.content.Context) {
+        viewModelScope.launch {
+            repository.updateSettings { it.setLauncherIconId(iconId) }
+            com.kintsu.app.ui.theme.AppIconManager.applyLauncherIcon(context, iconId)
         }
     }
 
@@ -1032,9 +1134,9 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     // Journal
-    fun saveJournalEntry(content: String, mood: String?) {
+    fun saveJournalEntry(content: String, mood: String?, tags: String = "") {
         viewModelScope.launch {
-            repository.saveJournalEntry(todayEpochDay, content, mood)
+            repository.saveJournalEntry(todayEpochDay, content, mood, tags)
         }
     }
 
@@ -1212,5 +1314,48 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
 
     fun resetHomePreferences() {
         viewModelScope.launch { repository.updateSettings { it.resetHomePreferences() } }
+    }
+
+    fun setAppLockEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setAppLockEnabled(enabled) } }
+    }
+
+    fun setAppLockType(type: String) {
+        viewModelScope.launch { repository.updateSettings { it.setAppLockType(type) } }
+    }
+
+    fun setAppLockCode(code: String) {
+        viewModelScope.launch { repository.updateSettings { it.setAppLockCode(code) } }
+    }
+
+    fun setAppLockBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch { repository.updateSettings { it.setAppLockBiometricEnabled(enabled) } }
+    }
+
+    fun triggerAutoBackup(onResult: ((Result<com.kintsu.app.data.SecureBackupInfo>) -> Unit)? = null) {
+        viewModelScope.launch {
+            if (settings.value.syncEnabled) {
+                try { repository.performSync() } catch (e: Exception) {}
+            }
+            val res = com.kintsu.app.data.SecureEncryptedBackupManager.performAutoBackup(
+                context = getApplication(),
+                database = database,
+                settings = settings.value
+            )
+            if (res.isSuccess) {
+                repository.updateSettings { it.setLastAutoBackupTime(System.currentTimeMillis()) }
+            }
+            onResult?.invoke(res)
+        }
+    }
+
+    fun restoreFromEncryptedBackup(onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch {
+            val res = com.kintsu.app.data.SecureEncryptedBackupManager.restoreFromEncryptedBackup(
+                context = getApplication(),
+                database = database
+            )
+            onResult(res)
+        }
     }
 }

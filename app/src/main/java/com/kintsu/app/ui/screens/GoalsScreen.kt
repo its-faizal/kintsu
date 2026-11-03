@@ -1,5 +1,13 @@
 package com.kintsu.app.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -78,6 +86,16 @@ fun GoalsScreen(
 
     var showAddSheet by remember { mutableStateOf(false) }
     var goalToEdit by remember { mutableStateOf<GoalEntity?>(null) }
+    var selectedGoalTab by remember { mutableStateOf(0) }
+
+    val displayedGoals = remember(goals, selectedGoalTab) {
+        when (selectedGoalTab) {
+            0 -> goals.filter { !it.isCompleted && !it.isArchived }
+            1 -> goals.filter { it.isCompleted && !it.isArchived }
+            2 -> goals.filter { it.isArchived }
+            else -> goals
+        }
+    }
     val todayEpochDay = remember { LocalDate.now().toEpochDay() }
 
     LaunchedEffect(externalOpenAddSheet) {
@@ -94,9 +112,8 @@ fun GoalsScreen(
     ) {
         KintsuTopBar(
             title = "Goals",
-            showBackButton = true,
-            onBackClick = onBackClick
-        )
+            subtitle = "Long-term focus, real progress",
+                                )
 
         LazyColumn(
             modifier = Modifier
@@ -105,39 +122,96 @@ fun GoalsScreen(
             verticalArrangement = Arrangement.spacedBy(spacing.m)
         ) {
             item {
-                Spacer(modifier = Modifier.height(spacing.xxs))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(colors.surface)
+                        .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "Intentions on the Horizon",
-                        style = typography.caption,
-                        color = colors.textSecondary
-                    )
-
-                    KintsuButton(
-                        text = "New Goal",
-                        onClick = { showAddSheet = true },
-                        variant = KintsuButtonVariant.ACCENT_SOFT,
-                        leadingIcon = { IconAdd(color = it, size = 16.dp) }
-                    )
+                    val activeCount = goals.count { !it.isCompleted && !it.isArchived }
+                    val completedCount = goals.count { it.isCompleted && !it.isArchived }
+                    val archivedCount = goals.count { it.isArchived }
+                    val tabs = listOf("Active ($activeCount)", "Completed ($completedCount)", "Archived ($archivedCount)")
+                    tabs.forEachIndexed { index, tabTitle ->
+                        val isSelected = selectedGoalTab == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(9.dp))
+                                .background(if (isSelected) colors.accentSoft.copy(alpha = 0.85f) else Color.Transparent)
+                                .clickable { selectedGoalTab = index }
+                                .padding(vertical = spacing.xs + 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = tabTitle,
+                                style = typography.caption,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) colors.accentText else colors.textSecondary
+                            )
+                        }
+                    }
                 }
             }
 
-            if (goals.isEmpty()) {
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = spacing.xxs),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.accentSoft)
+                            .clickable { showAddSheet = true }
+                            .padding(horizontal = spacing.s, vertical = spacing.xxs),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            IconAdd(color = colors.accentText, size = 14.dp)
+                            Text(
+                                text = "New Goal",
+                                style = typography.caption,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.accentText
+                            )
+                        }
+                    }
+                }
+            }
+
+
+
+            if (displayedGoals.isEmpty()) {
                 item {
                     KintsuEmptyState(
-                        title = "No Goals Yet",
-                        description = "Set a meaningful direction. Tasks and rituals can link to it directly.",
+                        title = when (selectedGoalTab) {
+                            1 -> "No Completed Goals"
+                            2 -> "No Archived Goals"
+                            else -> "No Active Goals"
+                        },
+                        description = when (selectedGoalTab) {
+                            1 -> "Mark completed milestones and goals to view your history of achievement here."
+                            2 -> "Completed or shelved goals can be archived cleanly."
+                            else -> "Set a meaningful direction. Tasks and rituals can link to it directly."
+                        },
                         icon = { IconGoal(color = it, size = 32.dp) },
-                        actionText = "Create Horizon Goal",
+                        actionText = if (selectedGoalTab == 0) "Create Horizon Goal" else null,
                         onActionClick = { showAddSheet = true }
                     )
                 }
             } else {
-                items(goals, key = { "goal_${it.id}" }) { goal ->
+                items(displayedGoals, key = { "goal_${it.id}" }) { goal ->
                     val linkedTasks = tasks.filter { it.linkedGoalId == goal.id }
                     val linkedHabits = habits.filter { it.linkedGoalId == goal.id }
                     GoalRowItem(
@@ -147,6 +221,12 @@ fun GoalsScreen(
                         todayLogs = todayLogs,
                         todayEpochDay = todayEpochDay,
                         onEdit = { goalToEdit = goal },
+                        onToggleCompleted = {
+                            onUpdateGoal(goal.copy(isCompleted = !goal.isCompleted))
+                        },
+                        onToggleArchived = {
+                            onUpdateGoal(goal.copy(isArchived = !goal.isArchived))
+                        },
                         onDelete = { onDeleteGoal(goal) }
                     )
                 }
@@ -198,6 +278,8 @@ private fun GoalRowItem(
     todayLogs: List<HabitLogEntity> = emptyList(),
     todayEpochDay: Long,
     onEdit: () -> Unit,
+    onToggleCompleted: () -> Unit = {},
+    onToggleArchived: () -> Unit = {},
     onDelete: () -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -270,7 +352,8 @@ private fun GoalRowItem(
                     progress = progressFloat,
                     size = 54.dp,
                     strokeWidth = 4.5.dp,
-                    progressColor = colors.goldSeam
+                    progressColor = colors.goldSeam,
+                    showPercentage = true
                 )
             }
 
@@ -340,24 +423,51 @@ private fun GoalRowItem(
                         }
                     }
 
+                    if (!goal.notes.isNullOrBlank()) {
+                        Spacer(modifier = Modifier.height(spacing.xs))
+                        Text(
+                            text = goal.notes ?: "",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+                    }
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = spacing.s),
-                        horizontalArrangement = Arrangement.End,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        KintsuButton(
-                            text = "Edit",
-                            onClick = onEdit,
-                            variant = KintsuButtonVariant.TEXT
-                        )
-                        KintsuIconButton(
-                            icon = { IconTrash(color = it, size = 16.dp) },
-                            contentDescription = "Delete goal",
-                            onClick = onDelete,
-                            tint = colors.textTertiary
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.xxs)) {
+                            KintsuButton(
+                                text = if (goal.isCompleted) "Reopen" else "Complete",
+                                onClick = onToggleCompleted,
+                                variant = KintsuButtonVariant.SECONDARY
+                            )
+                            KintsuButton(
+                                text = if (goal.isArchived) "Unarchive" else "Archive",
+                                onClick = onToggleArchived,
+                                variant = KintsuButtonVariant.TEXT
+                            )
+                        }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(spacing.xxs),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            KintsuButton(
+                                text = "Edit",
+                                onClick = onEdit,
+                                variant = KintsuButtonVariant.TEXT
+                            )
+                            KintsuIconButton(
+                                icon = { IconTrash(color = it, size = 16.dp) },
+                                contentDescription = "Delete goal",
+                                onClick = onDelete,
+                                tint = colors.textTertiary
+                            )
+                        }
                     }
                 }
             }

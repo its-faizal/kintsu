@@ -5,14 +5,16 @@ import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.SettingsDataStore
 import com.kintsu.app.data.model.BlockRuleEntity
-import com.kintsu.app.data.model.DigitalDetoxEntity
+import com.kintsu.app.data.model.DistractionInterventionLogEntity
 import com.kintsu.app.wellbeing.domain.BlockMode
 import com.kintsu.app.wellbeing.domain.DailyLimitTracker
 import com.kintsu.app.wellbeing.domain.ProtectedApps
 import com.kintsu.app.wellbeing.domain.ScheduleEvaluator
+import com.kintsu.app.wellbeing.domain.ShortFormContentDetector
 import com.kintsu.app.wellbeing.ui.BlockActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalTime
+import java.util.Calendar
 import java.util.concurrent.ConcurrentHashMap
 
 class KintsuAccessibilityBlockerService : AccessibilityService() {
@@ -30,6 +33,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private val limitTracker = DailyLimitTracker()
     private val temporarilyUnlockedUntil = ConcurrentHashMap<String, Long>()
     private val lastTriggeredTimeMillis = ConcurrentHashMap<String, Long>()
+    private val lastShortFormCheckMillis = ConcurrentHashMap<String, Long>()
 
     private var failSafeErrorsIn10Min = 0
     private var lastErrorTimeMillis = 0L
@@ -54,7 +58,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         isServiceRunning = true
 
         val info = AccessibilityServiceInfo().apply {
-            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+            eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
+                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
                     AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
@@ -70,15 +75,32 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event == null || event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null) return
+        val eventType = event.eventType
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+        ) return
 
         val pkgName = event.packageName?.toString() ?: return
         if (ProtectedApps.isProtected(pkgName)) return
 
         val now = System.currentTimeMillis()
-        // Anti-flicker throttling: ignore repeated events for same package within 3 seconds
+
+        // 1. High-Priority Short-Form Video / Reels Interception
+        val lastShortCheck = lastShortFormCheckMillis[pkgName] ?: 0L
+        if (now - lastShortCheck > 600L) {
+            lastShortFormCheckMillis[pkgName] = now
+            serviceScope.launch {
+                inspectShortFormAndWeb(event, pkgName, now)
+            }
+        }
+
+        // If not a window state change, we only inspect short form and website URLs above
+        if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+
+        // Anti-flicker throttling for app level inspection
         val lastTrigger = lastTriggeredTimeMillis[pkgName] ?: 0L
-        if (now - lastTrigger < 3000L) {
+        if (now - lastTrigger < 2500L) {
             return
         }
 
@@ -99,6 +121,110 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         }
     }
 
+    private suspend fun inspectShortFormAndWeb(
+        event: AccessibilityEvent,
+        pkgName: String,
+        now: Long
+    ) {
+        val settings = SettingsDataStore(applicationContext).settingsFlow.first()
+        if (!settings.wellbeingEnabled || settings.protectionFailSafeTripped) return
+
+        val db = KintsuDatabase.getDatabase(applicationContext)
+
+        // A. Short-form video detection (YouTube Shorts, IG Reels, TikTok, FB Reels, Snapchat)
+        if (settings.shortFormBlockingEnabled) {
+            val rootNode = try { rootInActiveWindow } catch (_: Exception) { null }
+            val isShortForm = ShortFormContentDetector.isShortFormContent(
+                event = event,
+                rootNode = rootNode,
+                packageName = pkgName,
+                blockYouTube = settings.blockYouTubeShorts,
+                blockInstagram = settings.blockInstagramReels,
+                blockTikTok = settings.blockTikTok,
+                blockFacebook = settings.blockFacebookReels,
+                blockSnapchat = settings.blockSnapchatSpotlight,
+                blockWeb = settings.blockWebShorts
+            )
+
+            if (isShortForm) {
+                if (com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(pkgName)) {
+                    return
+                }
+
+                lastTriggeredTimeMillis[pkgName] = now
+
+                // Log intervention
+                db.wellbeingDao().insertIntervention(
+                    DistractionInterventionLogEntity(
+                        timestampMillis = now,
+                        packageName = pkgName,
+                        interventionStyle = "REEL_OVERLAY",
+                        userAction = "PAUSED_FOR_CHOICE"
+                    )
+                )
+
+                // Launch interface overlay with conscious choices directly over reels
+                val platformName = when {
+                    pkgName.contains("instagram") -> "Instagram"
+                    pkgName.contains("youtube") -> "YouTube"
+                    pkgName.contains("tiktok") -> "TikTok"
+                    pkgName.contains("facebook") || pkgName.contains("katana") -> "Facebook"
+                    pkgName.contains("snapchat") -> "Snapchat"
+                    pkgName.contains("reddit") -> "Reddit"
+                    else -> "Video Feed"
+                }
+
+                val overlayIntent = android.content.Intent(applicationContext, com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity::class.java).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PACKAGE, pkgName)
+                    putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PLATFORM, platformName)
+                }
+                startActivity(overlayIntent)
+                return
+            }
+        }
+
+        // B. Browser URL inspection against blocked website list
+        if (ShortFormContentDetector.BROWSER_PACKAGES.contains(pkgName)) {
+            val rootNode = try { rootInActiveWindow } catch (_: Exception) { null }
+            val url = ShortFormContentDetector.extractBrowserUrl(rootNode)
+            if (!url.isNullOrBlank()) {
+                val blockedWebsites = db.wellbeingDao().getAllBlockedWebsites().first()
+                val isBlockedSite = blockedWebsites.any { it.isEnabled && url.contains(it.domain, ignoreCase = true) }
+                val isWebShort = settings.shortFormBlockingEnabled && settings.blockWebShorts && ShortFormContentDetector.isShortFormUrl(url)
+
+                if (isBlockedSite || isWebShort) {
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    lastTriggeredTimeMillis[pkgName] = now
+
+                    val prompt = if (isWebShort) {
+                        "Short-form feed is restricted."
+                    } else {
+                        "Access to this website ($url) is restricted by Kintsu Shield."
+                    }
+
+                    db.wellbeingDao().insertIntervention(
+                        DistractionInterventionLogEntity(
+                            timestampMillis = now,
+                            packageName = pkgName,
+                            interventionStyle = settings.interventionStyle,
+                            userAction = "BLOCKED"
+                        )
+                    )
+
+                    triggerBlockScreen(
+                        targetPackage = pkgName,
+                        ruleMode = "WEBSITE_BLOCKED",
+                        strictness = "STRICT",
+                        customPrompt = prompt,
+                        pauseDurationSeconds = 10,
+                        interventionStyle = settings.interventionStyle
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun handlePackageInspection(packageName: String) {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
         if (!settings.wellbeingEnabled) return
@@ -107,7 +233,22 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         val db = KintsuDatabase.getDatabase(applicationContext)
         val nowMillis = System.currentTimeMillis()
 
-        // 1. Check Active Focus Lock Session
+        // 1. Check if App is in Active Cooldown from an excessive session
+        if (limitTracker.isPackageInCooldown(packageName)) {
+            val remainingSec = limitTracker.getRemainingCooldownSeconds(packageName)
+            lastTriggeredTimeMillis[packageName] = nowMillis
+            triggerBlockScreen(
+                targetPackage = packageName,
+                ruleMode = "COOLDOWN",
+                strictness = "STRICT",
+                customPrompt = "Continuous session cooldown active (${remainingSec / 60}m ${remainingSec % 60}s remaining). Rest your eyes.",
+                pauseDurationSeconds = 10,
+                interventionStyle = settings.interventionStyle
+            )
+            return
+        }
+
+        // 2. Check Active Focus Lock Session
         val activeFocusLock = db.wellbeingDao().getActiveFocusLockSession(nowMillis)
         if (activeFocusLock != null) {
             val allGroups = db.wellbeingDao().getAllAppGroups().first()
@@ -132,7 +273,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
-        // 2. Check Active Digital Detox
+        // 3. Check Active Digital Detox
         val activeDetox = db.wellbeingDao().getActiveDetox(nowMillis)
         if (activeDetox != null) {
             val allowedList = activeDetox.allowedPackages.split(",").map { it.trim() }.toSet()
@@ -142,7 +283,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     targetPackage = packageName,
                     ruleMode = "DIGITAL_DETOX",
                     strictness = settings.wellbeingStrictness,
-                    customPrompt = activeDetox.intention ?: "Digital Detox is active.",
+                    customPrompt = activeDetox.intention ?: "Digital Detox Sanctuary is active.",
                     pauseDurationSeconds = settings.breathingDurationSeconds,
                     interventionStyle = settings.interventionStyle
                 )
@@ -150,7 +291,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
-        // 3. Check App Groups & Rules
+        // 4. Check App Groups & Rules
         val allGroups = db.wellbeingDao().getAllAppGroups().first()
         val matchingGroups = allGroups.filter { group ->
             group.packageNames.split(",").map { it.trim() }.contains(packageName)
@@ -164,6 +305,62 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
         limitTracker.onAppOpened(packageName, todayEpoch)
 
+        // 5. Check Active Continuous Session Limit
+        val activeSessionSec = limitTracker.getActiveSessionSeconds()
+        if (settings.maxContinuousSessionMinutes > 0 && activeSessionSec >= (settings.maxContinuousSessionMinutes * 60L)) {
+            limitTracker.triggerCooldown(packageName, settings.sessionCooldownMinutes)
+            lastTriggeredTimeMillis[packageName] = nowMillis
+            triggerBlockScreen(
+                targetPackage = packageName,
+                ruleMode = "SESSION_LIMIT",
+                strictness = "STRICT",
+                customPrompt = "You've been in this app continuously for over ${settings.maxContinuousSessionMinutes} minutes. Taking a ${settings.sessionCooldownMinutes}-minute pause.",
+                pauseDurationSeconds = settings.breathingDurationSeconds,
+                interventionStyle = settings.interventionStyle
+            )
+            return
+        }
+
+        // 6. Check Daily Launch Limit
+        if (settings.appLaunchLimitEnabled) {
+            val opensToday = limitTracker.getOpenCountToday(packageName)
+            if (opensToday > settings.defaultAppMaxLaunches) {
+                lastTriggeredTimeMillis[packageName] = nowMillis
+                triggerBlockScreen(
+                    targetPackage = packageName,
+                    ruleMode = "OPEN_LIMIT",
+                    strictness = "STRICT",
+                    customPrompt = "Daily launch limit reached ($opensToday / ${settings.defaultAppMaxLaunches} launches today).",
+                    pauseDurationSeconds = settings.breathingDurationSeconds,
+                    interventionStyle = settings.interventionStyle
+                )
+                return
+            }
+        }
+
+        // 7. Check Bedtime & Sleep Sanctuary Lock
+        if (settings.bedtimeLockEnabled) {
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            val isBedtime = if (settings.bedtimeStartHour > settings.bedtimeEndHour) {
+                hour >= settings.bedtimeStartHour || hour < settings.bedtimeEndHour
+            } else {
+                hour in settings.bedtimeStartHour until settings.bedtimeEndHour
+            }
+            if (isBedtime) {
+                lastTriggeredTimeMillis[packageName] = nowMillis
+                triggerBlockScreen(
+                    targetPackage = packageName,
+                    ruleMode = "BEDTIME",
+                    strictness = "STRICT",
+                    customPrompt = "Bedtime Sanctuary Curfew is active. Wind down for restful sleep.",
+                    pauseDurationSeconds = settings.breathingDurationSeconds,
+                    interventionStyle = settings.interventionStyle
+                )
+                return
+            }
+        }
+
+        // 8. Evaluate configured group rules (Daily Limit, Schedule, Mindful Pause)
         for (group in matchingGroups) {
             val rules = db.wellbeingDao().getRulesForGroup(group.id)
             for (rule in rules) {
@@ -207,7 +404,6 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 rule.maxOpensPerDay > 0 && opens >= rule.maxOpensPerDay
             }
             BlockMode.MINDFUL_PAUSE.name -> {
-                // Mindful pause intercepts on every open unless bypassed
                 true
             }
             else -> false
@@ -246,7 +442,6 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         lastErrorTimeMillis = now
 
         if (failSafeErrorsIn10Min >= 3) {
-            // Tripped circuit breaker
             serviceScope.launch {
                 try {
                     val settings = SettingsDataStore(applicationContext)
@@ -257,9 +452,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         }
     }
 
-    override fun onInterrupt() {
-        // Accessibility service interrupted
-    }
+    override fun onInterrupt() {}
 
     override fun onDestroy() {
         instance = null

@@ -26,8 +26,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,6 +64,7 @@ import com.kintsu.app.ui.components.IconClose
 import com.kintsu.app.ui.components.IconFlame
 import com.kintsu.app.ui.components.IconFocus
 import com.kintsu.app.ui.components.IconHabit
+import com.kintsu.app.ui.components.IconShield
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
 import com.kintsu.app.ui.components.KintsuCard
@@ -79,6 +85,8 @@ fun FocusScreen(
     onResumeFocus: () -> Unit,
     onStopFocus: () -> Unit,
     onClose: () -> Unit,
+    onReflectInJournal: (prompt: String) -> Unit = {},
+    onCompleteTask: (TaskEntity) -> Unit = {},
     defaultPresetMinutes: Int = 25,
     breakLengthMinutes: Int = 5,
     modifier: Modifier = Modifier
@@ -93,6 +101,8 @@ fun FocusScreen(
     var selectedHabitId by remember { mutableStateOf<Long?>(null) }
     var linkedTask by remember { mutableStateOf(initialLinkedTask) }
     var isBreakMode by remember { mutableStateOf(false) }
+    var showCompletionModal by remember { mutableStateOf(false) }
+    var completedTaskCandidate by remember { mutableStateOf<TaskEntity?>(null) }
 
     val activeDuration = if (isBreakMode) selectedBreakDuration else selectedFocusDuration
 
@@ -165,6 +175,27 @@ fun FocusScreen(
                     contentDescription = "Close focus screen",
                     onClick = onClose
                 )
+            }
+
+            // Digital Shield Active Status Pill
+            if (focusState.isRunning) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(colors.accentSoft.copy(alpha = 0.25f))
+                        .border(0.5.dp, colors.accent.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = spacing.s, vertical = spacing.xxs),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.xxs)
+                ) {
+                    IconShield(color = colors.accent, size = 13.dp)
+                    Text(
+                        text = "Digital Shield Active · Distractions Dimmed",
+                        style = typography.caption.copy(fontSize = 11.sp),
+                        color = colors.accent,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
 
             // Linked Task Banner when running
@@ -262,7 +293,12 @@ fun FocusScreen(
                     }
                     KintsuButton(
                         text = "End Session",
-                        onClick = onStopFocus,
+                        onClick = {
+                            val activeTask = linkedTask ?: tasks.find { it.id == focusState.linkedTaskId }
+                            completedTaskCandidate = activeTask
+                            onStopFocus()
+                            showCompletionModal = true
+                        },
                         variant = KintsuButtonVariant.TEXT,
                         modifier = Modifier.weight(1f)
                     )
@@ -522,5 +558,64 @@ fun FocusScreen(
                 }
             }
         }
+
+    if (showCompletionModal) {
+        val candidate = completedTaskCandidate
+        AlertDialog(
+            onDismissRequest = { showCompletionModal = false },
+            title = {
+                Text(
+                    text = "Conscious Stillness Completed",
+                    style = typography.sectionHeader,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.s)) {
+                    Text(
+                        text = "Your mindful focus interval has been preserved. Take a moment to capture your thoughts or update your intentions.",
+                        style = typography.body,
+                        color = colors.textSecondary
+                    )
+                    if (candidate != null && !candidate.isCompleted) {
+                        Text(
+                            text = "Linked Task: \"${candidate.title}\"",
+                            style = typography.caption,
+                            color = colors.accent,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    if (candidate != null && !candidate.isCompleted) {
+                        TextButton(
+                            onClick = {
+                                onCompleteTask(candidate)
+                                showCompletionModal = false
+                            }
+                        ) {
+                            Text("Mark Task Done", color = colors.accent)
+                        }
+                    }
+                    TextButton(
+                        onClick = {
+                            showCompletionModal = false
+                            val title = candidate?.title ?: "Mindful Stillness"
+                            onReflectInJournal("Reflection on Focus: $title")
+                        }
+                    ) {
+                        Text("Reflect in Journal", color = colors.accent)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCompletionModal = false }) {
+                    Text("Close", color = colors.textTertiary)
+                }
+            }
+        )
     }
+}
 }

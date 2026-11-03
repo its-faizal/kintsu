@@ -60,16 +60,24 @@ fun DistractionInsightsSheet(
     val typography = KintsuTheme.typography
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    val hasUsagePermission = remember { ScreenTimeHelper.hasUsageStatsPermission(context) }
     var screenTimeTodayMin by remember { mutableStateOf(0L) }
+    var yesterdayMin by remember { mutableStateOf(0L) }
+    var lateNightMin by remember { mutableStateOf(0L) }
+    var longestSessionMin by remember { mutableStateOf(0) }
     var weeklyTrends by remember { mutableStateOf<List<Pair<String, Long>>>(emptyList()) }
-    var topAppsList by remember { mutableStateOf<List<Pair<String, Long>>>(emptyList()) }
+    var topAppsList by remember { mutableStateOf<List<Triple<String, Long, Int>>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             val stToday = ScreenTimeHelper.getScreenTimeTodayMinutes(context)
+            val yMin = ScreenTimeHelper.getYesterdayScreenTimeMinutes(context)
+            val lnMin = ScreenTimeHelper.getLateNightScreenTimeMinutes(context)
+            val lsMin = ScreenTimeHelper.getLongestSessionMinutes(context)
             val trends = ScreenTimeHelper.getWeeklyScreenTimeTrends(context)
             val pm = context.packageManager
             val perApp = ScreenTimeHelper.getPerAppUsageTodayMinutes(context)
+            val launchCounts = ScreenTimeHelper.getAppLaunchCountsToday(context)
             val topApps = perApp.entries
                 .sortedByDescending { it.value }
                 .take(5)
@@ -80,11 +88,15 @@ fun DistractionInsightsSheet(
                     } catch (_: Exception) {
                         entry.key.substringAfterLast('.')
                     }
-                    appName to entry.value
+                    val launches = launchCounts[entry.key] ?: 0
+                    Triple(appName, entry.value, launches)
                 }
 
             withContext(Dispatchers.Main) {
                 screenTimeTodayMin = stToday
+                yesterdayMin = yMin
+                lateNightMin = lnMin
+                longestSessionMin = lsMin
                 weeklyTrends = trends
                 topAppsList = topApps
             }
@@ -127,7 +139,27 @@ fun DistractionInsightsSheet(
 
             Spacer(modifier = Modifier.height(spacing.xl))
 
+            if (!hasUsagePermission) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(KintsuTheme.shapes.medium)
+                        .background(colors.warning.copy(alpha = 0.15f))
+                        .border(1.dp, colors.warning.copy(alpha = 0.4f), KintsuTheme.shapes.medium)
+                        .padding(spacing.m)
+                ) {
+                    Text(
+                        text = "Usage Access Required: To measure authentic screen time and app open frequency, grant Android Usage Access in System Settings.",
+                        style = typography.caption,
+                        color = colors.warning
+                    )
+                }
+                Spacer(modifier = Modifier.height(spacing.m))
+            }
+
             // 4 High-level Insight Cards
+            val diffYesterday = screenTimeTodayMin - yesterdayMin
+            val diffLabel = if (diffYesterday > 0) "+${diffYesterday}m vs yest." else if (diffYesterday < 0) "${diffYesterday}m vs yest." else "Same as yest."
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(spacing.s)
@@ -135,7 +167,7 @@ fun DistractionInsightsSheet(
                 MetricCard(
                     title = "Screen Time",
                     value = "${screenTimeTodayMin / 60}h ${screenTimeTodayMin % 60}m",
-                    subtitle = "Today's usage",
+                    subtitle = diffLabel,
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
@@ -153,15 +185,15 @@ fun DistractionInsightsSheet(
                 horizontalArrangement = Arrangement.spacedBy(spacing.s)
             ) {
                 MetricCard(
-                    title = "Focus Lock",
-                    value = "${focusLockTimeCompletedMinutes}m",
-                    subtitle = "${focusLockSessions.count { it.isCompleted }} sessions completed",
+                    title = "Unbroken Session",
+                    value = "${longestSessionMin}m",
+                    subtitle = if (longestSessionMin > 45) "Long session detected" else "Healthy session length",
                     modifier = Modifier.weight(1f)
                 )
                 MetricCard(
-                    title = "Breaks Taken",
-                    value = "${breaks.size}",
-                    subtitle = "Intentional pauses",
+                    title = "Late-Night Usage",
+                    value = "${lateNightMin}m",
+                    subtitle = "Past 11:00 PM",
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -249,13 +281,18 @@ fun DistractionInsightsSheet(
                             .padding(spacing.m),
                         verticalArrangement = Arrangement.spacedBy(spacing.s)
                     ) {
-                        topAppsList.forEach { (appName, mins) ->
+                        topAppsList.forEach { (appName, mins, launches) ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(appName, style = typography.body, color = colors.textPrimary)
+                                Column {
+                                    Text(appName, style = typography.body, color = colors.textPrimary)
+                                    if (launches > 0) {
+                                        Text("$launches opens today", style = typography.caption, color = colors.textTertiary)
+                                    }
+                                }
                                 Text("${mins}m", style = typography.body.copy(fontWeight = FontWeight.SemiBold), color = colors.goldSeam)
                             }
                         }

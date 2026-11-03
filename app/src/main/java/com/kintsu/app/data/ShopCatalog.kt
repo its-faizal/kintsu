@@ -15,7 +15,6 @@ object ShopCatalog {
         "Profile",
         "Sounds",
         "Gold Repair",
-        "Collections"
     )
 
     fun createCompleteCatalog(): List<ShopItemEntity> {
@@ -1103,6 +1102,6 @@ object ShopCatalog {
             )
         )
 
-        return list
+        return list.map { it.copy(costCoins = 0, isUnlocked = true, tag = "FREE") }
     }
 }

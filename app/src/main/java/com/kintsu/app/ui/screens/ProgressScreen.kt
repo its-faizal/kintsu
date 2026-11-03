@@ -1,5 +1,8 @@
 package com.kintsu.app.ui.screens
 
+import com.kintsu.app.ui.components.IconSparkle
+import com.kintsu.app.ui.components.IconChevronRight
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
@@ -112,10 +115,8 @@ fun ProgressScreen(
     ) {
         KintsuTopBar(
             title = "Progress & Insights",
-            subtitle = "The Tapestry of Your Journey",
-            showBackButton = true,
-            onBackClick = onBackClick
-        )
+            subtitle = "Your patterns, progress and growth",
+                                )
 
         LazyColumn(
             modifier = Modifier
@@ -128,18 +129,24 @@ fun ProgressScreen(
                 Spacer(modifier = Modifier.height(spacing.xxs))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.m)
+                    horizontalArrangement = Arrangement.spacedBy(spacing.s)
                 ) {
                     MetricStatCard(
-                        title = "Current Streak",
-                        value = "${stats.currentStreak} ${if (stats.currentStreak == 1) "day" else "days"}",
-                        icon = { IconFlame(color = colors.accent, size = 18.dp) },
+                        title = "Current",
+                        value = "${stats.currentStreak}",
+                        icon = { IconFlame(color = colors.accent, size = 16.dp) },
                         modifier = Modifier.weight(1f)
                     )
                     MetricStatCard(
-                        title = "Best Streak",
-                        value = "${stats.bestStreak} ${if (stats.bestStreak == 1) "day" else "days"}",
-                        icon = { IconFlame(color = colors.textTertiary, size = 18.dp) },
+                        title = "Best",
+                        value = "${stats.bestStreak}",
+                        icon = { IconSparkle(color = colors.textTertiary, size = 16.dp) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    MetricStatCard(
+                        title = "Consistency",
+                        value = "${(insights.overallRate30Days * 100).toInt()}%",
+                        icon = { IconProgress(color = colors.accent, size = 16.dp) },
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -167,18 +174,19 @@ fun ProgressScreen(
 
                         Spacer(modifier = Modifier.size(spacing.m))
 
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "${stats.totalRepairsGold} Gold Seams Mended",
-                                style = typography.sectionHeader,
+                                style = typography.itemTitle,
                                 color = colors.goldSeam
                             )
                             Text(
-                                text = "Every repaired crack makes your vessel stronger and more beautiful.",
-                                style = typography.secondary,
+                                text = "Every repaired crack makes you stronger.",
+                                style = typography.caption,
                                 color = colors.textSecondary
                             )
                         }
+                        IconChevronRight(color = colors.goldSeam, size = 16.dp)
                     }
                 }
             }
@@ -446,6 +454,18 @@ fun ProgressScreen(
                 }
             }
 
+            // Dynamic Changeable Activity Graph (Habits, Tasks, Focus, Gold Seams, Mood)
+            item {
+                DynamicProgressChartSection(
+                    todayEpochDay = todayEpochDay,
+                    habits = habits,
+                    logs = logs,
+                    tasks = tasks,
+                    focusSessions = focusSessions,
+                    journalEntries = allJournalEntries
+                )
+            }
+
             // 4. Task Productivity Insights (B3)
             item {
                 Text(
@@ -527,7 +547,7 @@ fun ProgressScreen(
             // 5. Mindful Focus Insights (B5)
             item {
                 Text(
-                    text = "Mindful Focus Practice",
+                    text = "Focus Practice",
                     style = typography.sectionHeader,
                     color = colors.textPrimary
                 )

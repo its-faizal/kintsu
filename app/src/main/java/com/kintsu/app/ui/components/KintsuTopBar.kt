@@ -42,6 +42,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Icon
 import com.kintsu.app.ui.theme.KintsuTheme
+import com.kintsu.app.ui.theme.AppTheme
 
 @Composable
 fun KintsuTopBar(
@@ -50,6 +51,7 @@ fun KintsuTopBar(
     onSettingsClick: (() -> Unit)? = null,
     onProfileClick: (() -> Unit)? = null,
     profileInitial: String = "S",
+    profileAvatarId: String = "avatar_botanical",
     coinsBalance: Int = 0,
     onShopClick: (() -> Unit)? = null,
     onCustomizationClick: (() -> Unit)? = null,
@@ -75,7 +77,7 @@ fun KintsuTopBar(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surfaceTranslucent)
+            .background(if (colors.background == Color(0xFF000000) && colors.isDark) Color(0xFF000000) else colors.surfaceTranslucent)
             .statusBarsPadding()
             .padding(horizontal = spacing.xl, vertical = spacing.m)
             .graphicsLayer {
@@ -97,8 +99,8 @@ fun KintsuTopBar(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(colors.surfaceElevated)
-                            .border(1.dp, colors.border, CircleShape)
+                            .background(colors.goldSeam.copy(alpha = 0.12f))
+                            .border(1.2.dp, colors.goldSeam.copy(alpha = 0.6f), CircleShape)
                             .clickable(
                                 interactionSource = profileInteraction,
                                 indication = null,
@@ -110,73 +112,63 @@ fun KintsuTopBar(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        IconUser(color = colors.textPrimary, size = 20.dp)
+                        ProfileAvatarVisual(
+                            avatarId = profileAvatarId,
+                            size = 44.dp,
+                            iconSize = 20.dp
+                        )
                     }
 
-                    // Right Action Cluster: Coins + Shop + Customization
+                    // Right Action Cluster: Combined Shop & Coins Pill + Customize Icon
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                     ) {
-                        // Coins Balance Pill
-                        if (coinsBalance > 0) {
+                        // Combined Shop & Coins Action Pill
+                        if (onShopClick != null) {
                             Box(
                                 modifier = Modifier
                                     .height(38.dp)
                                     .clip(RoundedCornerShape(19.dp))
-                                    .background(colors.goldSeam.copy(alpha = 0.12f))
-                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.4f), RoundedCornerShape(19.dp))
-                                    .padding(horizontal = spacing.m)
-                                    .semantics { contentDescription = "$coinsBalance Kintsugi Gold" }
+                                    .background(colors.goldSeam.copy(alpha = 0.14f))
+                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), RoundedCornerShape(19.dp))
+                                    .clickable(
+                                        interactionSource = shopInteraction,
+                                        indication = null,
+                                        onClick = onShopClick
+                                    )
+                                    .padding(horizontal = spacing.s)
+                                    .semantics {
+                                        role = Role.Button
+                                        contentDescription = "Sanctuary Shop, $coinsBalance Coins"
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    IconGoldSeam(color = colors.goldSeam, size = 15.dp)
+                                    IconShop(color = colors.goldSeam, size = 16.dp)
                                     Text(
                                         text = "$coinsBalance",
                                         style = typography.caption.copy(
                                             color = colors.goldSeam,
                                             fontSize = 13.sp,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                         )
                                     )
                                 }
                             }
                         }
 
-                        // Sanctuary Shop
-                        if (onShopClick != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(colors.goldSeam.copy(alpha = 0.12f))
-                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.4f), CircleShape)
-                                    .clickable(
-                                        interactionSource = shopInteraction,
-                                        indication = null,
-                                        onClick = onShopClick
-                                    )
-                                    .semantics {
-                                        role = Role.Button
-                                        contentDescription = "Sanctuary Shop"
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                IconShop(color = colors.goldSeam, size = 16.dp)
-                            }
-                        }
-
-                        // Customization
+                        // Customize Icon Button (Positioned at right of Shop)
                         if (onCustomizationClick != null) {
                             Box(
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(CircleShape)
-                                    .background(colors.accentSoft.copy(alpha = 0.15f))
-                                    .border(1.dp, colors.accent.copy(alpha = 0.4f), CircleShape)
+                                    .background(colors.goldSeam.copy(alpha = 0.14f))
+                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), CircleShape)
                                     .clickable(
                                         interactionSource = customizationInteraction,
                                         indication = null,
@@ -184,11 +176,11 @@ fun KintsuTopBar(
                                     )
                                     .semantics {
                                         role = Role.Button
-                                        contentDescription = "Customization - Themes, Icons, Widgets"
+                                        contentDescription = "Customize Themes and Styles"
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
-                                IconCustomizer(color = colors.accent, size = 18.dp)
+                                IconCustomizer(color = colors.goldSeam, size = 18.dp)
                             }
                         }
                     }
@@ -222,42 +214,17 @@ fun KintsuTopBar(
                 }
             }
         } else {
-            // SUB SCREENS: Back button left, title centered, settings right (when no back)
+            // MAIN SCREENS: Clean, symmetrical, balanced header matching Home's breathing room
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
+                    .padding(vertical = spacing.s),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Optional Back Button
-                if (showBackButton && onBackClick != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(colors.surfaceElevated.copy(alpha = 0.7f))
-                            .clickable(
-                                interactionSource = backInteraction,
-                                indication = null,
-                                onClick = onBackClick
-                            )
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = "Back"
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        IconChevronLeft(color = colors.textPrimary, size = 20.dp)
-                    }
-                    Spacer(modifier = Modifier.width(spacing.xs))
-                }
-
-                // Title Column - centered with back, left without
                 Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = if (showBackButton) Alignment.CenterHorizontally else Alignment.Start
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
                 ) {
                     if (!subtitle.isNullOrBlank()) {
                         Text(
@@ -267,6 +234,7 @@ fun KintsuTopBar(
                                 letterSpacing = 0.2.sp
                             )
                         )
+                        Spacer(modifier = Modifier.height(spacing.xxs))
                     }
                     Text(
                         text = title,
@@ -279,13 +247,13 @@ fun KintsuTopBar(
                     )
                 }
 
-                // Settings Button (only when no back button)
-                if (onSettingsClick != null && !showBackButton) {
+                if (onSettingsClick != null) {
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(colors.surfaceElevated.copy(alpha = 0.7f))
+                            .background(colors.surfaceElevated)
+                            .border(1.dp, colors.border, CircleShape)
                             .clickable(
                                 interactionSource = settingsInteraction,
                                 indication = null,
@@ -297,11 +265,8 @@ fun KintsuTopBar(
                             },
                         contentAlignment = Alignment.Center
                     ) {
-                        IconSettings(color = colors.textPrimary, size = 20.dp)
+                        IconSettings(color = colors.textPrimary, size = 18.dp)
                     }
-                } else if (!showBackButton) {
-                    // Spacer for alignment when no settings/back
-                    Spacer(modifier = Modifier.width(44.dp))
                 }
             }
         }

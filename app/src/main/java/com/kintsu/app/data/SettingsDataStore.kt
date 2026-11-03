@@ -47,9 +47,9 @@ data class KintsuSettings(
     val journalReminderTime: String = "21:00",
     val weeklyReviewEnabled: Boolean = true,
     val weeklyReviewReminderTime: String = "18:00",
-    val homeSectionOrder: String = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS,ADDICTION",
+    val homeSectionOrder: String = "KEY_NUMBERS,HABITS,FOCUS,DAILY_INTENTION,JOURNAL,ADDICTION",
     val hiddenHomeSections: String = "",
-    val quickActionsOrder: String = "ADD_HABIT,ADD_TASK,START_FOCUS,JOURNAL,NEW_GOAL",
+    val quickActionsOrder: String = "JOURNAL,WEEKLY_REVIEW,DETOX",
     val accountEmail: String? = null,
     val accountDisplayName: String? = null,
     val accountUserId: String? = null,
@@ -88,15 +88,54 @@ data class KintsuSettings(
     val habitRingId: String = "habit_ring_minimal",
     val soundPresetHabit: String = "sound_soft_chime",
     val soundPresetFocus: String = "sound_warm_resonance",
-    val hapticPreset: String = "SUBTLE"
+    val hapticPreset: String = "SUBTLE",
+    val appLockEnabled: Boolean = false,
+    val appLockType: String = "PIN",
+    val appLockCode: String = "",
+    val appLockBiometricEnabled: Boolean = false,
+    val lastAutoBackupTime: Long = 0L,
+    val shortFormBlockingEnabled: Boolean = true,
+    val blockYouTubeShorts: Boolean = true,
+    val blockInstagramReels: Boolean = true,
+    val blockTikTok: Boolean = true,
+    val blockFacebookReels: Boolean = true,
+    val blockSnapchatSpotlight: Boolean = true,
+    val blockWebShorts: Boolean = true,
+    val maxContinuousSessionMinutes: Int = 20,
+    val sessionCooldownMinutes: Int = 5,
+    val appLaunchLimitEnabled: Boolean = true,
+    val defaultAppMaxLaunches: Int = 10,
+    val bedtimeLockEnabled: Boolean = false,
+    val bedtimeStartHour: Int = 23,
+    val bedtimeEndHour: Int = 6,
+    val mindfulPauseOnLaunch: Boolean = true,
+    val blockNsfw: Boolean = true,
+    val bedtimeDaysMask: Int = 0b1111111,
+    val bedtimeDndEnabled: Boolean = true,
+    val notificationBatchingEnabled: Boolean = false,
+    val storeAllNotifications: Boolean = true,
+    val notificationHistoryDays: Int = 15,
+    val notificationRecapType: String = "SUMMARY_ONLY",
+    val notificationScheduleMorning: Boolean = true,
+    val notificationScheduleAfternoon: Boolean = true,
+    val notificationScheduleEvening: Boolean = true,
+    val invincibleModeEnabled: Boolean = false,
+    val invincibleWindowHour: Int = 0,
+    val invincibleWindowMinute: Int = 0,
+    val invincibleIncludeShorts: Boolean = true,
+    val invincibleIncludeBedtime: Boolean = true,
+    val protectedAccessEnabled: Boolean = false,
+    val tamperProtectionEnabled: Boolean = false,
+    val uninstallWindowHour: Int = 0,
+    val uninstallWindowMinute: Int = 0
 )
 
 class SettingsDataStore(val context: Context) {
 
     companion object {
-        const val DEFAULT_HOME_SECTION_ORDER = "DAILY_INTENTION,FOCUS,KEY_NUMBERS,QUICK_ACTIONS,ADDICTION"
+        const val DEFAULT_HOME_SECTION_ORDER = "KEY_NUMBERS,HABITS,FOCUS,DAILY_INTENTION,JOURNAL,ADDICTION"
         const val DEFAULT_HIDDEN_HOME_SECTIONS = ""
-        const val DEFAULT_QUICK_ACTIONS_ORDER = "ADD_HABIT,ADD_TASK,START_FOCUS,JOURNAL,NEW_GOAL"
+        const val DEFAULT_QUICK_ACTIONS_ORDER = "JOURNAL,WEEKLY_REVIEW,DETOX"
     }
 
     private object Keys {
@@ -167,6 +206,45 @@ class SettingsDataStore(val context: Context) {
         val WELLBEING_HAPTICS_ENABLED = booleanPreferencesKey("wellbeing_haptics_enabled")
         val DNS_PROTECTION_ENABLED = booleanPreferencesKey("dns_protection_enabled")
         val DAILY_SCREEN_TIME_BUDGET_MINUTES = intPreferencesKey("daily_screen_time_budget_minutes")
+        val APP_LOCK_ENABLED = booleanPreferencesKey("app_lock_enabled")
+        val APP_LOCK_TYPE = stringPreferencesKey("app_lock_type")
+        val APP_LOCK_CODE = stringPreferencesKey("app_lock_code")
+        val APP_LOCK_BIOMETRIC_ENABLED = booleanPreferencesKey("app_lock_biometric_enabled")
+        val LAST_AUTO_BACKUP_TIME = androidx.datastore.preferences.core.longPreferencesKey("last_auto_backup_time")
+        val SHORT_FORM_BLOCKING_ENABLED = booleanPreferencesKey("short_form_blocking_enabled")
+        val BLOCK_YOUTUBE_SHORTS = booleanPreferencesKey("block_youtube_shorts")
+        val BLOCK_INSTAGRAM_REELS = booleanPreferencesKey("block_instagram_reels")
+        val BLOCK_TIKTOK = booleanPreferencesKey("block_tiktok")
+        val BLOCK_FACEBOOK_REELS = booleanPreferencesKey("block_facebook_reels")
+        val BLOCK_SNAPCHAT_SPOTLIGHT = booleanPreferencesKey("block_snapchat_spotlight")
+        val BLOCK_WEB_SHORTS = booleanPreferencesKey("block_web_shorts")
+        val MAX_CONTINUOUS_SESSION_MINUTES = intPreferencesKey("max_continuous_session_minutes")
+        val SESSION_COOLDOWN_MINUTES = intPreferencesKey("session_cooldown_minutes")
+        val APP_LAUNCH_LIMIT_ENABLED = booleanPreferencesKey("app_launch_limit_enabled")
+        val DEFAULT_APP_MAX_LAUNCHES = intPreferencesKey("default_app_max_launches")
+        val BEDTIME_LOCK_ENABLED = booleanPreferencesKey("bedtime_lock_enabled")
+        val BEDTIME_START_HOUR = intPreferencesKey("bedtime_start_hour")
+        val BEDTIME_END_HOUR = intPreferencesKey("bedtime_end_hour")
+        val MINDFUL_PAUSE_ON_LAUNCH = booleanPreferencesKey("mindful_pause_on_launch")
+        val BLOCK_NSFW = booleanPreferencesKey("block_nsfw")
+        val BEDTIME_DAYS_MASK = intPreferencesKey("bedtime_days_mask")
+        val BEDTIME_DND_ENABLED = booleanPreferencesKey("bedtime_dnd_enabled")
+        val NOTIFICATION_BATCHING_ENABLED = booleanPreferencesKey("notification_batching_enabled")
+        val STORE_ALL_NOTIFICATIONS = booleanPreferencesKey("store_all_notifications")
+        val NOTIFICATION_HISTORY_DAYS = intPreferencesKey("notification_history_days")
+        val NOTIFICATION_RECAP_TYPE = stringPreferencesKey("notification_recap_type")
+        val NOTIFICATION_SCHEDULE_MORNING = booleanPreferencesKey("notification_schedule_morning")
+        val NOTIFICATION_SCHEDULE_AFTERNOON = booleanPreferencesKey("notification_schedule_afternoon")
+        val NOTIFICATION_SCHEDULE_EVENING = booleanPreferencesKey("notification_schedule_evening")
+        val INVINCIBLE_MODE_ENABLED = booleanPreferencesKey("invincible_mode_enabled")
+        val INVINCIBLE_WINDOW_HOUR = intPreferencesKey("invincible_window_hour")
+        val INVINCIBLE_WINDOW_MINUTE = intPreferencesKey("invincible_window_minute")
+        val INVINCIBLE_INCLUDE_SHORTS = booleanPreferencesKey("invincible_include_shorts")
+        val INVINCIBLE_INCLUDE_BEDTIME = booleanPreferencesKey("invincible_include_bedtime")
+        val PROTECTED_ACCESS_ENABLED = booleanPreferencesKey("protected_access_enabled")
+        val TAMPER_PROTECTION_ENABLED = booleanPreferencesKey("tamper_protection_enabled")
+        val UNINSTALL_WINDOW_HOUR = intPreferencesKey("uninstall_window_hour")
+        val UNINSTALL_WINDOW_MINUTE = intPreferencesKey("uninstall_window_minute")
     }
 
     val settingsFlow: Flow<KintsuSettings> = context.dataStore.data.map { prefs ->
@@ -287,7 +365,46 @@ class SettingsDataStore(val context: Context) {
             habitRingId = prefs[Keys.HABIT_RING_ID] ?: "habit_ring_minimal",
             soundPresetHabit = prefs[Keys.SOUND_PRESET_HABIT] ?: "sound_soft_chime",
             soundPresetFocus = prefs[Keys.SOUND_PRESET_FOCUS] ?: "sound_warm_resonance",
-            hapticPreset = prefs[Keys.HAPTIC_PRESET] ?: "SUBTLE"
+            hapticPreset = prefs[Keys.HAPTIC_PRESET] ?: "SUBTLE",
+            appLockEnabled = prefs[Keys.APP_LOCK_ENABLED] ?: false,
+            appLockType = prefs[Keys.APP_LOCK_TYPE] ?: "PIN",
+            appLockCode = prefs[Keys.APP_LOCK_CODE] ?: "",
+            appLockBiometricEnabled = prefs[Keys.APP_LOCK_BIOMETRIC_ENABLED] ?: false,
+            lastAutoBackupTime = prefs[Keys.LAST_AUTO_BACKUP_TIME] ?: 0L,
+                shortFormBlockingEnabled = prefs[Keys.SHORT_FORM_BLOCKING_ENABLED] ?: true,
+                blockYouTubeShorts = prefs[Keys.BLOCK_YOUTUBE_SHORTS] ?: true,
+                blockInstagramReels = prefs[Keys.BLOCK_INSTAGRAM_REELS] ?: true,
+                blockTikTok = prefs[Keys.BLOCK_TIKTOK] ?: true,
+                blockFacebookReels = prefs[Keys.BLOCK_FACEBOOK_REELS] ?: true,
+                blockSnapchatSpotlight = prefs[Keys.BLOCK_SNAPCHAT_SPOTLIGHT] ?: true,
+                blockWebShorts = prefs[Keys.BLOCK_WEB_SHORTS] ?: true,
+                maxContinuousSessionMinutes = prefs[Keys.MAX_CONTINUOUS_SESSION_MINUTES] ?: 20,
+                sessionCooldownMinutes = prefs[Keys.SESSION_COOLDOWN_MINUTES] ?: 5,
+                appLaunchLimitEnabled = prefs[Keys.APP_LAUNCH_LIMIT_ENABLED] ?: true,
+                defaultAppMaxLaunches = prefs[Keys.DEFAULT_APP_MAX_LAUNCHES] ?: 10,
+                bedtimeLockEnabled = prefs[Keys.BEDTIME_LOCK_ENABLED] ?: false,
+                bedtimeStartHour = prefs[Keys.BEDTIME_START_HOUR] ?: 23,
+                bedtimeEndHour = prefs[Keys.BEDTIME_END_HOUR] ?: 6,
+                mindfulPauseOnLaunch = prefs[Keys.MINDFUL_PAUSE_ON_LAUNCH] ?: true,
+                blockNsfw = prefs[Keys.BLOCK_NSFW] ?: true,
+                bedtimeDaysMask = prefs[Keys.BEDTIME_DAYS_MASK] ?: 0b1111111,
+                bedtimeDndEnabled = prefs[Keys.BEDTIME_DND_ENABLED] ?: true,
+                notificationBatchingEnabled = prefs[Keys.NOTIFICATION_BATCHING_ENABLED] ?: false,
+                storeAllNotifications = prefs[Keys.STORE_ALL_NOTIFICATIONS] ?: true,
+                notificationHistoryDays = prefs[Keys.NOTIFICATION_HISTORY_DAYS] ?: 15,
+                notificationRecapType = prefs[Keys.NOTIFICATION_RECAP_TYPE] ?: "SUMMARY_ONLY",
+                notificationScheduleMorning = prefs[Keys.NOTIFICATION_SCHEDULE_MORNING] ?: true,
+                notificationScheduleAfternoon = prefs[Keys.NOTIFICATION_SCHEDULE_AFTERNOON] ?: true,
+                notificationScheduleEvening = prefs[Keys.NOTIFICATION_SCHEDULE_EVENING] ?: true,
+                invincibleModeEnabled = prefs[Keys.INVINCIBLE_MODE_ENABLED] ?: false,
+                invincibleWindowHour = prefs[Keys.INVINCIBLE_WINDOW_HOUR] ?: 0,
+                invincibleWindowMinute = prefs[Keys.INVINCIBLE_WINDOW_MINUTE] ?: 0,
+                invincibleIncludeShorts = prefs[Keys.INVINCIBLE_INCLUDE_SHORTS] ?: true,
+                invincibleIncludeBedtime = prefs[Keys.INVINCIBLE_INCLUDE_BEDTIME] ?: true,
+                protectedAccessEnabled = prefs[Keys.PROTECTED_ACCESS_ENABLED] ?: false,
+                tamperProtectionEnabled = prefs[Keys.TAMPER_PROTECTION_ENABLED] ?: false,
+                uninstallWindowHour = prefs[Keys.UNINSTALL_WINDOW_HOUR] ?: 0,
+                uninstallWindowMinute = prefs[Keys.UNINSTALL_WINDOW_MINUTE] ?: 0
         )
     }
 
@@ -312,6 +429,26 @@ class SettingsDataStore(val context: Context) {
             }
         }
         return success
+    }
+
+    suspend fun setAppLockEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.APP_LOCK_ENABLED] = enabled }
+    }
+
+    suspend fun setAppLockType(type: String) {
+        context.dataStore.edit { it[Keys.APP_LOCK_TYPE] = type }
+    }
+
+    suspend fun setAppLockCode(code: String) {
+        context.dataStore.edit { it[Keys.APP_LOCK_CODE] = code }
+    }
+
+    suspend fun setAppLockBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.APP_LOCK_BIOMETRIC_ENABLED] = enabled }
+    }
+
+    suspend fun setLastAutoBackupTime(timeMillis: Long) {
+        context.dataStore.edit { it[Keys.LAST_AUTO_BACKUP_TIME] = timeMillis }
     }
 
     suspend fun setWellbeingEnabled(enabled: Boolean) {
@@ -593,5 +730,114 @@ class SettingsDataStore(val context: Context) {
 
     suspend fun resetSettings() {
         context.dataStore.edit { it.clear() }
+    }
+
+    suspend fun setShortFormBlockingEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.SHORT_FORM_BLOCKING_ENABLED] = enabled }
+    }
+
+    suspend fun setBlockShortFormPlatforms(
+        yt: Boolean, ig: Boolean, tt: Boolean, fb: Boolean, snap: Boolean, web: Boolean
+    ) {
+        context.dataStore.edit {
+            it[Keys.BLOCK_YOUTUBE_SHORTS] = yt
+            it[Keys.BLOCK_INSTAGRAM_REELS] = ig
+            it[Keys.BLOCK_TIKTOK] = tt
+            it[Keys.BLOCK_FACEBOOK_REELS] = fb
+            it[Keys.BLOCK_SNAPCHAT_SPOTLIGHT] = snap
+            it[Keys.BLOCK_WEB_SHORTS] = web
+        }
+    }
+
+    suspend fun setMaxContinuousSessionMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.MAX_CONTINUOUS_SESSION_MINUTES] = minutes }
+    }
+
+    suspend fun setSessionCooldownMinutes(minutes: Int) {
+        context.dataStore.edit { it[Keys.SESSION_COOLDOWN_MINUTES] = minutes }
+    }
+
+    suspend fun setAppLaunchLimitEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.APP_LAUNCH_LIMIT_ENABLED] = enabled }
+    }
+
+    suspend fun setDefaultAppMaxLaunches(maxLaunches: Int) {
+        context.dataStore.edit { it[Keys.DEFAULT_APP_MAX_LAUNCHES] = maxLaunches }
+    }
+
+    suspend fun setBedtimeLock(enabled: Boolean, startHour: Int, endHour: Int) {
+        context.dataStore.edit {
+            it[Keys.BEDTIME_LOCK_ENABLED] = enabled
+            it[Keys.BEDTIME_START_HOUR] = startHour
+            it[Keys.BEDTIME_END_HOUR] = endHour
+        }
+    }
+
+    suspend fun setMindfulPauseOnLaunch(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.MINDFUL_PAUSE_ON_LAUNCH] = enabled }
+    }
+
+    suspend fun setBlockNsfw(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.BLOCK_NSFW] = enabled }
+    }
+
+    suspend fun setBedtimeSchedule(enabled: Boolean, startHour: Int, endHour: Int, daysMask: Int, dnd: Boolean) {
+        context.dataStore.edit {
+            it[Keys.BEDTIME_LOCK_ENABLED] = enabled
+            it[Keys.BEDTIME_START_HOUR] = startHour
+            it[Keys.BEDTIME_END_HOUR] = endHour
+            it[Keys.BEDTIME_DAYS_MASK] = daysMask
+            it[Keys.BEDTIME_DND_ENABLED] = dnd
+        }
+    }
+
+    suspend fun setNotificationBatching(
+        enabled: Boolean,
+        storeAll: Boolean,
+        historyDays: Int,
+        recapType: String,
+        morning: Boolean,
+        afternoon: Boolean,
+        evening: Boolean
+    ) {
+        context.dataStore.edit {
+            it[Keys.NOTIFICATION_BATCHING_ENABLED] = enabled
+            it[Keys.STORE_ALL_NOTIFICATIONS] = storeAll
+            it[Keys.NOTIFICATION_HISTORY_DAYS] = historyDays
+            it[Keys.NOTIFICATION_RECAP_TYPE] = recapType
+            it[Keys.NOTIFICATION_SCHEDULE_MORNING] = morning
+            it[Keys.NOTIFICATION_SCHEDULE_AFTERNOON] = afternoon
+            it[Keys.NOTIFICATION_SCHEDULE_EVENING] = evening
+        }
+    }
+
+    suspend fun setInvincibleMode(
+        enabled: Boolean,
+        windowHour: Int,
+        windowMinute: Int,
+        includeShorts: Boolean,
+        includeBedtime: Boolean
+    ) {
+        context.dataStore.edit {
+            it[Keys.INVINCIBLE_MODE_ENABLED] = enabled
+            it[Keys.INVINCIBLE_WINDOW_HOUR] = windowHour
+            it[Keys.INVINCIBLE_WINDOW_MINUTE] = windowMinute
+            it[Keys.INVINCIBLE_INCLUDE_SHORTS] = includeShorts
+            it[Keys.INVINCIBLE_INCLUDE_BEDTIME] = includeBedtime
+        }
+    }
+
+    suspend fun setParentalControlsProtection(
+        protectedAccess: Boolean,
+        tamperProtection: Boolean,
+        uninstallHour: Int,
+        uninstallMinute: Int
+    ) {
+        context.dataStore.edit {
+            it[Keys.PROTECTED_ACCESS_ENABLED] = protectedAccess
+            it[Keys.TAMPER_PROTECTION_ENABLED] = tamperProtection
+            it[Keys.UNINSTALL_WINDOW_HOUR] = uninstallHour
+            it[Keys.UNINSTALL_WINDOW_MINUTE] = uninstallMinute
+        }
     }
 }

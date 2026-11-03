@@ -16,6 +16,9 @@ class DailyLimitTracker(
     // PackageName -> number of times opened today
     private val openCountsToday = mutableMapOf<String, Int>()
 
+    // PackageName -> timestamp millis until when app is locked in cooldown
+    private val cooldownUntilMillis = mutableMapOf<String, Long>()
+
     private var activeSession: AppUsageSession? = null
     private var lastRecordedEpochDay: Long = -1L
     private var lastMonotonicTime: Long = SystemClock.elapsedRealtime()
@@ -123,6 +126,32 @@ class DailyLimitTracker(
         lastMonotonicTime = monotonicNow
         lastWallClockTime = wallClockNow
         return isTampered
+    }
+
+    fun getActiveSessionSeconds(monotonicNow: Long = SystemClock.elapsedRealtime()): Long {
+        val session = activeSession ?: return 0L
+        val elapsedMillis = (monotonicNow - session.startMonotonicMillis).coerceAtLeast(0L)
+        return elapsedMillis / 1000L
+    }
+
+    fun getActivePackage(): String? = activeSession?.packageName
+
+    fun triggerCooldown(packageName: String, cooldownMinutes: Int) {
+        cooldownUntilMillis[packageName] = System.currentTimeMillis() + (cooldownMinutes * 60 * 1000L)
+    }
+
+    fun isPackageInCooldown(packageName: String): Boolean {
+        val expiry = cooldownUntilMillis[packageName] ?: return false
+        if (System.currentTimeMillis() >= expiry) {
+            cooldownUntilMillis.remove(packageName)
+            return false
+        }
+        return true
+    }
+
+    fun getRemainingCooldownSeconds(packageName: String): Long {
+        val expiry = cooldownUntilMillis[packageName] ?: return 0L
+        return ((expiry - System.currentTimeMillis()) / 1000L).coerceAtLeast(0L)
     }
 
     fun resetAllForTesting() {

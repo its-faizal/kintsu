@@ -810,3 +810,140 @@ fun IconCustomizer(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp
 
 
 
+
+
+@Composable
+fun IconAlignLeft(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        drawLine(color, Offset(w * 0.15f, h * 0.25f), Offset(w * 0.85f, h * 0.25f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.15f, h * 0.45f), Offset(w * 0.60f, h * 0.45f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.15f, h * 0.65f), Offset(w * 0.85f, h * 0.65f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.15f, h * 0.85f), Offset(w * 0.50f, h * 0.85f), stroke, StrokeCap.Round)
+    }
+}
+
+@Composable
+fun IconAlignCenter(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        drawLine(color, Offset(w * 0.15f, h * 0.25f), Offset(w * 0.85f, h * 0.25f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.28f, h * 0.45f), Offset(w * 0.72f, h * 0.45f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.15f, h * 0.65f), Offset(w * 0.85f, h * 0.65f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.32f, h * 0.85f), Offset(w * 0.68f, h * 0.85f), stroke, StrokeCap.Round)
+    }
+}
+
+@Composable
+fun IconAlignRight(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        drawLine(color, Offset(w * 0.15f, h * 0.25f), Offset(w * 0.85f, h * 0.25f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.40f, h * 0.45f), Offset(w * 0.85f, h * 0.45f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.15f, h * 0.65f), Offset(w * 0.85f, h * 0.65f), stroke, StrokeCap.Round)
+        drawLine(color, Offset(w * 0.50f, h * 0.85f), Offset(w * 0.85f, h * 0.85f), stroke, StrokeCap.Round)
+    }
+}
+
+
+@Composable
+fun IconNotifications(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.15f)
+            cubicTo(w * 0.35f, h * 0.15f, w * 0.25f, h * 0.30f, w * 0.25f, h * 0.55f)
+            lineTo(w * 0.18f, h * 0.72f)
+            lineTo(w * 0.82f, h * 0.72f)
+            lineTo(w * 0.75f, h * 0.55f)
+            cubicTo(w * 0.75f, h * 0.30f, w * 0.65f, h * 0.15f, w * 0.5f, h * 0.15f)
+            close()
+        }
+        drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        drawCircle(color, 2.dp.toPx(), Offset(w * 0.5f, h * 0.82f))
+    }
+}
+
+@Composable
+fun IconSun(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        drawCircle(color, w * 0.22f, Offset(w * 0.5f, h * 0.5f), style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+        // 8 rays
+        for (i in 0 until 8) {
+            val angle = i * Math.PI / 4.0
+            val x1 = (w * 0.5f + Math.cos(angle) * w * 0.32f).toFloat()
+            val y1 = (h * 0.5f + Math.sin(angle) * h * 0.32f).toFloat()
+            val x2 = (w * 0.5f + Math.cos(angle) * w * 0.44f).toFloat()
+            val y2 = (h * 0.5f + Math.sin(angle) * h * 0.44f).toFloat()
+            drawLine(color, Offset(x1, y1), Offset(x2, y2), stroke, StrokeCap.Round)
+        }
+    }
+}
+
+@Composable
+fun IconMoon(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.65f, h * 0.15f)
+            cubicTo(w * 0.30f, h * 0.20f, w * 0.20f, h * 0.60f, w * 0.45f, h * 0.85f)
+            cubicTo(w * 0.20f, h * 0.75f, w * 0.20f, h * 0.35f, w * 0.50f, h * 0.20f)
+            close()
+        }
+        drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
+}
+
+@Composable
+fun IconDevice(color: Color, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 1.8f.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(w * 0.25f, h * 0.15f),
+            size = androidx.compose.ui.geometry.Size(w * 0.50f, h * 0.70f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(stroke)
+        )
+        drawLine(color, Offset(w * 0.45f, h * 0.78f), Offset(w * 0.55f, h * 0.78f), stroke * 0.9f, StrokeCap.Round)
+    }
+}
+
+@Composable
+fun IconUmbrella(color: Color, modifier: Modifier = Modifier, size: Dp = 22.dp) {
+    Canvas(modifier = modifier.size(size)) {
+        val stroke = 2.dp.toPx()
+        val w = this.size.width
+        val h = this.size.height
+        // Canopy arc
+        val path = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.15f, h * 0.55f)
+            cubicTo(w * 0.15f, h * 0.20f, w * 0.85f, h * 0.20f, w * 0.85f, h * 0.55f)
+            close()
+        }
+        drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        // Pole
+        drawLine(color, Offset(w * 0.5f, h * 0.25f), Offset(w * 0.5f, h * 0.80f), stroke, StrokeCap.Round)
+        // Handle hook
+        val hook = androidx.compose.ui.graphics.Path().apply {
+            moveTo(w * 0.5f, h * 0.80f)
+            cubicTo(w * 0.5f, h * 0.90f, w * 0.38f, h * 0.90f, w * 0.38f, h * 0.82f)
+        }
+        drawPath(hook, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = stroke, cap = StrokeCap.Round))
+    }
+}

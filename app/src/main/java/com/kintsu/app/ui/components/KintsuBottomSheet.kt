@@ -40,6 +40,7 @@ fun KintsuBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     trailingAction: (@Composable () -> Unit)? = null,
     scrollable: Boolean = true,
+    showCloseButton: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -98,13 +99,17 @@ fun KintsuBottomSheet(
 
                 if (trailingAction != null) {
                     trailingAction()
-                    Spacer(modifier = Modifier.width(spacing.s))
+                    if (showCloseButton) {
+                        Spacer(modifier = Modifier.width(spacing.s))
+                    }
                 }
-                KintsuIconButton(
-                    icon = { IconClose(color = it, size = 18.dp) },
-                    contentDescription = "Close sheet",
-                    onClick = onDismissRequest
-                )
+                if (showCloseButton) {
+                    KintsuIconButton(
+                        icon = { IconClose(color = it, size = 18.dp) },
+                        contentDescription = "Close sheet",
+                        onClick = onDismissRequest
+                    )
+                }
             }
 
             content()

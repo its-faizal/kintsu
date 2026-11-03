@@ -249,7 +249,7 @@ fun BlockingSchedulesSheet(
 
                 if (endMinuteInput < startMinuteInput) {
                     Text(
-                        text = "🌙 Crosses midnight into next morning",
+                        text = "Crosses midnight into next morning",
                         style = typography.caption.copy(fontWeight = FontWeight.Medium),
                         color = colors.goldSeam
                     )

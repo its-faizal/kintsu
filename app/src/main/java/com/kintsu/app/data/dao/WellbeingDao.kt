@@ -152,6 +152,9 @@ interface WellbeingDao {
     @Update
     suspend fun updateShopItem(item: ShopItemEntity)
 
+    @Query("UPDATE shop_inventory SET isUnlocked = 1, costCoins = 0")
+    suspend fun unlockAllShopItems()
+
     @Query("UPDATE shop_inventory SET isEquipped = 0 WHERE itemType = :itemType")
     suspend fun unequipAllOfType(itemType: String)
 

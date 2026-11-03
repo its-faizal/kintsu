@@ -37,6 +37,8 @@ import com.kintsu.app.notifications.ReminderScheduler
 import com.kintsu.app.ui.components.KintsuNavBar
 import com.kintsu.app.ui.components.KintsuNavTab
 import com.kintsu.app.ui.components.PermissionRequestSheet
+import com.kintsu.app.ui.components.AppLockOverlay
+import com.kintsu.app.security.AppLockType
 import com.kintsu.app.util.PermissionHelper
 import com.kintsu.app.ui.screens.FocusScreen
 import com.kintsu.app.ui.screens.GoalsScreen
@@ -48,7 +50,10 @@ import com.kintsu.app.wellbeing.ui.SanctuaryShopSheet
 import com.kintsu.app.wellbeing.ui.WellbeingWizardSheet
 import com.kintsu.app.ui.shop.ShopHomeScreen
 import com.kintsu.app.ui.screens.HomeScreen
+import com.kintsu.app.ui.screens.CustomizeStudioSheet
 import com.kintsu.app.ui.screens.JournalSheet
+import com.kintsu.app.ui.screens.JournalEditorScreen
+import com.kintsu.app.ui.screens.JournalStudioSheet
 import com.kintsu.app.ui.screens.OnboardingScreen
 import com.kintsu.app.ui.screens.ProgressScreen
 import com.kintsu.app.ui.screens.SettingsScreen
@@ -68,6 +73,9 @@ fun KintsuApp(
     val settings by viewModel.settings.collectAsState()
     val currentTab by viewModel.currentTab.collectAsState()
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
+    var isAppUnlocked by remember(settings.appLockEnabled) {
+        mutableStateOf(!settings.appLockEnabled || settings.appLockCode.isBlank())
+    }
 
     val habits by viewModel.activeHabits.collectAsState()
     val todayLogs by viewModel.todayLogs.collectAsState()
@@ -86,6 +94,7 @@ fun KintsuApp(
     val allIntentions by viewModel.allIntentions.collectAsState()
     val todayJournalEntry by viewModel.todayJournalEntry.collectAsState()
     val allJournalEntries by viewModel.allJournalEntries.collectAsState()
+    val allJournalCollections by viewModel.allJournalCollections.collectAsState()
     val allWeeklyReviews by viewModel.allWeeklyReviews.collectAsState()
     val allFocusSessions by viewModel.allFocusSessions.collectAsState()
     val syncState by viewModel.syncState.collectAsState()
@@ -118,7 +127,11 @@ fun KintsuApp(
 
     var isFocusOpen by remember { mutableStateOf(false) }
     var isJournalOpen by remember { mutableStateOf(false) }
+    var isJournalStudioOpen by remember { mutableStateOf(false) }
+    var focusReflectionPrompt by remember { mutableStateOf<String?>(null) }
+    var isReflectionOpen by remember { mutableStateOf(false) }
     var isWeeklyReviewOpen by remember { mutableStateOf(false) }
+    var isCustomizeOpen by remember { mutableStateOf(false) }
     var focusLinkedTask by remember { mutableStateOf<TaskEntity?>(null) }
 
     var externalAddHabit by remember { mutableStateOf(false) }
@@ -277,6 +290,15 @@ fun KintsuApp(
                     isFocusOpen = false
                     focusLinkedTask = null
                 },
+                onReflectInJournal = { prompt ->
+                    isFocusOpen = false
+                    focusLinkedTask = null
+                    focusReflectionPrompt = prompt
+                    isReflectionOpen = true
+                },
+                onCompleteTask = { task ->
+                    viewModel.toggleTask(task)
+                },
                 defaultPresetMinutes = settings.focusDefaultPresetMinutes,
                 breakLengthMinutes = settings.focusBreakMinutes
             )
@@ -297,6 +319,7 @@ fun KintsuApp(
                 onSignOut = { keep -> viewModel.signOut(keep) },
                 onDeleteCloudData = { cb -> viewModel.deleteCloudData(cb) },
                 onUpdateDisplayName = { viewModel.setDisplayName(it) },
+                onUpdateProfileAvatar = { viewModel.updateProfileAvatarId(it) },
                 onUpdateThemeMode = { viewModel.setThemeMode(it) },
                 onUpdateAppTheme = { viewModel.setAppTheme(it) },
                 onUpdateAccent = { viewModel.setAccentOption(it) },
@@ -324,6 +347,12 @@ fun KintsuApp(
                 onUpdateHiddenHomeSections = { viewModel.setHiddenHomeSections(it) },
                 onUpdateQuickActionsOrder = { viewModel.setQuickActionsOrder(it) },
                 onResetHomePreferences = { viewModel.resetHomePreferences() },
+                onUpdateAppLockEnabled = { viewModel.setAppLockEnabled(it) },
+                onUpdateAppLockType = { viewModel.setAppLockType(it) },
+                onUpdateAppLockCode = { viewModel.setAppLockCode(it) },
+                onUpdateAppLockBiometricEnabled = { viewModel.setAppLockBiometricEnabled(it) },
+                onTriggerEncryptedBackup = { cb -> viewModel.triggerAutoBackup(cb) },
+                onRestoreEncryptedBackup = { cb -> viewModel.restoreFromEncryptedBackup(cb) },
                 onExportData = { viewModel.exportDataJson() },
                 onExportToFile = { uri ->
                     context.contentResolver.openOutputStream(uri)?.use { os ->
@@ -350,7 +379,14 @@ fun KintsuApp(
                 onOpenWellbeingWizard = { viewModel.setWellbeingWizardOpen(true) },
                 onOpenDetox = { viewModel.setDetoxOpen(true) },
                 onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
-                onOpenShop = { viewModel.setShopOpen(true) },
+                stylePresets = stylePresets,
+                onApplyStylePreset = { viewModel.applyStylePreset(it) },
+                onSaveStylePreset = { name, theme, accent, icon, skin, face ->
+                    viewModel.saveStylePreset(name, theme, accent, icon, skin, face)
+                },
+                onDeleteStylePreset = { viewModel.deleteStylePreset(it) },
+                onRestoreDefaultPresets = { viewModel.restoreDefaultStylePresets() },
+                onUpdateLauncherIcon = { viewModel.setLauncherIcon(it, context) },
                 allAchievements = allAchievements,
                 onUpdateWellbeingEnabled = { viewModel.setWellbeingEnabled(it) },
                 onUpdateStrictness = { viewModel.setWellbeingStrictness(it) },
@@ -441,12 +477,15 @@ fun KintsuApp(
                                         externalAddGoal = true
                                         viewModel.selectTab(KintsuNavTab.GOALS)
                                     },
-                                    onOpenJournal = { isJournalOpen = true },
+                                    onOpenJournal = { isJournalStudioOpen = true },
+                                    onOpenReflection = { isReflectionOpen = true },
+                                    allJournalEntries = allJournalEntries,
                                     onOpenWeeklyReview = { isWeeklyReviewOpen = true },
                                     onNavigateToTasks = { viewModel.selectTab(KintsuNavTab.TASKS) },
                                     onNavigateToProgress = { viewModel.selectTab(KintsuNavTab.PROGRESS) },
                                     onOpenSettings = { viewModel.setSettingsOpen(true) },
                                     onOpenShop = { viewModel.setShopOpen(true) },
+                                    onOpenCustomization = { isCustomizeOpen = true },
                                     onOpenDetox = { viewModel.setDetoxOpen(true) },
                                     onOpenQuitHabits = { viewModel.setQuitHabitsOpen(true) },
                                     onOpenDigitalBalance = { viewModel.setDigitalBalanceOpen(true) },
@@ -517,7 +556,7 @@ fun KintsuApp(
                                         triggerHaptic()
                                         viewModel.toggleTask(it)
                                     },
-                                    onAddTask = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, initialSubtasks ->
+                                    onAddTask = { title, dueDate, priority, goalId, recType, mask, recActive, plannedDate, timeBlock, category, notes, estimatedMinutes, initialSubtasks ->
                                         viewModel.addTask(
                                             title = title,
                                             dueDate = dueDate,
@@ -528,6 +567,9 @@ fun KintsuApp(
                                             recurrenceActive = recActive,
                                             plannedDateEpochDay = plannedDate,
                                             plannedTimeBlock = timeBlock,
+                                            category = category,
+                                            notes = notes,
+                                            estimatedMinutes = estimatedMinutes,
                                             initialSubtasks = initialSubtasks
                                         )
                                     },
@@ -599,16 +641,59 @@ fun KintsuApp(
         }
     }
 
+    if (isJournalStudioOpen) {
+        JournalStudioSheet(
+            allEntries = allJournalEntries,
+            collections = allJournalCollections,
+            onDismiss = { isJournalStudioOpen = false },
+            onSaveEntry = { entry ->
+                viewModel.saveRichJournalEntry(entry)
+            },
+            onDeleteEntry = { entry ->
+                viewModel.deleteJournalEntry(entry)
+            },
+            onToggleFavorite = { entry ->
+                viewModel.toggleFavoriteJournalEntry(entry)
+            }
+        )
+    }
+
+    if (isReflectionOpen) {
+        JournalSheet(
+            existingEntry = todayJournalEntry,
+            onDismiss = {
+                isReflectionOpen = false
+                focusReflectionPrompt = null
+            },
+            onSave = { content, mood, tags ->
+                viewModel.saveJournalEntry(content, mood, tags)
+                isReflectionOpen = false
+                focusReflectionPrompt = null
+            }
+        )
+    }
+
     if (isJournalOpen) {
-            JournalSheet(
-                existingEntry = todayJournalEntry,
-                onDismiss = { isJournalOpen = false },
-                onSave = { content, mood ->
-                    viewModel.saveJournalEntry(content, mood)
-                    isJournalOpen = false
-                }
-            )
-        }
+        JournalEditorScreen(
+            initialEntry = todayJournalEntry,
+            prefilledPrompt = focusReflectionPrompt,
+            collections = allJournalCollections,
+            onDismiss = {
+                isJournalOpen = false
+                focusReflectionPrompt = null
+            },
+            onSaveEntry = { entry ->
+                viewModel.saveRichJournalEntry(entry)
+                isJournalOpen = false
+                focusReflectionPrompt = null
+            },
+            onDeleteEntry = { entry ->
+                viewModel.deleteJournalEntry(entry)
+                isJournalOpen = false
+                focusReflectionPrompt = null
+            }
+        )
+    }
 
         if (isWeeklyReviewOpen) {
             val reviewDraft = remember(allLogs, habits, tasks, goals, allFocusSessions) {
@@ -740,7 +825,60 @@ fun KintsuApp(
                 onSaveBreathingPreferences = { style, dur, reint, haptics ->
                     viewModel.setBreathingPreferences(style, dur, reint, haptics)
                 },
-                onToggleDns = { viewModel.setDnsProtectionEnabled(it) }
+                onToggleDns = { viewModel.setDnsProtectionEnabled(it) },
+                onToggleMasterShield = { viewModel.setWellbeingEnabled(it) },
+                onSaveShortFormEnabled = { viewModel.setShortFormBlockingEnabled(it) },
+                onSaveShortFormPlatforms = { yt, ig, tt, fb, snap, web -> viewModel.setBlockShortFormPlatforms(yt, ig, tt, fb, snap, web) },
+                onSaveContinuousSession = { maxS, cd ->
+                    viewModel.setMaxContinuousSessionMinutes(maxS)
+                    viewModel.setSessionCooldownMinutes(cd)
+                },
+                onSaveLaunchLimit = { en, maxL ->
+                    viewModel.setAppLaunchLimitEnabled(en)
+                    viewModel.setDefaultAppMaxLaunches(maxL)
+                },
+                onSaveBedtimeLock = { en, st, enH -> viewModel.setBedtimeLock(en, st, enH) },
+                onSaveMindfulPause = { viewModel.setMindfulPauseOnLaunch(it) },
+                onStartInstantDetox = { mins -> viewModel.startDigitalDetox(mins, "Instant Sanctuary Detox", "", false) },
+                onSaveBedtimeSchedule = { en, st, enH, days, dnd -> viewModel.setBedtimeSchedule(en, st, enH, days, dnd) },
+                onSaveNotificationBatching = { en, storeAll, historyDays, recapType, morning, afternoon, evening ->
+                    viewModel.setNotificationBatching(en, storeAll, historyDays, recapType, morning, afternoon, evening)
+                },
+                onSaveInvincibleMode = { en, wH, wM, sh, bt ->
+                    viewModel.setInvincibleMode(en, wH, wM, sh, bt)
+                },
+                onSaveParentalControlsProtection = { prot, tamp, unH, unM ->
+                    viewModel.setParentalControlsProtection(prot, tamp, unH, unM)
+                }
+            )
+        }
+        if (settings.appLockEnabled && !isAppUnlocked && settings.appLockCode.isNotBlank()) {
+            AppLockOverlay(
+                storedCodeHash = settings.appLockCode,
+                lockType = try { AppLockType.valueOf(settings.appLockType) } catch (e: Exception) { AppLockType.PIN },
+                biometricEnabled = settings.appLockBiometricEnabled,
+                onUnlocked = { isAppUnlocked = true }
+            )
+        }
+
+        if (isCustomizeOpen) {
+            CustomizeStudioSheet(
+                currentSettings = settings,
+                stylePresets = stylePresets,
+                onApplyPreset = { viewModel.applyStylePreset(it) },
+                onSavePreset = { name, theme, accent, icon, skin, face ->
+                    viewModel.saveStylePreset(name, theme, accent, icon, skin, face)
+                },
+                onDeletePreset = { viewModel.deleteStylePreset(it) },
+                onRestoreDefaultPresets = { viewModel.restoreDefaultStylePresets() },
+                onUpdateAppTheme = { viewModel.setAppTheme(it) },
+                onUpdateAccent = { viewModel.setAccentOption(it) },
+                onUpdateThemeMode = { viewModel.setThemeMode(it) },
+                onUpdateContentDensity = { viewModel.setContentDensity(it) },
+                onUpdateLauncherIcon = { iconId -> viewModel.setLauncherIcon(iconId, context) },
+                onUpdateHapticsEnabled = { viewModel.setHapticsEnabled(it) },
+                onUpdateReducedMotion = { viewModel.setReducedMotion(it) },
+                onDismiss = { isCustomizeOpen = false }
             )
         }
     }

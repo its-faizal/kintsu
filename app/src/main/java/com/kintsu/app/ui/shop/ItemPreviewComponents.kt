@@ -263,10 +263,7 @@ fun BundleThumbnail(item: ShopItemEntity) {
             .border(1.5.dp, colors.goldSeam, RoundedCornerShape(10.dp)),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "✨",
-            fontSize = 20.sp
-        )
+        IconGoldSeam(color = colors.goldSeam, size = 22.dp)
     }
 }
 
@@ -280,7 +277,7 @@ fun GenericThumbnail(item: ShopItemEntity) {
             .background(colors.accentSoft),
         contentAlignment = Alignment.Center
     ) {
-        Text("★", color = colors.accent, fontSize = 16.sp)
+        IconGoldSeam(color = colors.accent, size = 20.dp)
     }
 }
 
@@ -572,7 +569,7 @@ fun LargeBundlePreview(item: ShopItemEntity) {
         modifier = Modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("✨ " + item.title, style = KintsuTheme.typography.itemTitle, color = colors.goldSeam)
+        Text("" + item.title, style = KintsuTheme.typography.itemTitle, color = colors.goldSeam)
         Spacer(modifier = Modifier.height(6.dp))
         Text(item.description, style = KintsuTheme.typography.secondary, color = colors.textSecondary, maxLines = 3)
     }

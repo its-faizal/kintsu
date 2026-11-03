@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -72,6 +73,7 @@ import com.kintsu.app.ui.components.IconLeaf
 import com.kintsu.app.ui.components.IconPlay
 import com.kintsu.app.ui.components.IconProgress
 import com.kintsu.app.ui.components.IconShield
+import com.kintsu.app.ui.components.IconSparkle
 import com.kintsu.app.ui.components.IconTask
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
@@ -107,6 +109,8 @@ fun HomeScreen(
     onOpenAddTask: () -> Unit,
     onOpenAddGoal: () -> Unit,
     onOpenJournal: () -> Unit,
+    onOpenReflection: () -> Unit = {},
+    allJournalEntries: List<com.kintsu.app.data.model.JournalEntryEntity> = emptyList(),
     onOpenWeeklyReview: () -> Unit,
     onNavigateToTasks: () -> Unit,
     onNavigateToProgress: () -> Unit,
@@ -137,18 +141,100 @@ fun HomeScreen(
         com.kintsu.app.util.KintsuDateFormatter.formatHeaderDate()
     }
 
+    // Creative probabilistic greetings matching the diurnal phase (User requirement)
     val greeting = remember(userName) {
         val hour = LocalTime.now().hour
-        val salutation = when {
-            hour < 12 -> "Good morning"
-            hour < 17 -> "Good afternoon"
-            else -> "Good evening"
+        val lateNightGreetings = listOf(
+            "Night owl wanderer",
+            "Stillness under starlight",
+            "Rest beckons, night bird",
+            "Midnight philosopher",
+            "Quiet nocturnal calm"
+        )
+        val earlyDawnGreetings = listOf(
+            "First light unfolds",
+            "Dawn breaks with clarity",
+            "Awaken gently, early riser",
+            "Fresh horizon awaits",
+            "The morning breathes anew"
+        )
+        val morningGreetings = listOf(
+            "Mindful morning begins",
+            "A day of purposeful craft",
+            "Morning clarity is yours",
+            "Steady steps forward",
+            "Breathe in morning calm"
+        )
+        val afternoonGreetings = listOf(
+            "Midday pause & breath",
+            "Steady focus in the sun",
+            "Afternoon momentum",
+            "Sun at its peak, mind centered",
+            "Keep your center, seeker"
+        )
+        val eveningGreetings = listOf(
+            "Golden dusk settles",
+            "Twilight quietude",
+            "Unwinding with gratitude",
+            "The day gently slows",
+            "A peaceful twilight arrives"
+        )
+        val nightGreetings = listOf(
+            "Night bird returns to calm",
+            "Closing the day in peace",
+            "Gentle thoughts for the night",
+            "Stars watch over your quiet",
+            "Rest well, mindful soul"
+        )
+
+        val candidateList = when (hour) {
+            in 0..4 -> lateNightGreetings
+            in 5..7 -> earlyDawnGreetings
+            in 8..11 -> morningGreetings
+            in 12..16 -> afternoonGreetings
+            in 17..20 -> eveningGreetings
+            else -> nightGreetings
         }
+
+        val chosen = candidateList.random()
         if (userName.isNotBlank() && userName != "Seeker") {
-            "$salutation, $userName"
+            "$chosen, $userName"
         } else {
-            salutation
+            chosen
         }
+    }
+
+    // Creative daily quotes at top of home (User requirement)
+    val dailyQuotes = remember {
+        listOf(
+            "?The wound is the place where the Light enters you.? ? Rumi",
+            "?Adopt the pace of nature: her secret is patience.? ? Ralph Waldo Emerson",
+            "?Mended with gold, our broken pieces become our greatest strength.? ? Kintsugi",
+            "?Between stimulus and response there is a space. In that space lies our freedom.? ? Viktor Frankl",
+            "?You have power over your mind, not outside events. Realize this, and you will find strength.? ? Marcus Aurelius",
+            "?Simplicity is the ultimate sophistication.? ? Leonardo da Vinci",
+            "?Quiet the mind, and the soul will speak.? ? Ma Jaya Sati Bhagavati",
+            "?Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.? ? Buddha",
+            "?In the midst of movement and chaos, keep stillness inside of you.? ? Deepak Chopra",
+            "?To be calm is the highest achievement of the self.? ? Zen Proverb"
+        )
+    }
+    val todayQuote = remember(todayEpoch) {
+        val index = (todayEpoch.toInt().let { if (it < 0) -it else it }) % dailyQuotes.size
+        dailyQuotes[index]
+    }
+
+    // Live clock ticker synced with time for focus timer on home (User requirement)
+    var liveClockMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(focusState.isRunning, focusState.isPaused) {
+        while (focusState.isRunning && !focusState.isPaused) {
+            delay(1000L)
+            liveClockMillis = System.currentTimeMillis()
+        }
+    }
+
+    val liveFocusSecondsRemaining = remember(focusState, liveClockMillis) {
+        FocusTimerManager.getRemainingSeconds(focusState, liveClockMillis)
     }
 
     // Filter habits scheduled for today
@@ -201,7 +287,8 @@ fun HomeScreen(
                 onProfileClick = onOpenSettings,
                 coinsBalance = settings.coinsBalance,
                 onShopClick = onOpenShop,
-                onCustomizationClick = onOpenCustomization
+                onCustomizationClick = onOpenCustomization,
+                profileAvatarId = settings.profileAvatarId
             )
 
             LazyColumn(
@@ -211,38 +298,275 @@ fun HomeScreen(
                     .padding(horizontal = spacing.xl),
                 verticalArrangement = Arrangement.spacedBy(spacing.m)
             ) {
-                // Pristine Clean First-Launch Welcome Card (when 0 habits)
-                if (habits.isEmpty()) {
-                    item(key = "empty_rituals_welcome") {
-                        KintsuCard(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenAddHabit() }
+                // --- TOP OF HOME: CREATIVE DAILY QUOTE (User requirement) ---
+                item(key = "home_top_creative_quote") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(colors.surfaceElevated.copy(alpha = 0.6f))
+                            .border(1.dp, colors.goldSeam.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(
+                            IconGoldSeam(color = colors.goldSeam, size = 16.dp)
+                            Text(
+                                text = todayQuote,
+                                style = typography.caption.copy(
+                                    fontSize = 12.sp,
+                                    fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
+                                    lineHeight = 18.sp
+                                ),
+                                color = colors.textPrimary
+                            )
+                        }
+                    }
+                }
+
+                // --- TOP OF HOME: LIVE SYNCED FOCUS TIMER (User requirement) ---
+                item(key = "home_live_focus_timer") {
+                    KintsuCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenFocus() },
+                        backgroundColor = colors.surfaceElevated
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(spacing.m),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            if (focusState.isRunning) {
+                                val minsLeft = liveFocusSecondsRemaining / 60
+                                val secsLeft = liveFocusSecondsRemaining % 60
+                                val timeText = String.format(Locale.US, "%02d:%02d", minsLeft, secsLeft)
+                                val progress = (liveFocusSecondsRemaining.toFloat() / (focusState.durationMinutes * 60f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(modifier = Modifier.size(46.dp), contentAlignment = Alignment.Center) {
+                                            KintsuProgressRing(progress = progress, size = 46.dp, progressColor = colors.accent, showPercentage = false)
+                                            IconClock(color = colors.accent, size = 18.dp)
+                                        }
+
+                                        Column {
+                                            Text(
+                                                text = if (focusState.isPaused) "Focus Paused" else "Focus Sanctuary Active",
+                                                style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                                                color = if (focusState.isPaused) colors.goldSeam else colors.accent
+                                            )
+                                            Text(
+                                                text = "$timeText remaining",
+                                                fontSize = 20.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colors.textPrimary,
+                                                letterSpacing = 0.5.sp
+                                            )
+                                        }
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(colors.accentSoft)
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Open HUD",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.accent
+                                        )
+                                    }
+                                }
+                            } else {
+                                // Inactive: Quick Presets synced to Home
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(colors.accentSoft),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            IconPlay(color = colors.accent, size = 16.dp)
+                                        }
+                                        Column {
+                                            Text(
+                                                text = "Focus Timer",
+                                                style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                                color = colors.textPrimary
+                                            )
+                                            Text(
+                                                text = "Tap a preset to begin deep work",
+                                                fontSize = 11.sp,
+                                                color = colors.textSecondary
+                                            )
+                                        }
+                                    }
+
+                                    IconChevronRight(color = colors.textTertiary, size = 16.dp)
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    val presets = listOf(15, 25, 45, 60)
+                                    presets.forEach { duration ->
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(colors.surface)
+                                                .border(1.dp, colors.border.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                .clickable { onStartFocusPreset(duration) }
+                                                .padding(vertical = 8.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "${duration}m",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = colors.textPrimary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 1. TODAY AT A GLANCE (Stays at the very top!)
+                item(key = "home_section_key_numbers") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        Text(
+                            text = "Today at a Glance",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            // Streak Pill
+                            KintsuCard(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(spacing.l),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .weight(1f)
+                                    .clickable { onNavigateToProgress() }
                             ) {
-                                Text(
-                                    text = "A Mindful Beginning",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Spacer(modifier = Modifier.height(spacing.xs))
-                                Text(
-                                    text = "Start with a single gentle ritual. Tap below to begin your daily journey.",
-                                    style = typography.caption,
-                                    color = colors.textSecondary,
-                                    textAlign = TextAlign.Center
-                                )
-                                Spacer(modifier = Modifier.height(spacing.m))
-                                KintsuButton(
-                                    text = "Create First Ritual",
-                                    onClick = onOpenAddHabit,
-                                    variant = KintsuButtonVariant.ACCENT_SOFT
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = spacing.m, horizontal = spacing.s),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        IconFlame(color = colors.accent, size = 16.dp)
+                                        Spacer(modifier = Modifier.width(spacing.xxs))
+                                        Text(
+                                            text = "${homeStats.currentStreak}",
+                                            style = typography.itemTitle,
+                                            color = colors.textPrimary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Day Streak",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+
+                            // Tasks Due Today Pill
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onNavigateToTasks() }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = spacing.m, horizontal = spacing.s),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        IconTask(color = colors.accent, size = 16.dp)
+                                        Spacer(modifier = Modifier.width(spacing.xxs))
+                                        Text(
+                                            text = "${homeStats.tasksDueToday}",
+                                            style = typography.itemTitle,
+                                            color = colors.textPrimary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Due Today",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
+                            }
+
+                            // Focus Minutes Today Pill
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpenFocus() }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = spacing.m, horizontal = spacing.s),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        IconClock(color = colors.accent, size = 16.dp)
+                                        Spacer(modifier = Modifier.width(spacing.xxs))
+                                        Text(
+                                            text = "${homeStats.focusMinutesToday}m",
+                                            style = typography.itemTitle,
+                                            color = colors.textPrimary
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Focus Today",
+                                        style = typography.caption.copy(fontSize = 11.sp),
+                                        color = colors.textSecondary
+                                    )
+                                }
                             }
                         }
                     }
@@ -258,48 +582,29 @@ fun HomeScreen(
                     }
                 }
 
-                // 2. TODAY SECTION (Circular progress ring + today's habits; hides if empty)
+                // 2. TODAY'S HABITS SECTION
                 if (scheduledHabitsToday.isNotEmpty()) {
                     item(key = "today_section_header") {
-                        KintsuCard(
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = spacing.xs, bottom = spacing.xxs),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(
+                            Text(
+                                text = "Today's Habits ($completedCount/${scheduledHabitsToday.size})",
+                                style = typography.itemTitle,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "View All",
+                                style = typography.caption,
+                                color = colors.accent,
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(spacing.m)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = "Today's Rituals",
-                                            style = typography.itemTitle,
-                                            color = colors.textPrimary
-                                        )
-                                        Spacer(modifier = Modifier.height(spacing.xxs))
-                                        Text(
-                                            text = if (completedCount == scheduledHabitsToday.size) {
-                                                "All rituals complete • Calm restored"
-                                            } else {
-                                                "$completedCount of ${scheduledHabitsToday.size} completed"
-                                            },
-                                            style = typography.caption,
-                                            color = if (completedCount == scheduledHabitsToday.size) colors.goldSeam else colors.textSecondary
-                                        )
-                                    }
-
-                                    KintsuProgressRing(
-                                        progress = todayProgress,
-                                        size = 48.dp,
-                                        strokeWidth = 4.dp,
-                                        showPercentage = true
-                                    )
-                                }
-                            }
+                                    .clickable { onNavigateToTasks() }
+                                    .padding(vertical = spacing.xxs)
+                            )
                         }
                     }
 
@@ -367,483 +672,356 @@ fun HomeScreen(
                         KintsuCard(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onToggleHabit(habit.id) }
+                                .clip(KintsuTheme.shapes.medium)
+                                .clickable { onToggleHabit(habit.id) },
+                            backgroundColor = if (isDone) colors.accentSoft.copy(alpha = 0.3f) else colors.surface,
+                            borderColor = if (isRepaired) colors.goldSeam else if (isDone) colors.accent.copy(alpha = 0.4f) else colors.border
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(spacing.m),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                    .padding(horizontal = spacing.m, vertical = spacing.s),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    // 48dp touch target checkbox
-                                    Box(
-                                        modifier = Modifier
-                                            .size(48.dp)
-                                            .semantics {
-                                                role = Role.Checkbox
-                                                contentDescription = if (isDone) "Mark ${habit.name} incomplete" else "Mark ${habit.name} complete"
-                                            }
-                                            .clickable { onToggleHabit(habit.id) },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .clip(CircleShape)
-                                                .then(
-                                                    when {
-                                                        isRepaired -> Modifier
-                                                            .border(1.5.dp, colors.goldSeam, CircleShape)
-                                                            .background(colors.goldSeam.copy(alpha = 0.2f))
-                                                        isDone -> Modifier.background(colors.accent)
-                                                        else -> Modifier.border(1.5.dp, colors.border, CircleShape)
-                                                    }
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            if (isRepaired) {
-                                                IconGoldSeam(color = colors.goldSeam, size = 13.dp)
-                                            } else if (isDone) {
-                                                IconCheck(color = colors.background, size = 13.dp)
-                                            }
-                                        }
-                                    }
-
-                                    Spacer(modifier = Modifier.width(spacing.s))
-
-                                    Column {
-                                        Text(
-                                            text = habit.name,
-                                            style = typography.itemTitle,
-                                            color = if (isDone) colors.textTertiary else colors.textPrimary,
-                                            textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .border(
+                                            width = 1.5.dp,
+                                            color = when {
+                                                isRepaired -> colors.goldSeam
+                                                isDone -> colors.accent
+                                                else -> colors.border
+                                            },
+                                            shape = CircleShape
                                         )
-                                        if (!habit.routineGroup.isNullOrBlank()) {
-                                            Text(
-                                                text = habit.routineGroup,
-                                                style = typography.caption,
-                                                color = colors.textSecondary
-                                            )
-                                        }
+                                        .background(
+                                            when {
+                                                isRepaired -> colors.goldSeam
+                                                isDone -> colors.accent
+                                                else -> Color.Transparent
+                                            }
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (isDone || isRepaired) {
+                                        IconCheck(color = colors.background, size = 14.dp)
                                     }
                                 }
 
-                                if (isRepaired) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(4.dp))
-                                            .background(colors.goldSeam.copy(alpha = 0.15f))
-                                            .padding(horizontal = spacing.xs, vertical = 2.dp)
-                                    ) {
+                                Spacer(modifier = Modifier.width(spacing.m))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = habit.name,
+                                        style = typography.body,
+                                        color = if (isDone) colors.textSecondary else colors.textPrimary,
+                                        textDecoration = if (isDone) TextDecoration.LineThrough else TextDecoration.None
+                                    )
+                                    val habitSub = habit.routineGroup ?: habit.reminderTime
+                                    if (!habitSub.isNullOrBlank()) {
                                         Text(
-                                            text = "Repaired",
-                                            style = typography.caption.copy(fontSize = 11.sp),
-                                            color = colors.goldSeam
+                                            text = habitSub,
+                                            style = typography.caption,
+                                            color = colors.textTertiary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
                             }
                         }
                     }
+                } else if (habits.isEmpty()) {
+                    // Pristine Clean First-Launch Welcome Card (when 0 habits)
+                    item(key = "empty_rituals_welcome") {
+                        KintsuCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenAddHabit() }
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(spacing.l),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "A Mindful Beginning",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Spacer(modifier = Modifier.height(spacing.xs))
+                                Text(
+                                    text = "Start with a single gentle ritual. Tap below to begin your daily journey.",
+                                    style = typography.caption,
+                                    color = colors.textSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(spacing.m))
+                                KintsuButton(
+                                    text = "Create First Ritual",
+                                    onClick = onOpenAddHabit,
+                                    variant = KintsuButtonVariant.ACCENT_SOFT
+                                )
+                            }
+                        }
+                    }
                 }
 
-                // Render Reorderable / Toggleable Sections
-                sectionOrder.forEach { sectionId ->
-                    if (!hiddenSections.contains(sectionId)) {
-                        when (sectionId) {
-                            "DAILY_INTENTION" -> {
-                                if (settings.dailyIntentionEnabled) {
-                                    item(key = "home_section_daily_intention") {
-                                        KintsuCard(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { isEditingIntention = true }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(spacing.m),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    // Checkbox for intention
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(48.dp)
-                                                            .clickable {
-                                                                if (todayIntention != null) {
-                                                                    onToggleIntention(todayIntention)
-                                                                } else {
-                                                                    isEditingIntention = true
-                                                                }
-                                                            },
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(22.dp)
-                                                                .clip(CircleShape)
-                                                                .then(
-                                                                    if (todayIntention?.isCompleted == true) {
-                                                                        Modifier.background(colors.accent)
-                                                                    } else {
-                                                                        Modifier.border(1.5.dp, colors.border, CircleShape)
-                                                                    }
-                                                                ),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            if (todayIntention?.isCompleted == true) {
-                                                                IconCheck(color = colors.background, size = 12.dp)
-                                                            }
-                                                        }
-                                                    }
+                // 3. MINDFUL PRACTICE TILES (Journal, Quick Reflection, Daily Intention, Addiction Shield)
+                item(key = "mindful_practice_tiles") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(spacing.s)
+                    ) {
+                        Text(
+                            text = "Daily Practices",
+                            style = typography.caption,
+                            color = colors.textSecondary,
+                            modifier = Modifier.padding(top = spacing.xs)
+                        )
 
-                                                    Spacer(modifier = Modifier.width(spacing.s))
-
-                                                    Column {
-                                                        Text(
-                                                            text = "Daily Intention",
-                                                            style = typography.caption,
-                                                            color = colors.textSecondary
-                                                        )
-                                                        Text(
-                                                            text = todayIntention?.text?.ifBlank { "What is your intention today?" }
-                                                                ?: "What is your intention today?",
-                                                            style = typography.body,
-                                                            color = if (todayIntention?.isCompleted == true) colors.textTertiary else colors.textPrimary,
-                                                            textDecoration = if (todayIntention?.isCompleted == true) TextDecoration.LineThrough else TextDecoration.None,
-                                                            maxLines = 2,
-                                                            overflow = TextOverflow.Ellipsis
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            "FOCUS" -> {
-                                if (settings.focusEnabled) {
-                                    item(key = "home_section_focus") {
-                                        KintsuCard(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clickable { onOpenFocus() }
-                                        ) {
-                                            Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(spacing.m),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    modifier = Modifier.weight(1f)
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .size(40.dp)
-                                                            .clip(CircleShape)
-                                                            .background(if (focusState.isRunning) colors.accentSoft else colors.surfaceElevated),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        IconClock(color = colors.accent, size = 20.dp)
-                                                    }
-                                                    Spacer(modifier = Modifier.width(spacing.m))
-                                                    Column {
-                                                        Text(
-                                                            text = if (focusState.isRunning) {
-                                                                "Focus In Progress"
-                                                            } else {
-                                                                "${settings.focusDefaultPresetMinutes} Min Focus"
-                                                            },
-                                                            style = typography.itemTitle,
-                                                            color = colors.textPrimary
-                                                        )
-                                                        Text(
-                                                            text = if (focusState.isRunning) {
-                                                                val remSeconds = FocusTimerManager.getRemainingSeconds(focusState)
-                                                                val m = remSeconds / 60
-                                                                val s = remSeconds % 60
-                                                                String.format("%02d:%02d remaining • Tap to open", m, s)
-                                                            } else {
-                                                                "One tap to begin undisturbed time"
-                                                            },
-                                                            style = typography.caption,
-                                                            color = colors.textSecondary
-                                                        )
-                                                    }
-                                                }
-
-                                                KintsuButton(
-                                                    text = if (focusState.isRunning) "View" else "Start",
-                                                    onClick = {
-                                                        if (focusState.isRunning) {
-                                                            onOpenFocus()
-                                                        } else {
-                                                            onStartFocusPreset(settings.focusDefaultPresetMinutes)
-                                                        }
-                                                    },
-                                                    variant = KintsuButtonVariant.ACCENT_SOFT
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            "ADDICTION" -> {
-                                item(key = "home_section_addiction") {
-                                    KintsuCard(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { onOpenDigitalBalance() }
+                        // Row 1: Journal & Quick Reflection
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            // Journal Tile
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpenJournal() }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(spacing.m),
+                                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
+                                        Box(
                                             modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(spacing.m),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(colors.accentSoft),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                modifier = Modifier.weight(1f)
-                                            ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(40.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (settings.wellbeingEnabled) colors.warning.copy(alpha = 0.15f) else colors.surfaceElevated),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    com.kintsu.app.ui.components.IconShield(
-                                                        color = if (settings.wellbeingEnabled) colors.warning else colors.textTertiary,
-                                                        size = 20.dp
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.width(spacing.m))
-                                                Column {
-                                                    Text(
-                                                        text = "Addiction Shield",
-                                                        style = typography.itemTitle,
-                                                        color = colors.textPrimary
-                                                    )
-                                                    Text(
-                                                        text = if (settings.wellbeingEnabled) {
-                                                            when (settings.wellbeingStrictness) {
-                                                                "STRICT" -> "Strict protection active"
-                                                                "BALANCED" -> "Balanced protection active"
-                                                                else -> "Gentle protection active"
-                                                            }
-                                                        } else {
-                                                            "Not set up • Tap to configure"
-                                                        },
-                                                        style = typography.caption,
-                                                        color = if (settings.wellbeingEnabled) colors.textSecondary else colors.textTertiary
-                                                    )
-                                                }
-                                            }
-
-                                            KintsuButton(
-                                                text = if (settings.wellbeingEnabled) "Open" else "Set Up",
-                                                onClick = onOpenDigitalBalance,
-                                                variant = KintsuButtonVariant.ACCENT_SOFT
+                                            IconBook(color = colors.accent, size = 18.dp)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(KintsuTheme.shapes.small)
+                                                .background(colors.surfaceElevated)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "${allJournalEntries.size}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colors.accent
                                             )
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Journal",
+                                        style = typography.itemTitle,
+                                        color = colors.textPrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Chronicles & personal notes",
+                                        style = typography.caption,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
 
-                            "KEY_NUMBERS" -> {
-                                item(key = "home_section_key_numbers") {
+                            // Quick Reflection Tile
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpenReflection() }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(spacing.m),
+                                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                ) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        // Streak Pill
-                                        KintsuCard(
+                                        Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { onNavigateToProgress() }
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(colors.accentSoft),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = spacing.m, horizontal = spacing.s),
-                                                horizontalAlignment = Alignment.CenterHorizontally
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    IconFlame(color = colors.accent, size = 16.dp)
-                                                    Spacer(modifier = Modifier.width(spacing.xxs))
-                                                    Text(
-                                                        text = "${homeStats.currentStreak}",
-                                                        style = typography.itemTitle,
-                                                        color = colors.textPrimary
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "Day Streak",
-                                                    style = typography.caption.copy(fontSize = 11.sp),
-                                                    color = colors.textSecondary
-                                                )
-                                            }
+                                            IconSparkle(color = colors.accent, size = 18.dp)
                                         }
-
-                                        // Tasks Due Today Pill
-                                        KintsuCard(
+                                        Box(
                                             modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { onNavigateToTasks() }
+                                                .clip(KintsuTheme.shapes.small)
+                                                .background(colors.surfaceElevated)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = spacing.m, horizontal = spacing.s),
-                                                horizontalAlignment = Alignment.CenterHorizontally
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    IconTask(color = colors.accent, size = 16.dp)
-                                                    Spacer(modifier = Modifier.width(spacing.xxs))
-                                                    Text(
-                                                        text = "${homeStats.tasksDueToday}",
-                                                        style = typography.itemTitle,
-                                                        color = colors.textPrimary
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "Due Today",
-                                                    style = typography.caption.copy(fontSize = 11.sp),
-                                                    color = colors.textSecondary
-                                                )
-                                            }
-                                        }
-
-                                        // Focus Minutes Today Pill
-                                        KintsuCard(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { onOpenFocus() }
-                                        ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = spacing.m, horizontal = spacing.s),
-                                                horizontalAlignment = Alignment.CenterHorizontally
-                                            ) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center
-                                                ) {
-                                                    IconClock(color = colors.accent, size = 16.dp)
-                                                    Spacer(modifier = Modifier.width(spacing.xxs))
-                                                    Text(
-                                                        text = "${homeStats.focusMinutesToday}m",
-                                                        style = typography.itemTitle,
-                                                        color = colors.textPrimary
-                                                    )
-                                                }
-                                                Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "Focus Today",
-                                                    style = typography.caption.copy(fontSize = 11.sp),
-                                                    color = colors.textSecondary
-                                                )
-                                            }
+                                            Text(
+                                                text = "Pause",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = colors.textSecondary
+                                            )
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Quick Reflection",
+                                        style = typography.itemTitle,
+                                        color = colors.textPrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Evening pause & mood check",
+                                        style = typography.caption,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+
+                        // Row 2: Daily Intention & Addiction Shield
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(spacing.s)
+                        ) {
+                            // Daily Intention Tile
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { isEditingIntention = true }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(spacing.m),
+                                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(colors.accentSoft),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            IconLeaf(color = colors.accent, size = 18.dp)
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(KintsuTheme.shapes.small)
+                                                .background(if (todayIntention?.isCompleted == true) colors.accentSoft else colors.surfaceElevated)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = if (todayIntention?.isCompleted == true) "Aligned" else "Focus",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = if (todayIntention?.isCompleted == true) colors.accent else colors.textSecondary
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Daily Intention",
+                                        style = typography.itemTitle,
+                                        color = colors.textPrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = todayIntention?.text?.takeIf { it.isNotBlank() } ?: "Set your mindful focus",
+                                        style = typography.caption,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
 
-                            "QUICK_ACTIONS" -> {
-                                if (quickActionsList.isNotEmpty()) {
-                                    item(key = "home_section_quick_actions") {
-                                        KintsuCard(
-                                            modifier = Modifier.fillMaxWidth()
+                            // Addiction Shield Tile
+                            KintsuCard(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { onOpenDigitalBalance() }
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(spacing.m),
+                                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(CircleShape)
+                                                .background(if (settings.wellbeingEnabled) colors.warning.copy(alpha = 0.15f) else colors.surfaceElevated),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = spacing.m, horizontal = spacing.s)
-                                            ) {
-                                                Text(
-                                                    text = "Quick Actions",
-                                                    style = typography.caption,
-                                                    color = colors.textSecondary,
-                                                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.s)
-                                                )
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceAround,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    quickActionsList.forEach { actionId ->
-                                                        when (actionId) {
-                                                            "ADD_HABIT" -> HomeActionButton(
-                                                                icon = { IconHabit(color = colors.accent, size = 20.dp) },
-                                                                label = "Habit",
-                                                                onClick = onOpenAddHabit
-                                                            )
-                                                            "ADD_TASK" -> HomeActionButton(
-                                                                icon = { IconTask(color = colors.accent, size = 20.dp) },
-                                                                label = "Task",
-                                                                onClick = onOpenAddTask
-                                                            )
-                                                            "START_FOCUS" -> HomeActionButton(
-                                                                icon = { IconPlay(color = colors.accent, size = 20.dp) },
-                                                                label = "Focus",
-                                                                onClick = onOpenFocus
-                                                            )
-                                                            "JOURNAL" -> HomeActionButton(
-                                                                icon = { IconBook(color = colors.accent, size = 20.dp) },
-                                                                label = "Journal",
-                                                                onClick = onOpenJournal
-                                                            )
-                                                            "NEW_GOAL" -> HomeActionButton(
-                                                                icon = { IconGoal(color = colors.accent, size = 20.dp) },
-                                                                label = "Goal",
-                                                                onClick = onOpenAddGoal
-                                                            )
-                                                            "WEEKLY_REVIEW" -> HomeActionButton(
-                                                                icon = { IconProgress(color = colors.accent, size = 20.dp) },
-                                                                label = "Review",
-                                                                onClick = onOpenWeeklyReview
-                                                            )
-                                                            "DETOX" -> HomeActionButton(
-                                                                icon = { IconLeaf(color = colors.accent, size = 20.dp) },
-                                                                label = "Detox",
-                                                                onClick = onOpenDigitalBalance
-                                                            )
-                                                            "ADDICTION" -> HomeActionButton(
-                                                                icon = { IconLeaf(color = colors.warning, size = 20.dp) },
-                                                                label = "Addiction",
-                                                                onClick = onOpenDigitalBalance
-                                                            )
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                            IconShield(
+                                                color = if (settings.wellbeingEnabled) colors.warning else colors.textTertiary,
+                                                size = 18.dp
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(KintsuTheme.shapes.small)
+                                                .background(if (settings.wellbeingEnabled) colors.warning.copy(alpha = 0.15f) else colors.surfaceElevated)
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = if (settings.wellbeingEnabled) "Active" else "Off",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = if (settings.wellbeingEnabled) colors.warning else colors.textSecondary
+                                            )
                                         }
                                     }
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = "Addiction Shield",
+                                        style = typography.itemTitle,
+                                        color = colors.textPrimary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = if (settings.wellbeingEnabled) "Digital balance active" else "Configure pauses",
+                                        style = typography.caption,
+                                        color = colors.textSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
                                 }
                             }
                         }
@@ -851,13 +1029,12 @@ fun HomeScreen(
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(spacing.xxxl))
+                    Spacer(modifier = Modifier.height(spacing.xxl))
                 }
             }
         }
     }
 
-    // Daily Intention Edit Dialog
     if (isEditingIntention) {
         AlertDialog(
             onDismissRequest = { isEditingIntention = false },
