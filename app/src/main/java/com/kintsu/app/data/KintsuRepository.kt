@@ -204,8 +204,8 @@ class KintsuRepository(
                 )
             )
             val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-            val baseCoins = if (currentHour < 9) 4 else 2
-            val reason = if (currentHour < 9) "Morning habit completed (+2 early bonus)" else "Habit completed"
+            val baseCoins = if (currentHour < 9) 15 else 10
+            val reason = if (currentHour < 9) "Morning habit completed (+5 early bonus)" else "Habit completed"
             awardCoins(baseCoins, reason, "HABIT_COMPLETION", "habit_${habitId}_${epochDay}")
         } else {
             val nextCompleted = !current.isCompleted
@@ -325,9 +325,9 @@ class KintsuRepository(
             taskDao.updateTask(updated)
             syncEngine.recordLocalMutation("tasks", task.id, SyncOperation.UPSERT, syncEngine.serializeTask(updated))
             val baseCoins = when (task.priority) {
-                TaskPriority.HIGH -> 3
-                TaskPriority.MEDIUM -> 2
-                else -> 1
+                TaskPriority.HIGH -> 35
+                TaskPriority.MEDIUM -> 20
+                else -> 10
             }
             awardCoins(baseCoins, "Completed ${task.priority.name.lowercase()} task: ${task.title}", "TASK_COMPLETION", "task_${task.id}_${System.currentTimeMillis()}")
         } else {
@@ -438,7 +438,14 @@ class KintsuRepository(
     }
 
     suspend fun updateGoal(goal: GoalEntity) {
+        val oldGoal = goalDao.getGoalById(goal.id)
         goalDao.updateGoal(goal)
+        if (goal.manualProgressPercent >= 100 && (oldGoal == null || oldGoal.manualProgressPercent < 100)) {
+            awardCoins(50, "Achieved Goal: ${goal.title}", "GOAL_COMPLETED", "goal_${goal.id}_100")
+        } else if (oldGoal != null && goal.manualProgressPercent > oldGoal.manualProgressPercent) {
+            val milestone = (goal.manualProgressPercent / 25) * 25
+            awardCoins(15, "Advanced Goal: ${goal.title} (${goal.manualProgressPercent}%)", "GOAL_PROGRESS", "goal_${goal.id}_ms_${milestone}")
+        }
         notifyWidgets()
     }
 
@@ -517,7 +524,7 @@ class KintsuRepository(
             )
         )
         if (nextCompleted) {
-            awardCoins(1, "Daily intention fulfilled", "DAILY_INTENTION_FULFILL", "intention_fulfill_${intention.id}_${System.currentTimeMillis()}")
+            awardCoins(10, "Daily intention fulfilled", "DAILY_INTENTION_FULFILL", "intention_fulfill_${intention.dateEpochDay}")
         }
         notifyWidgets()
     }
@@ -536,7 +543,7 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
-        awardCoins(2, "Reflective journal entry written", "JOURNAL", "journal_${dateEpochDay}")
+        awardCoins(15, "Reflective journal entry written", "JOURNAL", "journal_${dateEpochDay}")
         notifyWidgets()
         return id
     }
@@ -1152,6 +1159,8 @@ class KintsuRepository(
 
     suspend fun seedShopCatalogIfEmpty() {
         val completeCatalog = ShopCatalog.createCompleteCatalog()
+        val validIds = completeCatalog.map { it.id }
+        wellbeingDao.deleteShopItemsNotIn(validIds)
         wellbeingDao.seedShopItems(completeCatalog)
         // Strictly update pricing and streak gates on unpurchased inventory items
         completeCatalog.forEach { catalogItem ->

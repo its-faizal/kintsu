@@ -89,7 +89,7 @@ fun ShopHomeScreen(
     val typography = KintsuTheme.typography
 
     // Active Category & Search / Filters State
-    var selectedCategory by remember { mutableStateOf("Discover") }
+    var selectedCategory by remember { mutableStateOf("Themes") }
     var searchQuery by remember { mutableStateOf("") }
     var filterOwnedOnly by remember { mutableStateOf(false) }
     var filterAffordableOnly by remember { mutableStateOf(false) }
@@ -116,7 +116,7 @@ fun ShopHomeScreen(
         var list = allShopItems
 
         // 1. Category Filter
-        if (selectedCategory != "Discover") {
+        if (selectedCategory != "Discover" && selectedCategory != "All") {
             list = list.filter { it.category.equals(selectedCategory, ignoreCase = true) }
         }
 

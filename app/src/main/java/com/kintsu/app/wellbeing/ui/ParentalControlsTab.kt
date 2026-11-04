@@ -94,6 +94,16 @@ fun ParentalControlsScreen(
         onSaveProtection(protected, tamper, h, m)
     }
 
+    fun isWithin10MinuteWindow(windowHour: Int, windowMinute: Int): Boolean {
+        val cal = java.util.Calendar.getInstance()
+        val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
+        val currentMin = cal.get(java.util.Calendar.MINUTE)
+        val currentTotalMin = currentHour * 60 + currentMin
+        val windowStart = windowHour * 60 + windowMinute
+        val windowEnd = windowStart + 10
+        return currentTotalMin in windowStart until windowEnd
+    }
+
     fun formatHourMinute(h: Int, m: Int): String {
         val amPm = if (h < 12) "AM" else "PM"
         val displayH = when {
@@ -178,6 +188,14 @@ fun ParentalControlsScreen(
                 Switch(
                     checked = isInvincibleEnabled,
                     onCheckedChange = {
+                        if (!it && settings.invincibleModeEnabled && !isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute)) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Invincible Mode is active. Changes can only be made during your daily 10-minute window (${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)} - ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute + 10)}).",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@Switch
+                        }
                         isInvincibleEnabled = it
                         commitInvincible(enabled = it)
                     },
@@ -197,17 +215,25 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    TimePickerDialog(
-                        context,
-                        { _, h, m ->
-                            invincibleHour = h
-                            invincibleMinute = m
-                            commitInvincible(h = h, m = m)
-                        },
-                        invincibleHour,
-                        invincibleMinute,
-                        false
-                    ).show()
+                    if (settings.invincibleModeEnabled && !isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute)) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Window changes locked by Invincible Mode until ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)}.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        TimePickerDialog(
+                            context,
+                            { _, h, m ->
+                                invincibleHour = h
+                                invincibleMinute = m
+                                commitInvincible(h = h, m = m)
+                            },
+                            invincibleHour,
+                            invincibleMinute,
+                            false
+                        ).show()
+                    }
                 }
                 .padding(spacing.m)
         ) {
@@ -542,6 +568,14 @@ fun ParentalControlsScreen(
                 Switch(
                     checked = isTamperProtection,
                     onCheckedChange = {
+                        if (!it && settings.tamperProtectionEnabled && !isWithin10MinuteWindow(settings.uninstallWindowHour, settings.uninstallWindowMinute)) {
+                            android.widget.Toast.makeText(
+                                context,
+                                "Tamper protection is active. Changes can only be made during your daily 10-minute window (${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute)} - ${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute + 10)}).",
+                                android.widget.Toast.LENGTH_LONG
+                            ).show()
+                            return@Switch
+                        }
                         isTamperProtection = it
                         commitProtection(tamper = it)
                     },
@@ -561,17 +595,25 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    TimePickerDialog(
-                        context,
-                        { _, h, m ->
-                            uninstallHour = h
-                            uninstallMinute = m
-                            commitProtection(h = h, m = m)
-                        },
-                        uninstallHour,
-                        uninstallMinute,
-                        false
-                    ).show()
+                    if (settings.tamperProtectionEnabled && !isWithin10MinuteWindow(settings.uninstallWindowHour, settings.uninstallWindowMinute)) {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Uninstall window changes locked until ${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute)}.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    } else {
+                        TimePickerDialog(
+                            context,
+                            { _, h, m ->
+                                uninstallHour = h
+                                uninstallMinute = m
+                                commitProtection(h = h, m = m)
+                            },
+                            uninstallHour,
+                            uninstallMinute,
+                            false
+                        ).show()
+                    }
                 }
                 .padding(spacing.m)
         ) {

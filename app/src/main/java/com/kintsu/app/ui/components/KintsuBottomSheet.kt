@@ -40,7 +40,7 @@ fun KintsuBottomSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     trailingAction: (@Composable () -> Unit)? = null,
     scrollable: Boolean = true,
-    showCloseButton: Boolean = true,
+    showCloseButton: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val colors = KintsuTheme.colors

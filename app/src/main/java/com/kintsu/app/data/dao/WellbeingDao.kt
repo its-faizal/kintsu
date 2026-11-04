@@ -155,6 +155,9 @@ interface WellbeingDao {
     @Query("UPDATE shop_inventory SET isUnlocked = 1, costCoins = 0")
     suspend fun unlockAllShopItems()
 
+    @Query("DELETE FROM shop_inventory WHERE id NOT IN (:validIds)")
+    suspend fun deleteShopItemsNotIn(validIds: List<String>)
+
     @Query("UPDATE shop_inventory SET isEquipped = 0 WHERE itemType = :itemType")
     suspend fun unequipAllOfType(itemType: String)
 

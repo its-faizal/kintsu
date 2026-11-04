@@ -22,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
@@ -59,11 +60,13 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
         val info = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or
-                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED or
+                    AccessibilityEvent.TYPE_WINDOWS_CHANGED
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
             flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
-                    AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS
-            notificationTimeout = 100
+                    AccessibilityServiceInfo.FLAG_REPORT_VIEW_IDS or
+                    AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+            notificationTimeout = 80
         }
         serviceInfo = info
 
@@ -78,11 +81,29 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         if (event == null) return
         val eventType = event.eventType
         if (eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+            eventType != AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED &&
+            eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED
         ) return
 
-        val pkgName = event.packageName?.toString() ?: return
-        if (ProtectedApps.isProtected(pkgName)) return
+        val pkgName = event.packageName?.toString() ?: ""
+
+        // 0. Tamper Protection & Invincible Mode Interception (Prioritized before protected app check)
+        if (pkgName.isNotBlank()) {
+            serviceScope.launch {
+                try {
+                    checkTamperAndInvincible(event, pkgName)
+                } catch (_: Exception) {}
+            }
+        }
+
+        // Multi-Window, Split-Screen & Pop-up Window Inspection
+        serviceScope.launch {
+            try {
+                inspectMultiWindowAndPopups(event)
+            } catch (_: Exception) {}
+        }
+
+        if (pkgName.isBlank() || ProtectedApps.isProtected(pkgName)) return
 
         val now = System.currentTimeMillis()
 
@@ -470,6 +491,127 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 } catch (_: Exception) {}
             }
         }
+    }
+
+
+    private fun isWithin10MinuteWindow(windowHour: Int, windowMinute: Int): Boolean {
+        val cal = Calendar.getInstance()
+        val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+        val currentMin = cal.get(Calendar.MINUTE)
+        val currentTotalMin = currentHour * 60 + currentMin
+        val windowStart = windowHour * 60 + windowMinute
+        val windowEnd = windowStart + 10 // strictly 10 minutes
+        return currentTotalMin in windowStart until windowEnd
+    }
+
+    private suspend fun checkTamperAndInvincible(event: AccessibilityEvent, pkgName: String): Boolean {
+        val settings = SettingsDataStore(applicationContext).settingsFlow.first()
+        if (!settings.wellbeingEnabled) return false
+
+        val isInvincibleActive = settings.invincibleModeEnabled
+        val isTamperActive = settings.tamperProtectionEnabled
+        if (!isInvincibleActive && !isTamperActive) return false
+
+        // Check if inside the 10-minute allowed modification window
+        val inInvincibleWindow = if (isInvincibleActive) isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute) else true
+        val inTamperWindow = if (isTamperActive) isWithin10MinuteWindow(settings.uninstallWindowHour, settings.uninstallWindowMinute) else true
+
+        if (inInvincibleWindow && inTamperWindow) {
+            // Legitimate 10-minute modification window
+            return false
+        }
+
+        val isSettingsOrInstaller = pkgName == "com.android.settings" ||
+                pkgName.contains("packageinstaller") ||
+                pkgName.contains("permissioncontroller") ||
+                pkgName == "com.android.vending"
+
+        if (!isSettingsOrInstaller) return false
+
+        val rootNode = try { rootInActiveWindow } catch (_: Exception) { null } ?: event.source ?: return false
+        val screenText = collectAllText(rootNode).lowercase()
+
+        val isTargetingKintsu = screenText.contains("kintsu")
+        val isUninstallAction = screenText.contains("uninstall") || screenText.contains("force stop") || screenText.contains("clear data") || screenText.contains("clear storage")
+        val isDisablingService = screenText.contains("accessibility") && (screenText.contains("turn off") || screenText.contains("stop") || screenText.contains("disable"))
+        val isDeviceAdminAction = screenText.contains("device admin") && (screenText.contains("deactivate") || screenText.contains("remove"))
+        val isUserSwitchAction = screenText.contains("switch user") || screenText.contains("guest") || screenText.contains("multiple users") || screenText.contains("add user")
+
+        if ((isTargetingKintsu && (isUninstallAction || isDisablingService || isDeviceAdminAction)) ||
+            (isUninstallAction && isTargetingKintsu) ||
+            isUserSwitchAction
+        ) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            performGlobalAction(GLOBAL_ACTION_BACK)
+
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    applicationContext,
+                    "Invincible Mode: Settings & uninstalling are locked until your daily 10-minute window.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            return true
+        }
+
+        return false
+    }
+
+    private suspend fun inspectMultiWindowAndPopups(event: AccessibilityEvent) {
+        val settings = SettingsDataStore(applicationContext).settingsFlow.first()
+        if (!settings.wellbeingEnabled || settings.protectionFailSafeTripped) return
+
+        val currentWindows = try { windows } catch (_: Exception) { emptyList() }
+        for (w in currentWindows) {
+            val wRoot = try { w.root } catch (_: Exception) { null } ?: continue
+            val wPkg = wRoot.packageName?.toString() ?: continue
+            if (ProtectedApps.isProtected(wPkg)) continue
+
+            // If short-form content in a floating / pop-up / split window
+            if (settings.shortFormBlockingEnabled && ShortFormContentDetector.isShortFormContent(
+                    event = event,
+                    rootNode = wRoot,
+                    packageName = wPkg,
+                    blockYouTube = settings.blockYouTubeShorts,
+                    blockInstagram = settings.blockInstagramReels,
+                    blockTikTok = settings.blockTikTok,
+                    blockFacebook = settings.blockFacebookReels,
+                    blockSnapchat = settings.blockSnapchatSpotlight,
+                    blockWeb = settings.blockWebShorts
+                )
+            ) {
+                if (!com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(wPkg)) {
+                    // Close the popup/split window
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+
+                    val overlayIntent = Intent(applicationContext, com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PACKAGE, wPkg)
+                        putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PLATFORM, "Video Feed")
+                    }
+                    startActivity(overlayIntent)
+                    return
+                }
+            }
+        }
+    }
+
+    private fun collectAllText(node: android.view.accessibility.AccessibilityNodeInfo?): String {
+        if (node == null) return ""
+        val sb = StringBuilder()
+        node.text?.let { sb.append(it).append(" ") }
+        node.contentDescription?.let { sb.append(it).append(" ") }
+        for (i in 0 until node.childCount) {
+            try {
+                val child = node.getChild(i)
+                if (child != null) {
+                    sb.append(collectAllText(child)).append(" ")
+                    child.recycle()
+                }
+            } catch (_: Exception) {}
+        }
+        return sb.toString()
     }
 
     override fun onInterrupt() {}

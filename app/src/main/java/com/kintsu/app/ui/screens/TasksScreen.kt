@@ -1311,16 +1311,35 @@ private fun TaskEditSheet(
                 singleLine = true
             )
 
-            // Priority Selector
-            Text(
-                text = "Priority",
-                style = typography.caption,
-                color = colors.textSecondary
-            )
+            // Difficulty & Priority Selector (3 Options with Gold Rewards)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Difficulty & Reward",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+                Text(
+                    text = when (priority) {
+                        TaskPriority.LOW -> "Easy • +10 Gold"
+                        TaskPriority.MEDIUM -> "Medium • +20 Gold"
+                        TaskPriority.HIGH -> "Hard • +35 Gold"
+                    },
+                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                    color = colors.goldSeam
+                )
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                TaskPriority.values().forEach { p ->
+                listOf(
+                    TaskPriority.LOW to "Easy (+10)",
+                    TaskPriority.MEDIUM to "Medium (+20)",
+                    TaskPriority.HIGH to "Hard (+35)"
+                ).forEach { (p, label) ->
                     KintsuFilterChip(
-                        label = p.displayName,
+                        label = label,
                         selected = priority == p,
                         onClick = { priority = p }
                     )

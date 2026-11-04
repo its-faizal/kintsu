@@ -119,12 +119,35 @@ fun KintsuTopBar(
                         )
                     }
 
-                    // Right Action Cluster: Combined Shop & Coins Pill + Customize Icon
+                    // Right Action Cluster: Customize Icon (Left) + Coins & Shop Pill (Far Right)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(spacing.xs)
                     ) {
-                        // Combined Shop & Coins Action Pill
+                        // Customize Icon Button
+                        if (onCustomizationClick != null) {
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(colors.goldSeam.copy(alpha = 0.14f))
+                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), CircleShape)
+                                    .clickable(
+                                        interactionSource = customizationInteraction,
+                                        indication = null,
+                                        onClick = onCustomizationClick
+                                    )
+                                    .semantics {
+                                        role = Role.Button
+                                        contentDescription = "Customize Themes and Styles"
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                IconCustomizer(color = colors.goldSeam, size = 18.dp)
+                            }
+                        }
+
+                        // Combined Shop & Coins Action Pill at the far RIGHT
                         if (onShopClick != null) {
                             Box(
                                 modifier = Modifier
@@ -158,29 +181,6 @@ fun KintsuTopBar(
                                         )
                                     )
                                 }
-                            }
-                        }
-
-                        // Customize Icon Button (Positioned at right of Shop)
-                        if (onCustomizationClick != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(colors.goldSeam.copy(alpha = 0.14f))
-                                    .border(1.dp, colors.goldSeam.copy(alpha = 0.45f), CircleShape)
-                                    .clickable(
-                                        interactionSource = customizationInteraction,
-                                        indication = null,
-                                        onClick = onCustomizationClick
-                                    )
-                                    .semantics {
-                                        role = Role.Button
-                                        contentDescription = "Customize Themes and Styles"
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                IconCustomizer(color = colors.goldSeam, size = 18.dp)
                             }
                         }
                     }
