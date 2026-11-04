@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.FabPosition
+import com.kintsu.app.ui.components.QuickCreationFab
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -411,6 +413,23 @@ fun KintsuApp(
 
             Scaffold(
                 contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                floatingActionButton = {
+                    QuickCreationFab(
+                        onNewTask = {
+                            viewModel.selectTab(KintsuNavTab.TASKS)
+                            externalAddTask = true
+                        },
+                        onNewHabit = {
+                            viewModel.selectTab(KintsuNavTab.HABITS)
+                            externalAddHabit = true
+                        },
+                        onNewGoal = {
+                            viewModel.selectTab(KintsuNavTab.GOALS)
+                            externalAddGoal = true
+                        }
+                    )
+                },
+                floatingActionButtonPosition = FabPosition.End,
                 bottomBar = {
                     KintsuNavBar(
                         selectedTab = currentTab,

@@ -24,6 +24,13 @@ object ShortFormContentDetector {
         "com.duckduckgo.mobile.android"
     )
 
+    fun isShortFormPackage(pkgName: String): Boolean {
+        val lower = pkgName.lowercase()
+        return lower.contains("instagram") || lower.contains("youtube") ||
+                lower.contains("tiktok") || lower.contains("facebook") ||
+                lower.contains("snapchat")
+    }
+
     fun isShortFormContent(
         event: AccessibilityEvent,
         rootNode: AccessibilityNodeInfo?,

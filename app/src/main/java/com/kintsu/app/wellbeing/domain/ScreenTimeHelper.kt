@@ -88,6 +88,10 @@ object ScreenTimeHelper {
         return result
     }
 
+    fun getPackageUsageTodayMinutes(context: Context, packageName: String): Long {
+        return getPerAppUsageTodayMinutes(context)[packageName] ?: 0L
+    }
+
     /**
      * Returns a list of daily screen time in minutes for each of the last 7 days (including today).
      */

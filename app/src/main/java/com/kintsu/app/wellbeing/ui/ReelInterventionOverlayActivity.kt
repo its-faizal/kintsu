@@ -76,6 +76,24 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
         const val EXTRA_PACKAGE = "extra_package"
         private val temporaryUnlockTimestamps = mutableMapOf<String, Long>()
         private val recentPassExpiredTimestamps = mutableMapOf<String, Long>()
+        private var emergencyPassDateEpochDay = 0L
+        private var emergencyPassCountToday = 0
+
+        fun getRemainingEmergencyPasses(): Int {
+            val todayEpoch = java.time.LocalDate.now().toEpochDay()
+            if (emergencyPassDateEpochDay != todayEpoch) {
+                emergencyPassDateEpochDay = todayEpoch
+                emergencyPassCountToday = 0
+            }
+            return (2 - emergencyPassCountToday).coerceAtLeast(0)
+        }
+
+        fun consumeEmergencyPass(pkgName: String): Boolean {
+            if (getRemainingEmergencyPasses() <= 0) return false
+            emergencyPassCountToday++
+            grantTemporaryPass(pkgName, 5)
+            return true
+        }
 
         fun isTemporarilyUnlocked(pkgName: String): Boolean {
             val expireTime = temporaryUnlockTimestamps[pkgName] ?: return false
@@ -112,6 +130,14 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
         )
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
 
+        if (isInMultiWindowMode) {
+            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(homeIntent)
+        }
+
         val platform = intent.getStringExtra(EXTRA_PLATFORM) ?: "Short-Form Feed"
         val pkgName = intent.getStringExtra(EXTRA_PACKAGE) ?: ""
 
@@ -139,9 +165,10 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
                         logIntervention(pkgName, "BREATHING_PAUSE")
                     },
                     onAllowFiveMinutes = {
-                        grantTemporaryPass(pkgName, 5)
-                        logIntervention(pkgName, "5_MIN_PASS")
-                        finish()
+                        if (consumeEmergencyPass(pkgName)) {
+                            logIntervention(pkgName, "5_MIN_PASS")
+                            finish()
+                        }
                     },
                     onLockForToday = {
                         grantTemporaryPass(pkgName, 0)
@@ -425,14 +452,16 @@ fun ReelOverlayContent(
                         }
                     }
 
-                    // Option 3: Allow 5 Minutes Conscious Watch
+                    // Option 3: Allow 5 Minutes Conscious Watch (Emergency 5 Mins x 2 Max)
+                    val remainingPasses = ReelInterventionOverlayActivity.getRemainingEmergencyPasses()
+                    val canUsePass = remainingPasses > 0
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(14.dp))
-                            .background(colors.surface)
-                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                            .clickable(onClick = onAllowFiveMinutes)
+                            .background(if (canUsePass) colors.surface else colors.surface.copy(alpha = 0.4f))
+                            .border(1.dp, if (canUsePass) colors.border.copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(14.dp))
+                            .clickable(enabled = canUsePass, onClick = onAllowFiveMinutes)
                             .padding(vertical = 14.dp, horizontal = 16.dp)
                             .semantics { role = Role.Button }
                     ) {
@@ -444,20 +473,20 @@ fun ReelOverlayContent(
                                 modifier = Modifier
                                     .size(34.dp)
                                     .clip(CircleShape)
-                                    .background(colors.accentSoft),
+                                    .background(if (canUsePass) colors.goldSeamSoft else colors.border),
                                 contentAlignment = Alignment.Center
                             ) {
-                                IconClock(size = 16.dp, color = colors.accent)
+                                IconClock(size = 16.dp, color = if (canUsePass) colors.goldSeam else colors.textTertiary)
                             }
                             Column {
                                 Text(
-                                    text = "Allow 5-Minute Conscious Watch",
+                                    text = if (canUsePass) "Emergency 5-Min Pass ($remainingPasses of 2 Left)" else "Emergency Passes Exhausted (0 of 2 Left)",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = colors.textPrimary
+                                    color = if (canUsePass) colors.textPrimary else colors.textTertiary
                                 )
                                 Text(
-                                    text = "Temporary pass with re-intervention reminder",
+                                    text = if (canUsePass) "Mindful 5m pass. Strictly limited to 2x per day." else "Daily quota of 2 emergency passes reached.",
                                     fontSize = 11.sp,
                                     color = colors.textSecondary
                                 )

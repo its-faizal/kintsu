@@ -28,9 +28,9 @@
     <application
         android:allowBackup="true"
         android:enableOnBackInvokedCallback="true"
-        android:icon="@drawable/ic_kintsu_original"
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@drawable/ic_kintsu_original"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Kintsu">
@@ -49,8 +49,8 @@
             android:targetActivity=".MainActivity"
             android:exported="true"
             android:enabled="true"
-            android:icon="@drawable/ic_kintsu_original"
-            android:roundIcon="@drawable/ic_kintsu_original"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -407,6 +407,9 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
@@ -430,11 +433,15 @@
             android:name=".wellbeing.ui.ReelInterventionOverlayActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:launchMode="singleTop"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.kintsu.app.reelintervention"
             android:resizeableActivity="false"
             android:supportsPictureInPicture="false"
             android:showWhenLocked="true"
             android:turnScreenOn="true"
+            android:screenOrientation="portrait"
+            android:noHistory="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.Kintsu" />
 

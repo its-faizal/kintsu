@@ -14,6 +14,7 @@ import com.kintsu.app.wellbeing.domain.BlockMode
 import com.kintsu.app.wellbeing.domain.DailyLimitTracker
 import com.kintsu.app.wellbeing.domain.ProtectedApps
 import com.kintsu.app.wellbeing.domain.ScheduleEvaluator
+import com.kintsu.app.wellbeing.domain.ScreenTimeHelper
 import com.kintsu.app.wellbeing.domain.ShortFormContentDetector
 import com.kintsu.app.wellbeing.ui.BlockActivity
 import kotlinx.coroutines.CoroutineScope
@@ -182,8 +183,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
                 lastTriggeredTimeMillis[pkgName] = now
 
-                // Forcefully eject the background video player immediately
-                performGlobalAction(GLOBAL_ACTION_BACK)
+                // Forcefully minimize background video player immediately so it cannot keep playing or trap overlay in pop-up
+                performGlobalAction(GLOBAL_ACTION_HOME)
 
                 // Log intervention
                 db.wellbeingDao().insertIntervention(
@@ -335,13 +336,43 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
+        // 3.5 Check Active Mindful Focus Session
+        val currentFocus = com.kintsu.app.focus.FocusForegroundService.focusState.value
+        if (currentFocus.isRunning && !currentFocus.isBreak && !ProtectedApps.isProtected(packageName)) {
+            val isShort = ShortFormContentDetector.isShortFormPackage(packageName)
+            val isDistraction = ShortFormContentDetector.BROWSER_PACKAGES.contains(packageName) || isShort ||
+                    packageName.contains("instagram") || packageName.contains("tiktok") ||
+                    packageName.contains("youtube") || packageName.contains("facebook") ||
+                    packageName.contains("twitter") || packageName.contains("snapchat") ||
+                    packageName.contains("reddit") || packageName.contains("netflix") ||
+                    packageName.contains("game")
+
+            if (isDistraction) {
+                lastTriggeredTimeMillis[packageName] = nowMillis
+                performGlobalAction(GLOBAL_ACTION_HOME)
+                triggerBlockScreen(
+                    targetPackage = packageName,
+                    ruleMode = "FOCUS_ACTIVE",
+                    strictness = "INVINCIBLE",
+                    customPrompt = "Mindful Focus is active (${currentFocus.durationMinutes}m). Distractions are blocked until your session concludes.",
+                    pauseDurationSeconds = 15,
+                    interventionStyle = settings.interventionStyle
+                )
+                return
+            }
+        }
+
         // 4. Check App Groups & Rules
         val allGroups = db.wellbeingDao().getAllAppGroups().first()
         val matchingGroups = allGroups.filter { group ->
             group.packageNames.split(",").map { it.trim() }.contains(packageName)
         }
 
-        if (matchingGroups.isEmpty()) return
+        val isDistractionCandidate = matchingGroups.isNotEmpty() ||
+                ShortFormContentDetector.isShortFormPackage(packageName) ||
+                ShortFormContentDetector.BROWSER_PACKAGES.contains(packageName)
+
+        if (!isDistractionCandidate) return
 
         val todayEpoch = LocalDate.now().toEpochDay()
         val localTime = LocalTime.now()
@@ -449,7 +480,9 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         return when (rule.mode) {
             BlockMode.DAILY_LIMIT.name -> {
                 val usageSec = limitTracker.getUsageSecondsToday(packageName)
-                usageSec >= (rule.dailyLimitMinutes * 60L)
+                val systemUsageMin = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, packageName)
+                val totalUsedMin = (usageSec / 60L).coerceAtLeast(systemUsageMin)
+                totalUsedMin >= rule.dailyLimitMinutes
             }
             BlockMode.SCHEDULE.name, BlockMode.BEDTIME.name -> {
                 val schedules = db.wellbeingDao().getSchedulesForRule(rule.id)
@@ -616,12 +649,12 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 if (!com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(wPkg)) {
                     // Forcefully terminate the popup / split screen view
                     performGlobalAction(GLOBAL_ACTION_HOME)
-                    performGlobalAction(GLOBAL_ACTION_BACK)
 
                     val overlayIntent = Intent(applicationContext, com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_CLEAR_TASK
+                                Intent.FLAG_ACTIVITY_CLEAR_TASK or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
                         putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PACKAGE, wPkg)
                         putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PLATFORM, "Video Feed")
                     }

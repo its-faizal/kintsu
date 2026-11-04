@@ -107,27 +107,33 @@ fun FocusScreen(
     val activeDuration = if (isBreakMode) selectedBreakDuration else selectedFocusDuration
 
     // Ticking remaining time
-    var remainingSeconds by remember { mutableLongStateOf(FocusTimerManager.getRemainingSeconds(focusState)) }
+    val initialSeconds = if (!focusState.isRunning) activeDuration * 60L else FocusTimerManager.getRemainingSeconds(focusState)
+    var remainingSeconds by remember { mutableLongStateOf(initialSeconds) }
 
-    LaunchedEffect(focusState) {
-        while (true) {
-            remainingSeconds = FocusTimerManager.getRemainingSeconds(focusState)
-            delay(500L)
+    LaunchedEffect(focusState, activeDuration) {
+        if (!focusState.isRunning) {
+            remainingSeconds = activeDuration * 60L
+        } else {
+            while (true) {
+                remainingSeconds = FocusTimerManager.getRemainingSeconds(focusState)
+                delay(500L)
+            }
         }
     }
 
+    val displaySeconds = if (focusState.isRunning) remainingSeconds else (activeDuration * 60L)
     val totalDurationSeconds = if (focusState.isRunning) {
         focusState.durationMinutes * 60L
     } else {
         activeDuration * 60L
     }
 
-    val progressFraction = if (totalDurationSeconds > 0) {
+    val progressFraction = if (focusState.isRunning && totalDurationSeconds > 0) {
         ((totalDurationSeconds - remainingSeconds).toFloat() / totalDurationSeconds.toFloat()).coerceIn(0f, 1f)
-    } else 0f
+    } else 1f
 
-    val minutes = remainingSeconds / 60
-    val seconds = remainingSeconds % 60
+    val minutes = displaySeconds / 60
+    val seconds = displaySeconds % 60
     val formattedTime = String.format("%02d:%02d", minutes, seconds)
 
     BackHandler {
@@ -340,22 +346,68 @@ fun FocusScreen(
                     }
 
                     if (isCustomSelected) {
-                        Column(modifier = Modifier.padding(top = spacing.xs)) {
-                            Text(
-                                text = "Custom: ${selectedFocusDuration} minutes",
-                                style = typography.caption,
-                                color = colors.textSecondary
-                            )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = spacing.xs),
+                            verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Custom: ${selectedFocusDuration} minutes",
+                                    style = typography.caption.copy(fontWeight = FontWeight.Bold),
+                                    color = colors.goldSeam
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(colors.surface)
+                                            .border(1.dp, colors.border, CircleShape)
+                                            .clickable {
+                                                val next = (selectedFocusDuration - 5).coerceAtLeast(5)
+                                                selectedFocusDuration = next
+                                                customDuration = next.toFloat()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("-5", fontSize = 11.sp, color = colors.textPrimary)
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(CircleShape)
+                                            .background(colors.surface)
+                                            .border(1.dp, colors.goldSeam.copy(alpha = 0.5f), CircleShape)
+                                            .clickable {
+                                                val next = (selectedFocusDuration + 5).coerceAtMost(180)
+                                                selectedFocusDuration = next
+                                                customDuration = next.toFloat()
+                                            },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("+5", fontSize = 11.sp, color = colors.goldSeam)
+                                    }
+                                }
+                            }
                             Slider(
                                 value = customDuration,
                                 onValueChange = {
                                     customDuration = it
                                     selectedFocusDuration = it.toInt()
                                 },
-                                valueRange = 5f..120f,
+                                valueRange = 5f..180f,
                                 colors = SliderDefaults.colors(
-                                    thumbColor = colors.accent,
-                                    activeTrackColor = colors.accent,
+                                    thumbColor = colors.goldSeam,
+                                    activeTrackColor = colors.goldSeam,
                                     inactiveTrackColor = colors.border
                                 )
                             )

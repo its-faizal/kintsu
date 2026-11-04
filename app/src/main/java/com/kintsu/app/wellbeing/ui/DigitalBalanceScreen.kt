@@ -339,5 +339,17 @@ fun DigitalBalanceScreen(
                 }
             }
         }
+
+        if (showAppPicker) {
+            AppRestrictionsSheet(
+                onDismiss = { showAppPicker = false }
+            )
+        }
+
+        if (showGroupPicker) {
+            GroupRestrictionsSheet(
+                onDismiss = { showGroupPicker = false }
+            )
+        }
     }
 }

@@ -1,10 +1,10 @@
 package com.kintsu.app.wellbeing.ui
 
-import android.app.TimePickerDialog
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +26,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -47,7 +49,12 @@ import com.kintsu.app.ui.components.IconChevronRight
 import com.kintsu.app.ui.components.IconLock
 import com.kintsu.app.ui.components.IconMoon
 import com.kintsu.app.ui.components.IconShield
+import com.kintsu.app.ui.components.KintsuButton
+import com.kintsu.app.ui.components.KintsuButtonVariant
+import com.kintsu.app.ui.components.KintsuTimePickerSheet
 import com.kintsu.app.ui.theme.KintsuTheme
+import com.kintsu.app.wellbeing.service.KintsuDeviceAdminReceiver
+import java.util.Calendar
 import java.util.Locale
 
 @Composable
@@ -75,6 +82,49 @@ fun ParentalControlsScreen(
     var uninstallHour by remember(settings.uninstallWindowHour) { mutableIntStateOf(settings.uninstallWindowHour) }
     var uninstallMinute by remember(settings.uninstallWindowMinute) { mutableIntStateOf(settings.uninstallWindowMinute) }
 
+    // Premium Kintsu Time Picker states
+    var showInvinciblePicker by remember { mutableStateOf(false) }
+    var showUninstallPicker by remember { mutableStateOf(false) }
+
+    // Device Admin status
+    var isDeviceAdminActive by remember { mutableStateOf(false) }
+    val dpm = remember { context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager }
+    val adminComponent = remember { ComponentName(context, KintsuDeviceAdminReceiver::class.java) }
+
+    LaunchedEffect(Unit) {
+        isDeviceAdminActive = dpm?.isAdminActive(adminComponent) == true
+    }
+
+    fun isWithin10MinuteWindow(windowHour: Int, windowMinute: Int): Boolean {
+        val cal = Calendar.getInstance()
+        val currentHour = cal.get(Calendar.HOUR_OF_DAY)
+        val currentMin = cal.get(Calendar.MINUTE)
+        val currentTotalMin = currentHour * 60 + currentMin
+        val windowStart = windowHour * 60 + windowMinute
+        val windowEnd = windowStart + 10
+        return currentTotalMin in windowStart until windowEnd
+    }
+
+    val isLockedByInvincible = settings.invincibleModeEnabled && !isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute)
+
+    fun formatHourMinute(h: Int, m: Int): String {
+        val amPm = if (h < 12) "AM" else "PM"
+        val displayH = when {
+            h == 0 -> 12
+            h > 12 -> h - 12
+            else -> h
+        }
+        return String.format(Locale.US, "%d:%02d %s", displayH, m, amPm)
+    }
+
+    fun showInvincibleLockedToast() {
+        Toast.makeText(
+            context,
+            "Invincible Mode Active: Changes are locked until your daily 10-minute window (${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)} - ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute + 10)}).",
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
     fun commitInvincible(
         enabled: Boolean = isInvincibleEnabled,
         h: Int = invincibleHour,
@@ -92,26 +142,6 @@ fun ParentalControlsScreen(
         m: Int = uninstallMinute
     ) {
         onSaveProtection(protected, tamper, h, m)
-    }
-
-    fun isWithin10MinuteWindow(windowHour: Int, windowMinute: Int): Boolean {
-        val cal = java.util.Calendar.getInstance()
-        val currentHour = cal.get(java.util.Calendar.HOUR_OF_DAY)
-        val currentMin = cal.get(java.util.Calendar.MINUTE)
-        val currentTotalMin = currentHour * 60 + currentMin
-        val windowStart = windowHour * 60 + windowMinute
-        val windowEnd = windowStart + 10
-        return currentTotalMin in windowStart until windowEnd
-    }
-
-    fun formatHourMinute(h: Int, m: Int): String {
-        val amPm = if (h < 12) "AM" else "PM"
-        val displayH = when {
-            h == 0 -> 12
-            h > 12 -> h - 12
-            else -> h
-        }
-        return String.format(Locale.US, "%d:%02d %s", displayH, m, amPm)
     }
 
     Column(
@@ -136,20 +166,104 @@ fun ParentalControlsScreen(
             }
             Spacer(modifier = Modifier.width(spacing.m))
             Text(
-                text = "Parental controls",
-                fontSize = 22.sp,
+                text = "Parental Controls & Invincible Mode",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.textPrimary
             )
         }
 
-        Text(
-            text = "When Invincible Mode is on, you won't be able to adjust selected limits after reaching your daily quota. However, you can make changes within a selected 10-minute invincible window.",
-            style = typography.caption.copy(lineHeight = 18.sp),
-            color = colors.textSecondary
-        )
+        if (isLockedByInvincible) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(colors.warning.copy(alpha = 0.15f))
+                    .border(1.dp, colors.warning.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .padding(spacing.m)
+            ) {
+                Text(
+                    text = "🔒 Invincible Mode Active: All options and restrictions are locked. Changes can only be made during your daily 10-minute window (${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)} - ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute + 10)}).",
+                    style = typography.caption.copy(lineHeight = 16.sp, fontWeight = FontWeight.SemiBold),
+                    color = colors.warning
+                )
+            }
+        } else {
+            Text(
+                text = "When Invincible Mode is enabled, adjustments to restrictions, apps, and uninstall protections are strictly forbidden outside your selected daily 10-minute window.",
+                style = typography.caption.copy(lineHeight = 18.sp),
+                color = colors.textSecondary
+            )
+        }
 
-        // 1. Activate Invincible Mode Card
+        // --- 1. HARDWARE DEVICE ADMIN REBOOT PROTECTION CARD ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceElevated)
+                .border(1.dp, if (isDeviceAdminActive) colors.goldSeam.copy(alpha = 0.6f) else colors.warning, RoundedCornerShape(16.dp))
+                .padding(spacing.m)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(colors.surface),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconShield(size = 18.dp, color = if (isDeviceAdminActive) colors.goldSeam else colors.warning)
+                        }
+
+                        Column {
+                            Text(
+                                text = "Device Admin Reboot Protection",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = if (isDeviceAdminActive) "Active: Android OS blocks uninstallation on launcher and reboot."
+                                else "Inactive: Android can allow deletion right after restart.",
+                                fontSize = 11.sp,
+                                color = if (isDeviceAdminActive) colors.goldSeam else colors.warning
+                            )
+                        }
+                    }
+                }
+
+                if (!isDeviceAdminActive) {
+                    KintsuButton(
+                        text = "Activate Device Administrator",
+                        onClick = {
+                            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                                putExtra(
+                                    DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                    "Kintsu requires Device Administrator permission to permanently block uninstall bypass and reboot deletion."
+                                )
+                            }
+                            context.startActivity(intent)
+                        },
+                        variant = KintsuButtonVariant.PRIMARY,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // --- 2. ACTIVATE INVINCIBLE MODE CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -177,23 +291,27 @@ fun ParentalControlsScreen(
                     ) {
                         IconShield(size = 20.dp, color = colors.accent)
                     }
-                    Text(
-                        text = "Activate invincible mode",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
+                    Column {
+                        Text(
+                            text = "Activate Invincible Mode",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Lock all wellbeing settings outside the 10m window",
+                            fontSize = 11.sp,
+                            color = colors.textSecondary
+                        )
+                    }
                 }
 
                 Switch(
                     checked = isInvincibleEnabled,
+                    enabled = !isLockedByInvincible,
                     onCheckedChange = {
-                        if (!it && settings.invincibleModeEnabled && !isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute)) {
-                            android.widget.Toast.makeText(
-                                context,
-                                "Invincible Mode is active. Changes can only be made during your daily 10-minute window (${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)} - ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute + 10)}).",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
+                        if (isLockedByInvincible) {
+                            showInvincibleLockedToast()
                             return@Switch
                         }
                         isInvincibleEnabled = it
@@ -207,7 +325,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // 2. Invincible Window Card
+        // --- 3. INVINCIBLE WINDOW CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -215,24 +333,10 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    if (settings.invincibleModeEnabled && !isWithin10MinuteWindow(settings.invincibleWindowHour, settings.invincibleWindowMinute)) {
-                        android.widget.Toast.makeText(
-                            context,
-                            "Window changes locked by Invincible Mode until ${formatHourMinute(settings.invincibleWindowHour, settings.invincibleWindowMinute)}.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
                     } else {
-                        TimePickerDialog(
-                            context,
-                            { _, h, m ->
-                                invincibleHour = h
-                                invincibleMinute = m
-                                commitInvincible(h = h, m = m)
-                            },
-                            invincibleHour,
-                            invincibleMinute,
-                            false
-                        ).show()
+                        showInvinciblePicker = true
                     }
                 }
                 .padding(spacing.m)
@@ -244,13 +348,13 @@ fun ParentalControlsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Invincible window",
+                        text = "Invincible Window (10 Minutes)",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                     Text(
-                        text = "Selected limits can be modified within 10 minutes from the selected time.",
+                        text = "Settings can only be adjusted within 10 minutes from this time.",
                         fontSize = 12.sp,
                         color = colors.textSecondary
                     )
@@ -265,73 +369,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // 3. App Restrictions Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.surfaceElevated)
-                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                .clickable { onOpenAppRestrictions() }
-                .padding(spacing.m)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "App restrictions",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        text = "Prevent changes to the app's selected restrictions once the daily limits are exceeded.",
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
-                }
-
-                IconChevronRight(color = colors.textSecondary, size = 18.dp)
-            }
-        }
-
-        // 4. Group Restrictions Card
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.surfaceElevated)
-                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                .clickable { onOpenGroupRestrictions() }
-                .padding(spacing.m)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Group restrictions",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        text = "Prevent changes to the group's selected restrictions once the daily limits are exceeded.",
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
-                }
-
-                IconChevronRight(color = colors.textSecondary, size = 18.dp)
-            }
-        }
-
-        // 5. Include Shorts Timer Checkbox Card
+        // --- 4. APP RESTRICTIONS CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -339,8 +377,90 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    includeShorts = !includeShorts
-                    commitInvincible(shorts = includeShorts)
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
+                    } else {
+                        onOpenAppRestrictions()
+                    }
+                }
+                .padding(spacing.m)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "App Restrictions & Timers",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Configure daily usage quota and limits for individual apps.",
+                        fontSize = 12.sp,
+                        color = colors.textSecondary
+                    )
+                }
+
+                IconChevronRight(color = colors.textSecondary, size = 18.dp)
+            }
+        }
+
+        // --- 5. GROUP RESTRICTIONS CARD ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceElevated)
+                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .clickable {
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
+                    } else {
+                        onOpenGroupRestrictions()
+                    }
+                }
+                .padding(spacing.m)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Category & Group Restrictions",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Set category overall timer across social, video, and game bundles.",
+                        fontSize = 12.sp,
+                        color = colors.textSecondary
+                    )
+                }
+
+                IconChevronRight(color = colors.textSecondary, size = 18.dp)
+            }
+        }
+
+        // --- 6. INCLUDE SHORTS TIMER CARD ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceElevated)
+                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .clickable {
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
+                    } else {
+                        includeShorts = !includeShorts
+                        commitInvincible(shorts = includeShorts)
+                    }
                 }
                 .padding(spacing.m)
         ) {
@@ -366,13 +486,13 @@ fun ParentalControlsScreen(
 
                     Column {
                         Text(
-                            text = "Include shorts timer",
+                            text = "Include Shorts & Reel Interventions",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Prevents changes after reaching your daily shorts limit.",
+                            text = "Prevents changes to shorts blocking. Max 2x 5m passes daily.",
                             fontSize = 12.sp,
                             color = colors.textSecondary
                         )
@@ -381,9 +501,14 @@ fun ParentalControlsScreen(
 
                 Checkbox(
                     checked = includeShorts,
+                    enabled = !isLockedByInvincible,
                     onCheckedChange = {
-                        includeShorts = it
-                        commitInvincible(shorts = it)
+                        if (isLockedByInvincible) {
+                            showInvincibleLockedToast()
+                        } else {
+                            includeShorts = it
+                            commitInvincible(shorts = it)
+                        }
                     },
                     colors = CheckboxDefaults.colors(
                         checkedColor = colors.accent,
@@ -393,7 +518,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // 6. Include Bedtime Checkbox Card
+        // --- 7. INCLUDE BEDTIME CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -401,8 +526,12 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    includeBedtime = !includeBedtime
-                    commitInvincible(bedtime = includeBedtime)
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
+                    } else {
+                        includeBedtime = !includeBedtime
+                        commitInvincible(bedtime = includeBedtime)
+                    }
                 }
                 .padding(spacing.m)
         ) {
@@ -428,13 +557,13 @@ fun ParentalControlsScreen(
 
                     Column {
                         Text(
-                            text = "Include bedtime",
+                            text = "Include Bedtime Sanctuary",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Prevents changes during the active bedtime schedule.",
+                            text = "Prevents changes during the active bedtime curfew.",
                             fontSize = 12.sp,
                             color = colors.textSecondary
                         )
@@ -443,9 +572,14 @@ fun ParentalControlsScreen(
 
                 Checkbox(
                     checked = includeBedtime,
+                    enabled = !isLockedByInvincible,
                     onCheckedChange = {
-                        includeBedtime = it
-                        commitInvincible(bedtime = it)
+                        if (isLockedByInvincible) {
+                            showInvincibleLockedToast()
+                        } else {
+                            includeBedtime = it
+                            commitInvincible(bedtime = it)
+                        }
                     },
                     colors = CheckboxDefaults.colors(
                         checkedColor = colors.accent,
@@ -455,15 +589,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // --- SECTION: PARENTAL CONTROLS ---
-        Text(
-            text = "Parental controls",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.accent
-        )
-
-        // 7. Protected Access Card
+        // --- 8. PROTECTED ACCESS CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -494,13 +620,13 @@ fun ParentalControlsScreen(
 
                     Column {
                         Text(
-                            text = "Protected access",
+                            text = "Protected Access",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Protect Mindful with your device lock.",
+                            text = "Protect Kintsu with your biometric or device lock.",
                             fontSize = 12.sp,
                             color = colors.textSecondary
                         )
@@ -509,9 +635,14 @@ fun ParentalControlsScreen(
 
                 Switch(
                     checked = isProtectedAccess,
+                    enabled = !isLockedByInvincible,
                     onCheckedChange = {
-                        isProtectedAccess = it
-                        commitProtection(protected = it)
+                        if (isLockedByInvincible) {
+                            showInvincibleLockedToast()
+                        } else {
+                            isProtectedAccess = it
+                            commitProtection(protected = it)
+                        }
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = colors.accent,
@@ -521,7 +652,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // 8. Tamper Protection Card
+        // --- 9. TAMPER PROTECTION CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -552,13 +683,13 @@ fun ParentalControlsScreen(
 
                     Column {
                         Text(
-                            text = "Tamper protection",
+                            text = "Tamper Protection",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.textPrimary
                         )
                         Text(
-                            text = "Prevent uninstalling and force stopping the app.",
+                            text = "Prevent uninstalling and force-stopping the app.",
                             fontSize = 12.sp,
                             color = colors.textSecondary
                         )
@@ -567,17 +698,14 @@ fun ParentalControlsScreen(
 
                 Switch(
                     checked = isTamperProtection,
+                    enabled = !isLockedByInvincible,
                     onCheckedChange = {
-                        if (!it && settings.tamperProtectionEnabled && !isWithin10MinuteWindow(settings.uninstallWindowHour, settings.uninstallWindowMinute)) {
-                            android.widget.Toast.makeText(
-                                context,
-                                "Tamper protection is active. Changes can only be made during your daily 10-minute window (${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute)} - ${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute + 10)}).",
-                                android.widget.Toast.LENGTH_LONG
-                            ).show()
-                            return@Switch
+                        if (isLockedByInvincible) {
+                            showInvincibleLockedToast()
+                        } else {
+                            isTamperProtection = it
+                            commitProtection(tamper = it)
                         }
-                        isTamperProtection = it
-                        commitProtection(tamper = it)
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = colors.accent,
@@ -587,7 +715,7 @@ fun ParentalControlsScreen(
             }
         }
 
-        // 9. Uninstall Window Card
+        // --- 10. UNINSTALL WINDOW CARD ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -595,24 +723,10 @@ fun ParentalControlsScreen(
                 .background(colors.surfaceElevated)
                 .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 .clickable {
-                    if (settings.tamperProtectionEnabled && !isWithin10MinuteWindow(settings.uninstallWindowHour, settings.uninstallWindowMinute)) {
-                        android.widget.Toast.makeText(
-                            context,
-                            "Uninstall window changes locked until ${formatHourMinute(settings.uninstallWindowHour, settings.uninstallWindowMinute)}.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
                     } else {
-                        TimePickerDialog(
-                            context,
-                            { _, h, m ->
-                                uninstallHour = h
-                                uninstallMinute = m
-                                commitProtection(h = h, m = m)
-                            },
-                            uninstallHour,
-                            uninstallMinute,
-                            false
-                        ).show()
+                        showUninstallPicker = true
                     }
                 }
                 .padding(spacing.m)
@@ -624,13 +738,13 @@ fun ParentalControlsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Uninstall window",
+                        text = "Uninstall Window",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary
                     )
                     Text(
-                        text = "Tamper protection can be disabled within 10 minutes from the selected time.",
+                        text = "Tamper protection can only be disabled within 10 minutes from this time.",
                         fontSize = 12.sp,
                         color = colors.textSecondary
                     )
@@ -646,5 +760,38 @@ fun ParentalControlsScreen(
         }
 
         Spacer(modifier = Modifier.height(spacing.xl))
+    }
+
+    // Premium Time Pickers
+    if (showInvinciblePicker) {
+        KintsuTimePickerSheet(
+            initialHour = invincibleHour,
+            initialMinute = invincibleMinute,
+            title = "Invincible Unlock Window",
+            subtitle = "Daily 10-minute window when settings modifications are permitted.",
+            onDismiss = { showInvinciblePicker = false },
+            onConfirm = { h, m ->
+                invincibleHour = h
+                invincibleMinute = m
+                commitInvincible(h = h, m = m)
+                showInvinciblePicker = false
+            }
+        )
+    }
+
+    if (showUninstallPicker) {
+        KintsuTimePickerSheet(
+            initialHour = uninstallHour,
+            initialMinute = uninstallMinute,
+            title = "Uninstall Protection Window",
+            subtitle = "Daily 10-minute window when tamper protection may be altered.",
+            onDismiss = { showUninstallPicker = false },
+            onConfirm = { h, m ->
+                uninstallHour = h
+                uninstallMinute = m
+                commitProtection(h = h, m = m)
+                showUninstallPicker = false
+            }
+        )
     }
 }
