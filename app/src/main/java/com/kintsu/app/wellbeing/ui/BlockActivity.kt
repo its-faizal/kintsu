@@ -280,22 +280,36 @@ fun BlockShieldContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Calm Header
-            Text(
-                text = "Take a moment.",
-                style = typography.screenTitle.copy(fontSize = 30.sp, fontWeight = FontWeight.SemiBold),
-                color = colors.textPrimary,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(spacing.xs))
-
-            Text(
-                text = "Do you want to spend time here right now?",
-                style = typography.body,
-                color = colors.textSecondary,
-                textAlign = TextAlign.Center
-            )
+            // Header (Customized for Adult Shield vs Standard App Block)
+            if (ruleMode == "ADULT_CONTENT_BLOCKED") {
+                Text(
+                    text = "18+ Adult & Intimacy Shield",
+                    style = typography.screenTitle.copy(fontSize = 26.sp, fontWeight = FontWeight.Bold),
+                    color = colors.warning,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(spacing.xs))
+                Text(
+                    text = "Explicit adult, seductive, or intimacy content is prohibited by Kintsu Shield.",
+                    style = typography.body,
+                    color = colors.textSecondary,
+                    textAlign = TextAlign.Center
+                )
+            } else {
+                Text(
+                    text = "Take a moment.",
+                    style = typography.screenTitle.copy(fontSize = 30.sp, fontWeight = FontWeight.SemiBold),
+                    color = colors.textPrimary,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(spacing.xs))
+                Text(
+                    text = "Do you want to spend time here right now?",
+                    style = typography.body,
+                    color = colors.textSecondary,
+                    textAlign = TextAlign.Center
+                )
+            }
 
             Spacer(modifier = Modifier.height(spacing.xl))
 

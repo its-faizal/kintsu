@@ -418,6 +418,11 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
+            android:resizeableActivity="false"
+            android:supportsPictureInPicture="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.Kintsu" />
 
         <!-- Reel & Short-Form Intervention Screen Overlay Activity -->
@@ -426,7 +431,12 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTop"
-            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            android:resizeableActivity="false"
+            android:supportsPictureInPicture="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:windowSoftInputMode="adjustNothing"
+            android:theme="@style/Theme.Kintsu" />
 
         <!-- Notification Listener Service for Scheduled Notification Batching -->
         <service

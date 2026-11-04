@@ -13,6 +13,8 @@ import androidx.core.app.NotificationCompat
 import com.kintsu.app.MainActivity
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.wellbeing.domain.WebsiteFilterManager
+import com.kintsu.app.wellbeing.domain.AdultContentFilterEngine
+import com.kintsu.app.data.SettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -84,7 +86,8 @@ class KintsuVpnDnsFilterService : VpnService() {
             val builder = Builder()
                 .setSession("Kintsu Digital Balance")
                 .addAddress("10.111.0.1", 32)
-                .addDnsServer("1.1.1.1")
+                .addDnsServer("1.1.1.3")
+                .addDnsServer("1.0.0.3")
                 .addRoute("10.111.0.1", 32)
                 .setMtu(1500)
 
@@ -123,7 +126,8 @@ class KintsuVpnDnsFilterService : VpnService() {
             protect(this)
             soTimeout = 2500
         }
-        val upstreamDns = InetAddress.getByName("1.1.1.1")
+        val settingsStore = SettingsDataStore(applicationContext)
+        val upstreamDns = InetAddress.getByName("1.1.1.3")
 
         try {
             while (isRunning) {
@@ -148,9 +152,11 @@ class KintsuVpnDnsFilterService : VpnService() {
                                 val host = extractDnsQuestionHost(buffer, dnsPayloadOffset, dnsPayloadLen)
                                 if (host != null) {
                                     val blockedWebsites = db.wellbeingDao().getActiveBlockedWebsites().first()
+                                    val settings = settingsStore.settingsFlow.first()
+                                    val isAdultBlocked = settings.blockNsfw && AdultContentFilterEngine.isDomainBlocked(host).isBlocked
                                     val matchedRule = WebsiteFilterManager.isHostBlocked(host, blockedWebsites)
 
-                                    if (matchedRule != null) {
+                                    if (matchedRule != null || isAdultBlocked) {
                                         // Domain is restricted. Synthesize NXDOMAIN / Refused response
                                         val responsePayload = synthesizeBlockedDnsResponse(buffer, dnsPayloadOffset, dnsPayloadLen)
                                         if (responsePayload != null) {

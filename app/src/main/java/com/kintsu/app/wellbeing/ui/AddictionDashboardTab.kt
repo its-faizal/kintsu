@@ -25,6 +25,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import com.kintsu.app.data.SettingsDataStore
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -82,6 +85,8 @@ fun AddictionDashboardTab(
     onOpenAppLimits: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val settingsStore = remember { SettingsDataStore(context) }
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
     val typography = KintsuTheme.typography
@@ -658,6 +663,83 @@ fun AddictionDashboardTab(
                             }
                         }
                     }
+                }
+            }
+        }
+
+        // --- 18+ ADULT, PORN & INTIMACY WEB SHIELD CARD ---
+        KintsuCard(
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = colors.surfaceElevated
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(spacing.m),
+                verticalArrangement = Arrangement.spacedBy(spacing.s)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(colors.warning.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IconShield(size = 18.dp, color = colors.warning)
+                        }
+
+                        Column {
+                            Text(
+                                text = "18+ Adult & Intimacy Web Shield",
+                                style = typography.itemTitle.copy(fontSize = 14.sp, fontWeight = FontWeight.Bold),
+                                color = colors.textPrimary
+                            )
+                            Text(
+                                text = "DNS sinkhole & browser filter for adult, sex & seductive web",
+                                style = typography.caption.copy(fontSize = 11.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+
+                    val isInvincibleLocked = settings.invincibleModeEnabled
+                    Switch(
+                        checked = settings.blockNsfw,
+                        enabled = !isInvincibleLocked,
+                        onCheckedChange = { isChecked ->
+                            scope.launch {
+                                settingsStore.setBlockNsfw(isChecked)
+                            }
+                        },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = colors.warning,
+                            checkedTrackColor = colors.warning.copy(alpha = 0.35f)
+                        )
+                    )
+                }
+
+                if (settings.invincibleModeEnabled) {
+                    Text(
+                        text = "Locked by Invincible Mode. Protection cannot be modified.",
+                        style = typography.caption.copy(fontSize = 10.sp),
+                        color = colors.warning
+                    )
+                } else {
+                    Text(
+                        text = "Auto-blocks 500+ adult domains via Cloudflare 1.1.1.3 Family DNS & keyword trie.",
+                        style = typography.caption.copy(fontSize = 10.sp),
+                        color = colors.textTertiary
+                    )
                 }
             }
         }

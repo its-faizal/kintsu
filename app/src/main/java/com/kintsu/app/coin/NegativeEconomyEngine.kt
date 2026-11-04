@@ -33,6 +33,12 @@ enum class DeductionType(
         sourceActivity = "MARATHON_OVERSTAY",
         cooldownMillis = 15 * 60 * 1000L // 15 minutes
     ),
+    ADULT_CONTENT_ATTEMPT(
+        coins = 5,
+        reason = "Purity breach: Attempted access to restricted adult / intimacy content",
+        sourceActivity = "ADULT_CONTENT_ATTEMPT",
+        cooldownMillis = 10 * 60 * 1000L // 10 minutes
+    ),
     SLOTH_DECAY(
         coins = 1,
         reason = "Sloth decay: Habit neglected yesterday without gold mend",

@@ -182,6 +182,9 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
                 lastTriggeredTimeMillis[pkgName] = now
 
+                // Forcefully eject the background video player immediately
+                performGlobalAction(GLOBAL_ACTION_BACK)
+
                 // Log intervention
                 db.wellbeingDao().insertIntervention(
                     DistractionInterventionLogEntity(
@@ -204,7 +207,9 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 }
 
                 val overlayIntent = android.content.Intent(applicationContext, com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity::class.java).apply {
-                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK
                     putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PACKAGE, pkgName)
                     putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PLATFORM, platformName)
                 }
@@ -213,23 +218,32 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
-        // B. Browser URL inspection against blocked website list
+        // B. Browser URL inspection against adult content & blocked website list
         if (ShortFormContentDetector.BROWSER_PACKAGES.contains(pkgName)) {
             val rootNode = try { rootInActiveWindow } catch (_: Exception) { null }
             val url = ShortFormContentDetector.extractBrowserUrl(rootNode)
             if (!url.isNullOrBlank()) {
                 val blockedWebsites = db.wellbeingDao().getAllBlockedWebsites().first()
+                val isAdult = settings.blockNsfw && com.kintsu.app.wellbeing.domain.AdultContentFilterEngine.isUrlOrQueryBlocked(url).isBlocked
                 val isBlockedSite = blockedWebsites.any { it.isEnabled && url.contains(it.domain, ignoreCase = true) }
                 val isWebShort = settings.shortFormBlockingEnabled && settings.blockWebShorts && ShortFormContentDetector.isShortFormUrl(url)
 
-                if (isBlockedSite || isWebShort) {
+                if (isAdult || isBlockedSite || isWebShort) {
                     performGlobalAction(GLOBAL_ACTION_BACK)
                     lastTriggeredTimeMillis[pkgName] = now
 
-                    val prompt = if (isWebShort) {
-                        "Short-form feed is restricted."
-                    } else {
-                        "Access to this website ($url) is restricted by Kintsu Shield."
+                    val prompt = when {
+                        isAdult -> "18+ Adult, Seductive, or Intimacy web content is strictly blocked by Kintsu Shield."
+                        isWebShort -> "Short-form feed is restricted."
+                        else -> "Access to this website ($url) is restricted by Kintsu Shield."
+                    }
+
+                    if (isAdult) {
+                        com.kintsu.app.coin.NegativeEconomyEngine.recordDeduction(
+                            context = applicationContext,
+                            type = com.kintsu.app.coin.DeductionType.ADULT_CONTENT_ATTEMPT,
+                            targetKey = "adult_content"
+                        )
                     }
 
                     db.wellbeingDao().insertIntervention(
@@ -237,18 +251,19 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                             timestampMillis = now,
                             packageName = pkgName,
                             interventionStyle = settings.interventionStyle,
-                            userAction = "BLOCKED"
+                            userAction = if (isAdult) "ADULT_BLOCKED" else "BLOCKED"
                         )
                     )
 
                     triggerBlockScreen(
                         targetPackage = pkgName,
-                        ruleMode = "WEBSITE_BLOCKED",
-                        strictness = "STRICT",
+                        ruleMode = if (isAdult) "ADULT_CONTENT_BLOCKED" else "WEBSITE_BLOCKED",
+                        strictness = if (isAdult) "INVINCIBLE" else "STRICT",
                         customPrompt = prompt,
-                        pauseDurationSeconds = 10,
+                        pauseDurationSeconds = if (isAdult) 15 else 10,
                         interventionStyle = settings.interventionStyle
                     )
+                    return
                 }
             }
         }
@@ -567,6 +582,24 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             val wPkg = wRoot.packageName?.toString() ?: continue
             if (ProtectedApps.isProtected(wPkg)) continue
 
+            // If browser in popup/split window, inspect for adult content
+            if (ShortFormContentDetector.BROWSER_PACKAGES.contains(wPkg)) {
+                val url = ShortFormContentDetector.extractBrowserUrl(wRoot)
+                if (!url.isNullOrBlank() && settings.blockNsfw && com.kintsu.app.wellbeing.domain.AdultContentFilterEngine.isUrlOrQueryBlocked(url).isBlocked) {
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    triggerBlockScreen(
+                        targetPackage = wPkg,
+                        ruleMode = "ADULT_CONTENT_BLOCKED",
+                        strictness = "INVINCIBLE",
+                        customPrompt = "18+ Adult, Seductive, or Intimacy web content is strictly blocked by Kintsu Shield.",
+                        pauseDurationSeconds = 15,
+                        interventionStyle = settings.interventionStyle
+                    )
+                    return
+                }
+            }
+
             // If short-form content in a floating / pop-up / split window
             if (settings.shortFormBlockingEnabled && ShortFormContentDetector.isShortFormContent(
                     event = event,
@@ -581,12 +614,14 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 )
             ) {
                 if (!com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(wPkg)) {
-                    // Close the popup/split window
+                    // Forcefully terminate the popup / split screen view
                     performGlobalAction(GLOBAL_ACTION_HOME)
                     performGlobalAction(GLOBAL_ACTION_BACK)
 
                     val overlayIntent = Intent(applicationContext, com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_CLEAR_TASK
                         putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PACKAGE, wPkg)
                         putExtra(com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.EXTRA_PLATFORM, "Video Feed")
                     }

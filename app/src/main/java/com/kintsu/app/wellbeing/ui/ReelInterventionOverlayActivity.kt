@@ -105,6 +105,13 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Lock to full screen dimensions - prevent pop-up view and floating window leaks
+        window.setLayout(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.MATCH_PARENT
+        )
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+
         val platform = intent.getStringExtra(EXTRA_PLATFORM) ?: "Short-Form Feed"
         val pkgName = intent.getStringExtra(EXTRA_PACKAGE) ?: ""
 
@@ -236,7 +243,7 @@ fun ReelOverlayContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.85f))
+            .background(colors.background)
             .padding(spacing.l),
         contentAlignment = Alignment.Center
     ) {
