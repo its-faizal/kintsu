@@ -809,6 +809,7 @@ fun KintsuApp(
                 interventions = allInterventions,
                 breaks = allBreaks,
                 interventionsTodayCount = interventionsTodayCount,
+                activeQuitHabits = activeQuitHabits,
                 onBack = { viewModel.setDigitalBalanceOpen(false) },
                 onSaveAppGroup = { name, cat, pkgs -> viewModel.addAppGroup(name, cat, pkgs) },
                 onSaveRule = { gid, mode, limit -> viewModel.addBlockRule(gid, mode, limit) },
@@ -851,6 +852,14 @@ fun KintsuApp(
                 },
                 onSaveParentalControlsProtection = { prot, tamp, unH, unM ->
                     viewModel.setParentalControlsProtection(prot, tamp, unH, unM)
+                },
+                onAddQuitHabit = { name, ifThen, alt, cName, cPhone ->
+                    viewModel.addQuitHabit(name, ifThen, alt, cName, cPhone)
+                },
+                onRecordSlip = { viewModel.recordQuitHabitSlip(it) },
+                onRepairSlip = { viewModel.repairQuitHabitSlip(it) },
+                onLogUrge = { id, intensity, tags, note ->
+                    viewModel.logUrge(id, intensity, tags, note)
                 }
             )
         }

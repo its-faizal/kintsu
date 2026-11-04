@@ -207,16 +207,16 @@ fun HomeScreen(
     // Creative daily quotes at top of home (User requirement)
     val dailyQuotes = remember {
         listOf(
-            "?The wound is the place where the Light enters you.? ? Rumi",
-            "?Adopt the pace of nature: her secret is patience.? ? Ralph Waldo Emerson",
-            "?Mended with gold, our broken pieces become our greatest strength.? ? Kintsugi",
-            "?Between stimulus and response there is a space. In that space lies our freedom.? ? Viktor Frankl",
-            "?You have power over your mind, not outside events. Realize this, and you will find strength.? ? Marcus Aurelius",
-            "?Simplicity is the ultimate sophistication.? ? Leonardo da Vinci",
-            "?Quiet the mind, and the soul will speak.? ? Ma Jaya Sati Bhagavati",
-            "?Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.? ? Buddha",
-            "?In the midst of movement and chaos, keep stillness inside of you.? ? Deepak Chopra",
-            "?To be calm is the highest achievement of the self.? ? Zen Proverb"
+            "\"The wound is the place where the Light enters you.\" \u2014 Rumi",
+            "\"Adopt the pace of nature: her secret is patience.\" \u2014 Ralph Waldo Emerson",
+            "\"Mended with gold, our broken pieces become our greatest strength.\" \u2014 Kintsugi",
+            "\"Between stimulus and response there is a space. In that space lies our freedom.\" \u2014 Viktor Frankl",
+            "\"You have power over your mind, not outside events. Realize this, and you will find strength.\" \u2014 Marcus Aurelius",
+            "\"Simplicity is the ultimate sophistication.\" \u2014 Leonardo da Vinci",
+            "\"Quiet the mind, and the soul will speak.\" \u2014 Ma Jaya Sati Bhagavati",
+            "\"Do not dwell in the past, do not dream of the future, concentrate the mind on the present moment.\" \u2014 Buddha",
+            "\"In the midst of movement and chaos, keep stillness inside of you.\" \u2014 Deepak Chopra",
+            "\"To be calm is the highest achievement of the self.\" \u2014 Zen Proverb"
         )
     }
     val todayQuote = remember(todayEpoch) {

@@ -47,6 +47,7 @@ import com.kintsu.app.data.model.BlockScheduleEntity
 import com.kintsu.app.data.model.DistractionInterventionLogEntity
 import com.kintsu.app.data.model.FocusLockSessionEntity
 import com.kintsu.app.data.model.IntentionalBreakLogEntity
+import com.kintsu.app.data.model.QuitHabitEntity
 import com.kintsu.app.ui.components.IconBack
 import com.kintsu.app.ui.components.IconChevronRight
 import com.kintsu.app.ui.components.IconHome
@@ -75,6 +76,7 @@ fun DigitalBalanceScreen(
     interventions: List<DistractionInterventionLogEntity>,
     breaks: List<IntentionalBreakLogEntity>,
     interventionsTodayCount: Int,
+    activeQuitHabits: List<QuitHabitEntity> = emptyList(),
     onBack: () -> Unit,
     onSaveAppGroup: (name: String, category: String, packages: String) -> Unit,
     onSaveRule: (groupId: Long, mode: String, dailyLimitMinutes: Int) -> Unit,
@@ -101,7 +103,11 @@ fun DigitalBalanceScreen(
     onSaveBedtimeSchedule: ((enabled: Boolean, startHour: Int, endHour: Int, daysMask: Int, dnd: Boolean) -> Unit)? = null,
     onSaveNotificationBatching: ((enabled: Boolean, storeAll: Boolean, historyDays: Int, recapType: String, morning: Boolean, afternoon: Boolean, evening: Boolean) -> Unit)? = null,
     onSaveInvincibleMode: ((enabled: Boolean, windowHour: Int, windowMin: Int, includeShorts: Boolean, includeBedtime: Boolean) -> Unit)? = null,
-    onSaveParentalControlsProtection: ((protectedAccess: Boolean, tamperProtection: Boolean, uninstallHour: Int, uninstallMin: Int) -> Unit)? = null
+    onSaveParentalControlsProtection: ((protectedAccess: Boolean, tamperProtection: Boolean, uninstallHour: Int, uninstallMin: Int) -> Unit)? = null,
+    onAddQuitHabit: ((name: String, ifThen: String, alt: String, cName: String?, cPhone: String?) -> Unit)? = null,
+    onRecordSlip: ((QuitHabitEntity) -> Unit)? = null,
+    onRepairSlip: ((QuitHabitEntity) -> Unit)? = null,
+    onLogUrge: ((id: Long, intensity: Int, tags: String, note: String) -> Unit)? = null
 ) {
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
@@ -222,72 +228,28 @@ fun DigitalBalanceScreen(
                     } else {
                         when (currentTab) {
                             AddictionBottomTab.DASHBOARD -> {
-                                ShortsAndWebsitesTab(
+                                AddictionDashboardTab(
                                     settings = settings,
+                                    activeQuitHabits = activeQuitHabits,
                                     blockedWebsites = blockedWebsites,
-                                    onSaveShortFormBudget = { onSaveDailyBudget(it) },
+                                    appGroups = appGroups,
+                                    blockRules = blockRules,
+                                    interventionsTodayCount = interventionsTodayCount,
+                                    onAddQuitHabit = onAddQuitHabit,
+                                    onRecordSlip = onRecordSlip,
+                                    onRepairSlip = onRepairSlip,
+                                    onLogUrge = onLogUrge,
+                                    onStartInstantDetox = onStartInstantDetox,
                                     onToggleShortFormMaster = { onSaveShortFormEnabled?.invoke(it) },
                                     onSaveShortFormPlatforms = { yt, ig, tt, fb, snap, web ->
                                         onSaveShortFormPlatforms?.invoke(yt, ig, tt, fb, snap, web)
                                     },
-                                    onToggleNsfw = { /* block nsfw */ },
                                     onAddWebsite = onAddWebsite,
                                     onToggleWebsite = onToggleWebsite,
-                                    onDeleteWebsite = onDeleteWebsite
+                                    onDeleteWebsite = onDeleteWebsite,
+                                    onOpenParentalControls = { showParentalControls = true },
+                                    onOpenAppLimits = { showAppPicker = true }
                                 )
-
-                                Spacer(modifier = Modifier.height(spacing.l))
-
-                                // Quick Card: Parental Controls Entry
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(colors.surfaceElevated)
-                                        .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                                        .clickable { showParentalControls = true }
-                                        .padding(spacing.m)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                            modifier = Modifier.weight(1f)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(colors.surface),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                IconShield(size = 20.dp, color = colors.accent)
-                                            }
-
-                                            Column {
-                                                Text(
-                                                    text = "Parental Controls & Invincible Mode",
-                                                    fontSize = 15.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = colors.textPrimary
-                                                )
-                                                Text(
-                                                    text = if (settings.invincibleModeEnabled) "Active • Limits locked against impulses" else "Lock limits & prevent early bypasses",
-                                                    fontSize = 12.sp,
-                                                    color = colors.textSecondary
-                                                )
-                                            }
-                                        }
-
-                                        IconChevronRight(color = colors.textSecondary, size = 18.dp)
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(spacing.xl))
                             }
 
                             AddictionBottomTab.STATISTICS -> {
