@@ -151,6 +151,14 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     return
                 }
 
+                if (com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.hasPassExpiredRecently(pkgName)) {
+                    com.kintsu.app.coin.NegativeEconomyEngine.recordDeduction(
+                        context = applicationContext,
+                        type = com.kintsu.app.coin.DeductionType.REEL_BINGE_OVERSTAY,
+                        targetKey = pkgName
+                    )
+                }
+
                 lastTriggeredTimeMillis[pkgName] = now
 
                 // Log intervention
@@ -348,6 +356,11 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
             if (isBedtime) {
                 lastTriggeredTimeMillis[packageName] = nowMillis
+                com.kintsu.app.coin.NegativeEconomyEngine.recordDeduction(
+                    context = applicationContext,
+                    type = com.kintsu.app.coin.DeductionType.BEDTIME_CURFEW_VIOLATION,
+                    targetKey = packageName
+                )
                 triggerBlockScreen(
                     targetPackage = packageName,
                     ruleMode = "BEDTIME",
@@ -369,6 +382,13 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 val isBlocked = evaluateRule(db, rule, packageName, localTime, dayOfWeek)
                 if (isBlocked) {
                     lastTriggeredTimeMillis[packageName] = nowMillis
+                    if (rule.mode == "DAILY_LIMIT" || rule.mode == "SESSION_LIMIT") {
+                        com.kintsu.app.coin.NegativeEconomyEngine.recordDeduction(
+                            context = applicationContext,
+                            type = com.kintsu.app.coin.DeductionType.MARATHON_OVERSTAY,
+                            targetKey = packageName
+                        )
+                    }
                     triggerBlockScreen(
                         targetPackage = packageName,
                         ruleMode = rule.mode,

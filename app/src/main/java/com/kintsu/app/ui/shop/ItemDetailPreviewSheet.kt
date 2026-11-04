@@ -41,6 +41,7 @@ import com.kintsu.app.ui.theme.KintsuTheme
 fun ItemDetailPreviewSheet(
     item: ShopItemEntity,
     coinsBalance: Int,
+    streakDays: Int = 0,
     onUnlock: (ShopItemEntity) -> Unit,
     onEquip: (ShopItemEntity) -> Unit,
     onDismiss: () -> Unit
@@ -53,7 +54,8 @@ fun ItemDetailPreviewSheet(
     var isPreviewActive by remember { mutableStateOf(false) }
     var isPurchasing by remember { mutableStateOf(false) }
 
-    val canAfford = coinsBalance >= item.costCoins || item.isUnlocked
+    val isStreakEligible = streakDays >= item.requiredStreakDays
+    val canAfford = (coinsBalance >= item.costCoins || item.isUnlocked) && isStreakEligible
 
     KintsuBottomSheet(
         onDismissRequest = onDismiss,
@@ -177,8 +179,40 @@ fun ItemDetailPreviewSheet(
                 lineHeight = 22.sp
             )
 
+            // Streak Rank Barrier Check
+            if (!item.isUnlocked && !isStreakEligible) {
+                KintsuCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = colors.surfaceElevated,
+                    borderColor = colors.goldSeam.copy(alpha = 0.5f)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        IconGoldSeam(color = colors.goldSeam, size = 20.dp)
+                        Column {
+                            Text(
+                                text = "Requires ${item.requiredStreakDays}-Day Fire Streak",
+                                style = typography.itemTitle.copy(fontSize = 14.sp),
+                                color = colors.goldSeam
+                            )
+                            Text(
+                                text = "Current fire streak: $streakDays day${if (streakDays == 1) "" else "s"}. Maintain unbroken daily discipline to access this milestone rank.",
+                                style = typography.secondary.copy(fontSize = 12.sp),
+                                color = colors.textSecondary
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(spacing.s))
+            }
+
             // Balance Status & Affordability Check
-            if (!item.isUnlocked && item.costCoins > 0) {
+            if (!item.isUnlocked && item.costCoins > 0 && isStreakEligible) {
                 KintsuCard(
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = if (canAfford) colors.surfaceElevated else colors.errorContainer.copy(alpha = 0.25f),
@@ -246,6 +280,15 @@ fun ItemDetailPreviewSheet(
                                 onDismiss()
                             },
                             variant = KintsuButtonVariant.PRIMARY,
+                            modifier = Modifier.weight(1.3f)
+                        )
+                    }
+                    !isStreakEligible -> {
+                        KintsuButton(
+                            text = "Locked (${item.requiredStreakDays}d Streak)",
+                            onClick = { /* Locked behind streak */ },
+                            enabled = false,
+                            variant = KintsuButtonVariant.SECONDARY,
                             modifier = Modifier.weight(1.3f)
                         )
                     }

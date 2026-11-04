@@ -119,6 +119,7 @@ fun KintsuApp(
     val walletTransactions by viewModel.walletTransactions.collectAsState()
     val stylePresets by viewModel.allStylePresets.collectAsState()
     val allAchievements by viewModel.allAchievements.collectAsState()
+    val streakDays by viewModel.currentStreakDays.collectAsState()
     val activeQuitHabits by viewModel.activeQuitHabits.collectAsState()
     val allDetoxSessions by viewModel.allDetoxSessions.collectAsState()
     val activeDetox = remember(allDetoxSessions) {
@@ -732,6 +733,7 @@ fun KintsuApp(
                 walletTransactions = walletTransactions,
                 stylePresets = stylePresets,
                 allAchievements = allAchievements,
+                streakDays = streakDays,
                 onPurchaseItem = { viewModel.purchaseShopItem(it) },
                 onEquipItem = { viewModel.equipShopItem(it) },
                 onCreatePersonalReward = { title, desc, cost, cat, icon ->

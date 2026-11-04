@@ -260,9 +260,18 @@ interface WellbeingDao {
     @Query("UPDATE shop_inventory SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun updateShopItemFavorite(id: String, isFavorite: Boolean)
 
+    @Query("UPDATE shop_inventory SET costCoins = :costCoins, requiredStreakDays = :requiredStreakDays WHERE id = :id AND isUnlocked = 0")
+    suspend fun updateCatalogPricing(id: String, costCoins: Int, requiredStreakDays: Int)
+
     // --- Wallet Transactions Ledger ---
     @Query("SELECT * FROM wallet_transactions ORDER BY timestampMillis DESC")
     fun getAllWalletTransactions(): Flow<List<WalletTransactionEntity>>
+
+    @Query("SELECT * FROM wallet_transactions ORDER BY id DESC LIMIT 1")
+    suspend fun getLatestWalletTransaction(): WalletTransactionEntity?
+
+    @Query("SELECT * FROM wallet_transactions ORDER BY id ASC")
+    suspend fun getAllWalletTransactionsList(): List<WalletTransactionEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertWalletTransaction(tx: WalletTransactionEntity): Long

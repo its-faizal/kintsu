@@ -431,6 +431,23 @@ class SettingsDataStore(val context: Context) {
         return success
     }
 
+    suspend fun deductCoins(amount: Int): Int {
+        if (amount <= 0) return 0
+        var deducted = 0
+        context.dataStore.edit {
+            val current = it[Keys.COINS_BALANCE] ?: 100
+            deducted = kotlin.math.min(current, amount)
+            it[Keys.COINS_BALANCE] = kotlin.math.max(0, current - amount)
+        }
+        return deducted
+    }
+
+    suspend fun setReconciledCoins(balance: Int) {
+        context.dataStore.edit {
+            it[Keys.COINS_BALANCE] = kotlin.math.max(0, balance)
+        }
+    }
+
     suspend fun setAppLockEnabled(enabled: Boolean) {
         context.dataStore.edit { it[Keys.APP_LOCK_ENABLED] = enabled }
     }

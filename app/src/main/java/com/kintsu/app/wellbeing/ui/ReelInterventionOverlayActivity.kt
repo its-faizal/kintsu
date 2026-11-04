@@ -75,6 +75,7 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
         const val EXTRA_PLATFORM = "extra_platform"
         const val EXTRA_PACKAGE = "extra_package"
         private val temporaryUnlockTimestamps = mutableMapOf<String, Long>()
+        private val recentPassExpiredTimestamps = mutableMapOf<String, Long>()
 
         fun isTemporarilyUnlocked(pkgName: String): Boolean {
             val expireTime = temporaryUnlockTimestamps[pkgName] ?: return false
@@ -82,6 +83,17 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
                 return true
             }
             temporaryUnlockTimestamps.remove(pkgName)
+            recentPassExpiredTimestamps[pkgName] = System.currentTimeMillis() + (15 * 60 * 1000L)
+            return false
+        }
+
+        fun hasPassExpiredRecently(pkgName: String): Boolean {
+            val expireWindow = recentPassExpiredTimestamps[pkgName] ?: return false
+            if (System.currentTimeMillis() < expireWindow) {
+                recentPassExpiredTimestamps.remove(pkgName)
+                return true
+            }
+            recentPassExpiredTimestamps.remove(pkgName)
             return false
         }
 
@@ -144,6 +156,19 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
         startActivity(homeIntent)
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val db = com.kintsu.app.data.KintsuDatabase.getDatabase(applicationContext)
+                val settings = com.kintsu.app.data.SettingsDataStore(applicationContext)
+                val repo = com.kintsu.app.data.KintsuRepository(db, settings)
+                repo.awardCoins(
+                    amount = 1,
+                    reason = "Conscious choice: Resisted short-form feed",
+                    sourceActivity = "REEL_RESIST",
+                    sourceEventId = "reel_resist_${System.currentTimeMillis()}"
+                )
+            } catch (_: Exception) {}
+        }
         finish()
     }
 

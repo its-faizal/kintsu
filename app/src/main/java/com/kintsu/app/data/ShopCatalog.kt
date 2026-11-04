@@ -28,6 +28,7 @@ object ShopCatalog {
                 title = "Sage & Ivory",
                 description = "Warm ivory, dusty sage and muted gold. The original Kintsu aesthetic.",
                 costCoins = 0,
+                requiredStreakDays = 0,
                 isUnlocked = true,
                 isEquipped = true,
                 category = "Themes",
@@ -41,7 +42,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Sakura Dawn",
                 description = "Soft cherry-blossom pink, porcelain white, pale rose and muted mauve. Airy, gentle and elegant.",
-                costCoins = 50,
+                costCoins = 150,
+                requiredStreakDays = 7,
                 category = "Themes",
                 bundleId = "bundle_sakura",
                 collectionName = "Sakura Collection",
@@ -54,7 +56,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Matcha Atelier",
                 description = "Cream, matcha green, muted olive and warm stone. Japanese-inspired natural minimalism.",
-                costCoins = 50,
+                costCoins = 250,
+                requiredStreakDays = 14,
                 category = "Themes",
                 bundleId = "bundle_matcha",
                 collectionName = "Matcha Collection",
@@ -67,7 +70,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Ocean Pearl",
                 description = "Pale aqua, pearl white, subdued teal and cool slate. Fresh, spacious and peaceful.",
-                costCoins = 50,
+                costCoins = 350,
+                requiredStreakDays = 14,
                 category = "Themes",
                 collectionName = "Ocean Collection",
                 tag = "NEW"
@@ -79,7 +83,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Rosewood",
                 description = "Warm brown, dusty rose, blush beige and antique gold. Sophisticated, warm and understated.",
-                costCoins = 50,
+                costCoins = 500,
+                requiredStreakDays = 30,
                 category = "Themes",
                 collectionName = "Rosewood Collection"
             )
@@ -90,7 +95,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Nordic Frost",
                 description = "Cool ivory, fog grey, muted blue and soft silver. Clean, calm and architectural.",
-                costCoins = 50,
+                costCoins = 650,
+                requiredStreakDays = 30,
                 category = "Themes",
                 bundleId = "bundle_nordic",
                 collectionName = "Nordic Collection",
@@ -103,7 +109,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Eclipse Gold",
                 description = "Deep graphite, warm charcoal, muted bronze and restrained champagne. Elegant and premium.",
-                costCoins = 60,
+                costCoins = 1200,
+                requiredStreakDays = 60,
                 category = "Themes",
                 bundleId = "bundle_midnight",
                 collectionName = "Midnight Collection",
@@ -116,7 +123,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Golden Hour",
                 description = "Sandstone, pale peach, creamy ivory and muted amber. Warm, relaxed and atmospheric.",
-                costCoins = 50,
+                costCoins = 800,
+                requiredStreakDays = 30,
                 category = "Themes",
                 bundleId = "bundle_golden_hour",
                 collectionName = "Golden Hour Collection"
@@ -128,7 +136,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Botanical Paper",
                 description = "Soft paper white, eucalyptus, pale moss and gentle ink tones. Organic and refined.",
-                costCoins = 50,
+                costCoins = 500,
+                requiredStreakDays = 30,
                 category = "Themes",
                 collectionName = "Botanical Collection"
             )
@@ -139,7 +148,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Metropolis Hero",
                 description = "Midnight navy, crystalline ice, crimson cape and sunburst gold. Heroic resolve and unbreakable fortitude.",
-                costCoins = 60,
+                costCoins = 1500,
+                requiredStreakDays = 60,
                 category = "Themes",
                 bundleId = "bundle_superman",
                 collectionName = "Metropolis Hero Collection",
@@ -152,7 +162,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Apple Cupertino",
                 description = "Pure frosted glass, San Francisco slate and California blue. Fluid, interruptible spring interface.",
-                costCoins = 60,
+                costCoins = 2500,
+                requiredStreakDays = 90,
                 category = "Themes",
                 bundleId = "bundle_apple",
                 collectionName = "Cupertino Glass Collection",
@@ -165,7 +176,8 @@ object ShopCatalog {
                 itemType = "THEME",
                 title = "Spotify Pulse",
                 description = "Pitch dark obsidian with electric pulse green. Bold typography, high energy and rhythmic focus.",
-                costCoins = 60,
+                costCoins = 3500,
+                requiredStreakDays = 100,
                 category = "Themes",
                 bundleId = "bundle_spotify",
                 collectionName = "Spotify Pulse Collection",
@@ -181,6 +193,7 @@ object ShopCatalog {
                 title = "Kintsu Original",
                 description = "Official Kintsu gold fracture emblem over rich charcoal.",
                 costCoins = 0,
+                requiredStreakDays = 0,
                 isUnlocked = true,
                 isEquipped = true,
                 category = "App Icons",
@@ -193,7 +206,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Golden Seam",
                 description = "Minimal gold fracture line with warm deep background.",
-                costCoins = 30,
+                costCoins = 200,
+                requiredStreakDays = 14,
                 category = "App Icons"
             )
         )
@@ -203,7 +217,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Sage Emblem",
                 description = "Muted green geometric origami symbol.",
-                costCoins = 30,
+                costCoins = 250,
+                requiredStreakDays = 14,
                 category = "App Icons",
                 bundleId = "bundle_matcha",
                 collectionName = "Matcha Collection"
@@ -215,7 +230,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Ivory Monogram",
                 description = "Elegant serif K monogram with antique gold kintsugi crack.",
-                costCoins = 35,
+                costCoins = 400,
+                requiredStreakDays = 30,
                 category = "App Icons"
             )
         )
@@ -225,7 +241,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Midnight Gold",
                 description = "Charcoal and champagne crosshair crest.",
-                costCoins = 40,
+                costCoins = 800,
+                requiredStreakDays = 30,
                 category = "App Icons",
                 bundleId = "bundle_midnight",
                 collectionName = "Midnight Collection"
@@ -237,7 +254,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Sakura Mark",
                 description = "Subtle pink botanical flower icon with golden core.",
-                costCoins = 40,
+                costCoins = 600,
+                requiredStreakDays = 30,
                 category = "App Icons",
                 bundleId = "bundle_sakura",
                 collectionName = "Sakura Collection"
@@ -249,7 +267,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Terracotta Seal",
                 description = "Japanese hanko-inspired clay seal stamp.",
-                costCoins = 35,
+                costCoins = 500,
+                requiredStreakDays = 30,
                 category = "App Icons"
             )
         )
@@ -259,7 +278,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Ocean Glass",
                 description = "Misty teal abstract hexagonal jewel.",
-                costCoins = 40,
+                costCoins = 650,
+                requiredStreakDays = 30,
                 category = "App Icons"
             )
         )
@@ -269,7 +289,8 @@ object ShopCatalog {
                 itemType = "APP_ICON",
                 title = "Minimal Ink",
                 description = "Monochrome sumi line symbol on pure white.",
-                costCoins = 30,
+                costCoins = 350,
+                requiredStreakDays = 14,
                 category = "App Icons",
                 bundleId = "bundle_nordic",
                 collectionName = "Nordic Collection"
@@ -1003,7 +1024,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Matcha Atelier Bundle",
                 description = "Includes Matcha Theme, Sage App Icon, Botanical Widget Skin, Quiet Garden Focus Scene, and Sage Frame. 35% bundle savings.",
-                costCoins = 110,
+                costCoins = 1200,
+                requiredStreakDays = 30,
                 category = "Collections",
                 bundleId = "bundle_matcha",
                 collectionName = "Matcha Collection",
@@ -1016,7 +1038,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Sakura Dawn Bundle",
                 description = "Includes Sakura Dawn Theme, Sakura Mark App Icon, Soft Gradient Ring, Sakura Petals Background, and Pearl Edge Frame. 35% bundle savings.",
-                costCoins = 120,
+                costCoins = 1000,
+                requiredStreakDays = 30,
                 category = "Collections",
                 bundleId = "bundle_sakura",
                 collectionName = "Sakura Collection",
@@ -1029,7 +1052,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Midnight Sanctuary Bundle",
                 description = "Includes Eclipse Gold Theme, Midnight Gold Icon, Midnight Bronze Skin, Eclipse Focus Dial, and Midnight Gold Repair. 40% bundle savings.",
-                costCoins = 135,
+                costCoins = 2500,
+                requiredStreakDays = 60,
                 category = "Collections",
                 bundleId = "bundle_midnight",
                 collectionName = "Midnight Collection",
@@ -1042,7 +1066,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Golden Hour Bundle",
                 description = "Includes Golden Hour Theme, Golden Hour Sky, Fine Gold Habit Ring, and Soft Gold Frame. 35% bundle savings.",
-                costCoins = 115,
+                costCoins = 1800,
+                requiredStreakDays = 60,
                 category = "Collections",
                 bundleId = "bundle_golden_hour",
                 collectionName = "Golden Hour Collection",
@@ -1055,7 +1080,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Nordic Frost Bundle",
                 description = "Includes Nordic Frost Theme, Minimal Ink Icon, Minimal Paper Skin, and Minimal Digital Timer. 35% bundle savings.",
-                costCoins = 110,
+                costCoins = 1500,
+                requiredStreakDays = 30,
                 category = "Collections",
                 bundleId = "bundle_nordic",
                 collectionName = "Nordic Collection",
@@ -1068,7 +1094,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Metropolis Hero Collection",
                 description = "Includes Metropolis Hero Theme, Man of Steel Icon, Fortress Widget Skin, and Fortress Shield Timer Face. 40% hero savings.",
-                costCoins = 120,
+                costCoins = 3500,
+                requiredStreakDays = 60,
                 category = "Collections",
                 bundleId = "bundle_superman",
                 collectionName = "Metropolis Hero Collection",
@@ -1081,7 +1108,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Cupertino Glass Collection",
                 description = "Includes Apple Cupertino Theme, Frosted Pearl Skin, Flowing Line Timer Face, and California Blue Accent. 40% bundle savings.",
-                costCoins = 120,
+                costCoins = 5000,
+                requiredStreakDays = 90,
                 category = "Collections",
                 bundleId = "bundle_apple",
                 collectionName = "Cupertino Glass Collection",
@@ -1094,7 +1122,8 @@ object ShopCatalog {
                 itemType = "BUNDLE",
                 title = "Spotify Pulse Collection",
                 description = "Includes Spotify Pulse Theme, Midnight Bronze Skin, Minimal Digital Timer Face, and Electric Green Accent. 40% bundle savings.",
-                costCoins = 120,
+                costCoins = 6000,
+                requiredStreakDays = 100,
                 category = "Collections",
                 bundleId = "bundle_spotify",
                 collectionName = "Spotify Pulse Collection",
@@ -1102,6 +1131,35 @@ object ShopCatalog {
             )
         )
 
-        return list.map { it.copy(costCoins = 0, isUnlocked = true, tag = "FREE") }
+
+        // APEX PRESTIGE MILESTONES (120 & 150 Days)
+        list.add(
+            ShopItemEntity(
+                id = "theme_divine_sun",
+                itemType = "THEME",
+                title = "Divine Sun",
+                description = "120-Day Sacred Pillar. Radiant auric gold, transcendent solar embers, and ethereal cream.",
+                costCoins = 4500,
+                category = "Themes",
+                collectionName = "Divine Sun Collection",
+                tag = "DIVINE",
+                requiredStreakDays = 120
+            )
+        )
+        list.add(
+            ShopItemEntity(
+                id = "bundle_apex_transcendent",
+                itemType = "BUNDLE",
+                title = "Transcendent Lotus Sanctuary",
+                description = "150-Day Apex Masterpiece. Includes Imperial Lotus Theme, Apex Lotus Icon, and Celestial Widget Skin.",
+                costCoins = 7500,
+                category = "Collections",
+                collectionName = "Transcendent Collection",
+                tag = "APEX",
+                requiredStreakDays = 150
+            )
+        )
+
+        return list
     }
 }

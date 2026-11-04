@@ -1198,12 +1198,14 @@ fun SettingsScreen(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .background(colors.accent.copy(alpha = 0.15f), CircleShape),
+                                .clip(CircleShape)
+                                .background(colors.goldSeam.copy(alpha = 0.18f))
+                                .border(1.dp, colors.goldSeam.copy(alpha = 0.5f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = "",
-                                fontSize = 18.sp
+                            IconGoldSeam(
+                                color = colors.goldSeam,
+                                size = 20.dp
                             )
                         }
 

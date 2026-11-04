@@ -197,7 +197,8 @@ data class ShopItemEntity(
     val bundleId: String = "",
     val collectionName: String = "",
     val isFavorite: Boolean = false,
-    val tag: String = "" // NEW, FEATURED, BUNDLE, FREE, SIGNATURE
+    val tag: String = "", // NEW, FEATURED, BUNDLE, FREE, SIGNATURE
+    val requiredStreakDays: Int = 0
 )
 
 /**
@@ -309,7 +310,12 @@ data class WalletTransactionEntity(
     val reason: String,
     val sourceActivity: String, // "HABIT_COMPLETION", "TASK_COMPLETION", "FOCUS_SESSION", "WEEKLY_REVIEW", "GOAL_MILESTONE", "SHOP_PURCHASE", "PERSONAL_REWARD"
     val sourceEventId: String, // Unique idempotency key
-    val timestampMillis: Long = System.currentTimeMillis()
+    val timestampMillis: Long = System.currentTimeMillis(),
+    val previousHash: String = "GENESIS",
+    val transactionHash: String = "",
+    val signature: String = "",
+    val multiplier: Float = 1.0f,
+    val isDeduction: Boolean = false
 )
 
 /**

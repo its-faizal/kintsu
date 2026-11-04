@@ -71,6 +71,7 @@ fun ShopHomeScreen(
     walletTransactions: List<WalletTransactionEntity>,
     stylePresets: List<StylePresetEntity>,
     allAchievements: List<AchievementEntity> = emptyList(),
+    streakDays: Int = 0,
     onPurchaseItem: (ShopItemEntity) -> Unit,
     onEquipItem: (ShopItemEntity) -> Unit,
     onCreatePersonalReward: (title: String, desc: String, cost: Int, category: String, icon: String) -> Unit,
@@ -422,6 +423,26 @@ fun ShopHomeScreen(
                                                 )
                                             }
                                         }
+                                        if (item.requiredStreakDays > 0) {
+                                            Spacer(modifier = Modifier.width(spacing.xs))
+                                            val isEligible = streakDays >= item.requiredStreakDays
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(if (isEligible) colors.accentSoft else colors.surface)
+                                                    .border(0.5.dp, if (isEligible) colors.accent else colors.textSecondary.copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                                            ) {
+                                                Text(
+                                                    text = "${item.requiredStreakDays}d Streak",
+                                                    style = typography.caption.copy(
+                                                        color = if (isEligible) colors.accent else colors.textSecondary,
+                                                        fontSize = 8.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                )
+                                            }
+                                        }
                                     }
                                     Text(
                                         text = item.category,
@@ -499,6 +520,7 @@ fun ShopHomeScreen(
         ItemDetailPreviewSheet(
             item = item,
             coinsBalance = coinsBalance,
+            streakDays = streakDays,
             onUnlock = { purchasedItem ->
                 onPurchaseItem(purchasedItem)
                 selectedItemForDetail = null
@@ -517,6 +539,7 @@ fun ShopHomeScreen(
             coinsBalance = coinsBalance,
             coinsEarnedTotal = coinsEarnedTotal,
             transactions = walletTransactions,
+            streakDays = streakDays,
             onDismiss = { showWalletSheet = false }
         )
     }

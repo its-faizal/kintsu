@@ -1,5 +1,9 @@
 package com.kintsu.app.data
 
+import com.kintsu.app.coin.CoinSecurityGuard
+import com.kintsu.app.coin.FireStreakEngine
+import com.kintsu.app.coin.FireStreakTier
+
 import com.kintsu.app.data.model.AchievementEntity
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockedWebsiteEntity
@@ -199,7 +203,10 @@ class KintsuRepository(
                     mood = mood
                 )
             )
-            awardCoins(5)
+            val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+            val baseCoins = if (currentHour < 9) 4 else 2
+            val reason = if (currentHour < 9) "Morning habit completed (+2 early bonus)" else "Habit completed"
+            awardCoins(baseCoins, reason, "HABIT_COMPLETION", "habit_${habitId}_${epochDay}")
         } else {
             val nextCompleted = !current.isCompleted
             habitDao.upsertLog(
@@ -211,7 +218,10 @@ class KintsuRepository(
                 )
             )
             if (nextCompleted) {
-                awardCoins(5)
+                val currentHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                val baseCoins = if (currentHour < 9) 4 else 2
+                val reason = if (currentHour < 9) "Morning habit completed (+2 early bonus)" else "Habit completed"
+                awardCoins(baseCoins, reason, "HABIT_COMPLETION", "habit_${habitId}_${epochDay}")
             }
         }
         notifyWidgets()
@@ -242,7 +252,7 @@ class KintsuRepository(
                 )
             )
         }
-        awardCoins(10)
+        awardCoins(2, "Kintsugi gold mend ritual", "GOLD_MEND", "mend_${habitId}_${epochDay}")
         notifyWidgets()
     }
 
@@ -314,7 +324,12 @@ class KintsuRepository(
             )
             taskDao.updateTask(updated)
             syncEngine.recordLocalMutation("tasks", task.id, SyncOperation.UPSERT, syncEngine.serializeTask(updated))
-            awardCoins(3)
+            val baseCoins = when (task.priority) {
+                TaskPriority.HIGH -> 3
+                TaskPriority.MEDIUM -> 2
+                else -> 1
+            }
+            awardCoins(baseCoins, "Completed ${task.priority.name.lowercase()} task: ${task.title}", "TASK_COMPLETION", "task_${task.id}_${System.currentTimeMillis()}")
         } else {
             val isFinishing = !task.isCompleted
             val updated = task.copy(
@@ -324,7 +339,12 @@ class KintsuRepository(
             taskDao.updateTask(updated)
             syncEngine.recordLocalMutation("tasks", task.id, SyncOperation.UPSERT, syncEngine.serializeTask(updated))
             if (isFinishing) {
-                awardCoins(3)
+                val baseCoins = when (task.priority) {
+                    TaskPriority.HIGH -> 3
+                    TaskPriority.MEDIUM -> 2
+                    else -> 1
+                }
+                awardCoins(baseCoins, "Completed ${task.priority.name.lowercase()} task: ${task.title}", "TASK_COMPLETION", "task_${task.id}_${System.currentTimeMillis()}")
             }
         }
         notifyWidgets()
@@ -454,7 +474,18 @@ class KintsuRepository(
             )
         )
         if (isCompleted) {
-            awardCoins(10)
+            val durationMinutes = ((endTimeMillis - startTimeMillis) / (60 * 1000L)).toInt()
+            val baseCoins = when {
+                durationMinutes >= 45 -> 3
+                durationMinutes >= 15 -> 2
+                else -> 1
+            }
+            val focusType = when {
+                durationMinutes >= 45 -> "Deep Focus (45m+)"
+                durationMinutes >= 15 -> "Mindful Focus"
+                else -> "Quick Focus"
+            }
+            awardCoins(baseCoins, "$focusType completed (${durationMinutes}m)", "FOCUS_SESSION", "focus_${id}_${endTimeMillis}")
         }
         notifyWidgets()
         return id
@@ -472,17 +503,22 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+        awardCoins(1, "Daily intention pledged", "DAILY_INTENTION", "intention_${dateEpochDay}")
         notifyWidgets()
         return id
     }
 
     suspend fun toggleDailyIntention(intention: DailyIntentionEntity) {
+        val nextCompleted = !intention.isCompleted
         dailyIntentionDao.insertOrUpdate(
             intention.copy(
-                isCompleted = !intention.isCompleted,
+                isCompleted = nextCompleted,
                 updatedAt = System.currentTimeMillis()
             )
         )
+        if (nextCompleted) {
+            awardCoins(1, "Daily intention fulfilled", "DAILY_INTENTION_FULFILL", "intention_fulfill_${intention.id}_${System.currentTimeMillis()}")
+        }
         notifyWidgets()
     }
 
@@ -500,6 +536,7 @@ class KintsuRepository(
                 updatedAt = System.currentTimeMillis()
             )
         )
+        awardCoins(2, "Reflective journal entry written", "JOURNAL", "journal_${dateEpochDay}")
         notifyWidgets()
         return id
     }
@@ -604,6 +641,7 @@ class KintsuRepository(
     // Weekly Review operations
     suspend fun saveWeeklyReview(review: WeeklyReviewEntity): Long {
         val id = weeklyReviewDao.insertOrUpdate(review)
+        awardCoins(3, "Mindful weekly review completed", "WEEKLY_REVIEW", "weekly_${review.weekStartEpochDay}")
         notifyWidgets()
         return id
     }
@@ -947,14 +985,54 @@ class KintsuRepository(
             if (alreadyAwarded) return false
         }
 
-        settingsDataStore.addCoins(amount)
+        // 1. Time tamper verification
+        CoinSecurityGuard.checkAndUpdateMonotonicClock(settingsDataStore.context)
+
+        // 2. Fire Streak Multiplier Calculation (Capped strictly at 2.0x)
+        val streakDays = try {
+            val logs = habitDao.getAllLogsList()
+            FireStreakEngine.calculateCurrentStreak(logs)
+        } catch (_: Exception) { 0 }
+
+        val tier = FireStreakEngine.getTier(streakDays)
+        val finalAmount = FireStreakEngine.applyMultiplier(amount, tier)
+
+        // 3. Add to secure storage
+        settingsDataStore.addCoins(finalAmount)
+
+        // 4. Cryptographic Hash Chain & KeyStore Signing
+        val latestTx = wellbeingDao.getLatestWalletTransaction()
+        val prevHash = latestTx?.transactionHash ?: "GENESIS"
+        val now = System.currentTimeMillis()
+        val eventId = if (sourceEventId.isNotBlank()) sourceEventId else "coin_earn_${now}"
+
+        val txHash = CoinSecurityGuard.computeTransactionHash(
+            previousHash = prevHash,
+            amount = finalAmount,
+            type = "EARNED",
+            sourceActivity = sourceActivity,
+            sourceEventId = eventId,
+            timestampMillis = now,
+            multiplier = tier.multiplier,
+            isDeduction = false
+        )
+
+        val signature = CoinSecurityGuard.signHash(settingsDataStore.context, txHash)
+        val formattedReason = if (tier.multiplier > 1.0f) "$reason (${tier.title} ${tier.multiplier}x)" else reason
+
         wellbeingDao.insertWalletTransaction(
             WalletTransactionEntity(
-                amount = amount,
+                amount = finalAmount,
                 type = "EARNED",
-                reason = reason,
+                reason = formattedReason,
                 sourceActivity = sourceActivity,
-                sourceEventId = if (sourceEventId.isNotBlank()) sourceEventId else "coin_earn_${System.currentTimeMillis()}"
+                sourceEventId = eventId,
+                timestampMillis = now,
+                previousHash = prevHash,
+                transactionHash = txHash,
+                signature = signature,
+                multiplier = tier.multiplier,
+                isDeduction = false
             )
         )
         return true
@@ -962,19 +1040,56 @@ class KintsuRepository(
 
     suspend fun purchaseShopItem(item: ShopItemEntity): Boolean {
         if (item.isUnlocked) return true
+
+        // 1. Streak rank barrier check
+        val streakDays = try {
+            val logs = habitDao.getAllLogsList()
+            FireStreakEngine.calculateCurrentStreak(logs)
+        } catch (_: Exception) { 0 }
+
+        if (!FireStreakEngine.isEligibleForShopItem(streakDays, item.requiredStreakDays)) {
+            return false // Locked behind streak prerequisite!
+        }
+
+        // 2. Spend coins
         val success = settingsDataStore.spendCoins(item.costCoins)
         if (success) {
             val now = System.currentTimeMillis()
             wellbeingDao.updateShopItem(
                 item.copy(isUnlocked = true, purchasedAtMillis = now)
             )
+
+            // 3. Cryptographic Hash Chain & KeyStore Signing
+            val latestTx = wellbeingDao.getLatestWalletTransaction()
+            val prevHash = latestTx?.transactionHash ?: "GENESIS"
+            val eventId = "shop_item_${item.id}_$now"
+
+            val txHash = CoinSecurityGuard.computeTransactionHash(
+                previousHash = prevHash,
+                amount = -item.costCoins,
+                type = "SPENT",
+                sourceActivity = "SHOP_PURCHASE",
+                sourceEventId = eventId,
+                timestampMillis = now,
+                multiplier = 1.0f,
+                isDeduction = false
+            )
+
+            val signature = CoinSecurityGuard.signHash(settingsDataStore.context, txHash)
+
             wellbeingDao.insertWalletTransaction(
                 WalletTransactionEntity(
                     amount = -item.costCoins,
                     type = "SPENT",
                     reason = "Unlocked ${item.title}",
                     sourceActivity = "SHOP_PURCHASE",
-                    sourceEventId = "shop_item_${item.id}_$now"
+                    sourceEventId = eventId,
+                    timestampMillis = now,
+                    previousHash = prevHash,
+                    transactionHash = txHash,
+                    signature = signature,
+                    multiplier = 1.0f,
+                    isDeduction = false
                 )
             )
 
@@ -1038,7 +1153,14 @@ class KintsuRepository(
     suspend fun seedShopCatalogIfEmpty() {
         val completeCatalog = ShopCatalog.createCompleteCatalog()
         wellbeingDao.seedShopItems(completeCatalog)
-        wellbeingDao.unlockAllShopItems()
+        // Strictly update pricing and streak gates on unpurchased inventory items
+        completeCatalog.forEach { catalogItem ->
+            wellbeingDao.updateCatalogPricing(
+                id = catalogItem.id,
+                costCoins = catalogItem.costCoins,
+                requiredStreakDays = catalogItem.requiredStreakDays
+            )
+        }
     }
 
     // --- Personal Rewards ---
@@ -1295,7 +1417,7 @@ class KintsuRepository(
                 timeReclaimedMinutes = session.durationMinutes
             )
         )
-        awardCoins(15)
+        awardCoins(3, "Digital detox completed", "DIGITAL_DETOX", "detox_${session.id}")
     }
 
     suspend fun addQuitHabit(name: String, ifThen: String?, altActs: String?, contactName: String?, contactPhone: String?): Long {
@@ -1318,7 +1440,7 @@ class KintsuRepository(
     suspend fun repairQuitHabitSlip(habit: QuitHabitEntity) {
         val restored = QuitHabitTracker.repairWithGold(habit, habit.cleanStreakStartMillis)
         wellbeingDao.updateQuitHabit(restored)
-        awardCoins(10)
+        awardCoins(2, "Kintsugi urge mended with gold", "QUIT_HABIT_REPAIR", "urge_repair_${habit.id}_${System.currentTimeMillis()}")
     }
 
     suspend fun logUrge(habitId: Long, intensity: Int, tags: String, note: String): Long {

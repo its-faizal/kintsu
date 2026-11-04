@@ -1,5 +1,10 @@
 package com.kintsu.app.ui
 
+import com.kintsu.app.coin.FireStreakEngine
+import com.kintsu.app.coin.FireStreakTier
+import com.kintsu.app.coin.NegativeEconomyEngine
+import com.kintsu.app.coin.CoinSecurityGuard
+
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -197,6 +202,14 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
     val allLogs: StateFlow<List<HabitLogEntity>> = repository.allLogs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val currentStreakDays: StateFlow<Int> = allLogs
+        .map { logs -> FireStreakEngine.calculateCurrentStreak(logs) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val currentFireTier: StateFlow<FireStreakTier> = currentStreakDays
+        .map { days -> FireStreakEngine.getTier(days) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), FireStreakTier.NONE)
+
     val allTasks: StateFlow<List<TaskEntity>> = repository.allTasks
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -339,6 +352,7 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
             repository.seedDefaultStylePresetsIfEmpty()
             repository.seedDefaultTemplatesIfNeeded()
             achievementTracker.evaluateAchievements()
+            NegativeEconomyEngine.checkDailySlothDecay(getApplication())
         }
     }
 
