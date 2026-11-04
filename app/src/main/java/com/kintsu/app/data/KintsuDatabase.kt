@@ -48,6 +48,20 @@ import com.kintsu.app.sync.dao.SyncDao
 import com.kintsu.app.sync.model.SyncQueueEntity
 import com.kintsu.app.sync.model.SyncRegistryEntity
 
+val MIGRATION_15_16 = object : Migration(15, 16) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        fun addColumnSafe(sql: String) {
+            try { db.execSQL(sql) } catch (_: Exception) {}
+        }
+        addColumnSafe("ALTER TABLE shop_inventory ADD COLUMN requiredStreakDays INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN previousHash TEXT NOT NULL DEFAULT 'GENESIS'")
+        addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN transactionHash TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN signature TEXT NOT NULL DEFAULT ''")
+        addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN multiplier REAL NOT NULL DEFAULT 1.0")
+        addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN isDeduction INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
 val MIGRATION_14_15 = object : Migration(14, 15) {
     override fun migrate(db: SupportSQLiteDatabase) {
         fun addColumnSafe(sql: String) {
@@ -58,7 +72,7 @@ val MIGRATION_14_15 = object : Migration(14, 15) {
         addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN signature TEXT NOT NULL DEFAULT ''")
         addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN multiplier REAL NOT NULL DEFAULT 1.0")
         addColumnSafe("ALTER TABLE wallet_transactions ADD COLUMN isDeduction INTEGER NOT NULL DEFAULT 0")
-        addColumnSafe("ALTER TABLE shop_items ADD COLUMN requiredStreakDays INTEGER NOT NULL DEFAULT 0")
+        addColumnSafe("ALTER TABLE shop_inventory ADD COLUMN requiredStreakDays INTEGER NOT NULL DEFAULT 0")
     }
 }
 
@@ -584,7 +598,7 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         JournalCollectionEntity::class,
         JournalTemplateEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 abstract class KintsuDatabase : RoomDatabase() {
@@ -624,7 +638,8 @@ abstract class KintsuDatabase : RoomDatabase() {
                         MIGRATION_11_12,
                         MIGRATION_12_13,
                         MIGRATION_13_14,
-                        MIGRATION_14_15
+                        MIGRATION_14_15,
+                        MIGRATION_15_16
                     )
                     .build()
                 val appContext = context.applicationContext
