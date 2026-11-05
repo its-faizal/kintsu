@@ -43,6 +43,8 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.ui.components.AppLogo
+import com.kintsu.app.ui.components.AppLogoCache
 import com.kintsu.app.ui.components.KintsuBottomSheet
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
@@ -82,6 +84,7 @@ fun AppRestrictionsSheet(
         withContext(Dispatchers.IO) {
             val pm = context.packageManager
             val installed = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            AppLogoCache.preload(context, installed.map { it.packageName })
             val db = KintsuDatabase.getDatabase(context)
             val allGroups = db.wellbeingDao().getAllAppGroups().first()
             val allRules = db.wellbeingDao().getAllBlockRules().first()
@@ -171,18 +174,29 @@ fun AppRestrictionsSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = target.appName,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                AppLogo(
+                                    packageName = target.packageName,
+                                    size = 42.dp,
+                                    shape = RoundedCornerShape(10.dp),
+                                    fallbackAppName = target.appName
                                 )
-                                Text(
-                                    text = "Used today: ${target.usageMinutesToday}m",
-                                    fontSize = 11.sp,
-                                    color = colors.textSecondary
-                                )
+                                Column {
+                                    Text(
+                                        text = target.appName,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.textPrimary
+                                    )
+                                    Text(
+                                        text = "Used today: ${target.usageMinutesToday}m",
+                                        fontSize = 11.sp,
+                                        color = colors.textSecondary
+                                    )
+                                }
                             }
 
                             Text(
@@ -337,20 +351,12 @@ fun AppRestrictionsSheet(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(if (app.isRestricted) colors.goldSeamSoft else colors.surface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = app.appName.take(1).uppercase(),
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (app.isRestricted) colors.goldSeam else colors.textPrimary
-                                )
-                            }
+                            AppLogo(
+                                packageName = app.packageName,
+                                size = 38.dp,
+                                shape = RoundedCornerShape(10.dp),
+                                fallbackAppName = app.appName
+                            )
 
                             Column {
                                 Text(

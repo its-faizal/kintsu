@@ -46,7 +46,9 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.ui.components.IconBack
 import com.kintsu.app.ui.components.IconChevronRight
+import com.kintsu.app.ui.components.IconClock
 import com.kintsu.app.ui.components.IconLock
+import com.kintsu.app.ui.components.IconSparkle
 import com.kintsu.app.ui.components.IconMoon
 import com.kintsu.app.ui.components.IconShield
 import com.kintsu.app.ui.components.KintsuButton
@@ -390,18 +392,33 @@ fun ParentalControlsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "App Restrictions & Timers",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        text = "Configure daily usage quota and limits for individual apps.",
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(colors.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconClock(size = 20.dp, color = colors.goldSeam)
+                    }
+                    Column {
+                        Text(
+                            text = "App Restrictions & Timers",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Configure daily usage quota and limits for individual apps.",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                    }
                 }
 
                 IconChevronRight(color = colors.textSecondary, size = 18.dp)
@@ -429,18 +446,33 @@ fun ParentalControlsScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Category & Group Restrictions",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.textPrimary
-                    )
-                    Text(
-                        text = "Set category overall timer across social, video, and game bundles.",
-                        fontSize = 12.sp,
-                        color = colors.textSecondary
-                    )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(colors.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconSparkle(size = 20.dp, color = colors.accent)
+                    }
+                    Column {
+                        Text(
+                            text = "Category & Group Restrictions",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Set category overall timer across social, video, and game bundles.",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                    }
                 }
 
                 IconChevronRight(color = colors.textSecondary, size = 18.dp)

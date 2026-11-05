@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.ui.components.AppLogo
 import com.kintsu.app.ui.components.IconCheck
 import com.kintsu.app.ui.components.IconSearch
 import com.kintsu.app.ui.components.KintsuButton
@@ -395,19 +396,12 @@ private fun AppRowItem(
                         .clip(RoundedCornerShape(10.dp))
                 )
             } else {
-                Box(
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(colors.surfaceElevated),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = app.appName.take(1).uppercase(),
-                        style = typography.itemTitle,
-                        color = colors.goldSeam
-                    )
-                }
+                AppLogo(
+                    packageName = app.packageName,
+                    size = 42.dp,
+                    shape = RoundedCornerShape(10.dp),
+                    fallbackAppName = app.appName
+                )
             }
 
             Spacer(modifier = Modifier.width(spacing.m))

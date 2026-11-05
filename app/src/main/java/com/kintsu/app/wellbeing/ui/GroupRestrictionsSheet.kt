@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockRuleEntity
+import com.kintsu.app.ui.components.AppLogo
+import com.kintsu.app.ui.components.AppLogoCache
+import com.kintsu.app.ui.components.GroupCategoryBadge
+import com.kintsu.app.ui.components.GroupAppLogosRow
 import com.kintsu.app.ui.components.KintsuBottomSheet
 import com.kintsu.app.ui.components.KintsuButton
 import com.kintsu.app.ui.components.KintsuButtonVariant
@@ -96,6 +100,8 @@ fun GroupRestrictionsSheet(
 
         val reloadedGroups = db.wellbeingDao().getAllAppGroups().first()
         val reloadedRules = db.wellbeingDao().getAllBlockRules().first()
+        val allPkgs = reloadedGroups.flatMap { it.packageNames.split(",") }.map { it.trim() }.filter { it.isNotBlank() }
+        AppLogoCache.preload(context, allPkgs)
 
         val items = reloadedGroups.map { grp ->
             val rule = reloadedRules.find { it.appGroupId == grp.id }
@@ -155,18 +161,29 @@ fun GroupRestrictionsSheet(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text(
-                                    text = item.group.name,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = colors.textPrimary
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                GroupCategoryBadge(
+                                    categoryType = item.group.categoryType,
+                                    size = 46.dp
                                 )
-                                Text(
-                                    text = "${item.appCount} apps • Combined usage today: ${item.aggregateUsageMinutesToday}m",
-                                    fontSize = 11.sp,
-                                    color = colors.textSecondary
-                                )
+                                Column {
+                                    Text(
+                                        text = item.group.name,
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colors.textPrimary
+                                    )
+                                    val memberPkgs = item.group.packageNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                                    GroupAppLogosRow(packageNames = memberPkgs, maxLogos = 6, logoSize = 24.dp)
+                                    Text(
+                                        text = "${item.appCount} apps • Usage today: ${item.aggregateUsageMinutesToday}m",
+                                        fontSize = 11.sp,
+                                        color = colors.textSecondary
+                                    )
+                                }
                             }
 
                             Text(
@@ -285,37 +302,58 @@ fun GroupRestrictionsSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .background(colors.surfaceElevated)
-                            .border(1.dp, if (isRuleActive) colors.goldSeam.copy(alpha = 0.6f) else colors.border.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                            .border(1.dp, if (isRuleActive) colors.goldSeam.copy(alpha = 0.6f) else colors.border.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
                             .clickable {
                                 selectedGroupForEdit = item
                                 selectedGroupLimitMinutes = item.rule?.dailyLimitMinutes ?: 60
                             }
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = item.group.name,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = colors.textPrimary
+                        GroupCategoryBadge(
+                            categoryType = item.group.categoryType,
+                            size = 44.dp
+                        )
+
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = item.group.name,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = if (isRuleActive) "Guarded ✓" else "Configure +",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isRuleActive) colors.goldSeam else colors.accent
+                                )
+                            }
+
+                            val memberPkgs = item.group.packageNames.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                            GroupAppLogosRow(
+                                packageNames = memberPkgs,
+                                maxLogos = 5,
+                                logoSize = 22.dp
                             )
+
                             Text(
-                                text = "Combined usage today: ${item.aggregateUsageMinutesToday}m" + if (isRuleActive) " • Limit: ${item.rule?.dailyLimitMinutes}m" else " • No Limit",
+                                text = "Combined usage: ${item.aggregateUsageMinutesToday}m" + if (isRuleActive) " • Limit: ${item.rule?.dailyLimitMinutes}m" else " • No Limit",
                                 fontSize = 11.sp,
                                 color = if (isRuleActive) colors.goldSeam else colors.textSecondary
                             )
                         }
-
-                        Text(
-                            text = if (isRuleActive) "Guarded ✓" else "Configure +",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isRuleActive) colors.goldSeam else colors.accent
-                        )
                     }
                 }
             }
