@@ -17,31 +17,98 @@ data class LauncherIconInfo(
 
 object AppIconManager {
     val ICONS = listOf(
+        // 1. Ceramic Ivory (Default)
         LauncherIconInfo(
             id = "icon_original",
-            title = "Kintsu Original",
-            description = "Official Kintsu gold fracture emblem",
+            title = "Ceramic Ivory",
+            description = "Circular ceramic ivory stone with hand-laid 24k gold kintsugi crack",
             aliasName = ".MainActivityAliasOriginal",
             drawableResId = R.drawable.ic_kintsu_original,
             costCoins = 0,
             isDefault = true
         ),
+        // 2. Obsidian Gold
         LauncherIconInfo(
-            id = "icon_golden_seam",
-            title = "Golden Seam",
-            description = "Minimal gold fracture motif",
-            aliasName = ".MainActivityAliasGoldenSeam",
-            drawableResId = R.drawable.ic_kintsu_golden_seam,
-            costCoins = 30
+            id = "icon_obsidian_gold",
+            title = "Obsidian Gold",
+            description = "Circular midnight volcanic obsidian stone with glowing gold fracture",
+            aliasName = ".MainActivityAliasMidnightGold",
+            drawableResId = R.drawable.ic_kintsu_midnight_gold,
+            costCoins = 100
         ),
+        // 3. Carrara Silver
         LauncherIconInfo(
-            id = "icon_sage_emblem",
-            title = "Sage Emblem",
-            description = "Muted green geometric symbol",
+            id = "icon_carrara_silver",
+            title = "Carrara Silver",
+            description = "Circular pure white Tuscan marble with molten liquid silver seam",
+            aliasName = ".MainActivityAliasMinimalInk",
+            drawableResId = R.drawable.ic_kintsu_minimal_ink,
+            costCoins = 100
+        ),
+        // 4. Imperial Jade
+        LauncherIconInfo(
+            id = "icon_imperial_jade",
+            title = "Imperial Jade",
+            description = "Circular emerald nephrite jade with luminous gold fissure",
             aliasName = ".MainActivityAliasSageEmblem",
             drawableResId = R.drawable.ic_kintsu_sage_emblem,
-            costCoins = 30
+            costCoins = 120
         ),
+        // 5. Lapis Lazuli
+        LauncherIconInfo(
+            id = "icon_lapis_lazuli",
+            title = "Lapis Lazuli",
+            description = "Circular celestial cobalt stone with silver seam and gold flecks",
+            aliasName = ".MainActivityAliasOceanGlass",
+            drawableResId = R.drawable.ic_kintsu_ocean_glass,
+            costCoins = 120
+        ),
+        // 6. Rose Quartz
+        LauncherIconInfo(
+            id = "icon_rose_quartz",
+            title = "Rose Quartz",
+            description = "Circular soft crystalline rose quartz with warm champagne gold crack",
+            aliasName = ".MainActivityAliasSakuraMark",
+            drawableResId = R.drawable.ic_kintsu_sakura_mark,
+            costCoins = 120
+        ),
+        // 7. Terracotta Clay
+        LauncherIconInfo(
+            id = "icon_terracotta_clay",
+            title = "Terracotta Clay",
+            description = "Circular rustic pottery clay with rich molten bronze seam",
+            aliasName = ".MainActivityAliasTerracottaSeal",
+            drawableResId = R.drawable.ic_kintsu_terracotta_seal,
+            costCoins = 100
+        ),
+        // 8. Opal Pearl
+        LauncherIconInfo(
+            id = "icon_opal_pearl",
+            title = "Opal Pearl",
+            description = "Circular iridescent mother-of-pearl sheen with brilliant gold fracture",
+            aliasName = ".MainActivityAliasPrismaticPearl",
+            drawableResId = R.drawable.ic_kintsu_prismatic_pearl,
+            costCoins = 150
+        ),
+        // 9. Celestial Glass
+        LauncherIconInfo(
+            id = "icon_celestial_glass",
+            title = "Celestial Glass",
+            description = "Circular ethereal frosted starlight glass with radiant golden crack",
+            aliasName = ".MainActivityAliasGoldenSeam",
+            drawableResId = R.drawable.ic_kintsu_golden_seam,
+            costCoins = 150
+        ),
+        // 10. Brushed Titanium
+        LauncherIconInfo(
+            id = "icon_brushed_titanium",
+            title = "Brushed Titanium",
+            description = "Circular dark industrial titanium alloy with luminous gold seam",
+            aliasName = ".MainActivityAliasZenCircle",
+            drawableResId = R.drawable.ic_kintsu_zen_circle,
+            costCoins = 150
+        ),
+        // Additional creative variants
         LauncherIconInfo(
             id = "icon_ivory_monogram",
             title = "Ivory Monogram",
@@ -51,68 +118,12 @@ object AppIconManager {
             costCoins = 35
         ),
         LauncherIconInfo(
-            id = "icon_midnight_gold",
-            title = "Midnight Gold",
-            description = "Charcoal and champagne mark",
-            aliasName = ".MainActivityAliasMidnightGold",
-            drawableResId = R.drawable.ic_kintsu_midnight_gold,
-            costCoins = 40
-        ),
-        LauncherIconInfo(
-            id = "icon_sakura_mark",
-            title = "Sakura Mark",
-            description = "Subtle pink botanical icon",
-            aliasName = ".MainActivityAliasSakuraMark",
-            drawableResId = R.drawable.ic_kintsu_sakura_mark,
-            costCoins = 40
-        ),
-        LauncherIconInfo(
-            id = "icon_terracotta_seal",
-            title = "Terracotta Seal",
-            description = "Warm clay emblem seal",
-            aliasName = ".MainActivityAliasTerracottaSeal",
-            drawableResId = R.drawable.ic_kintsu_terracotta_seal,
-            costCoins = 35
-        ),
-        LauncherIconInfo(
-            id = "icon_ocean_glass",
-            title = "Ocean Glass",
-            description = "Misty teal abstract mark",
-            aliasName = ".MainActivityAliasOceanGlass",
-            drawableResId = R.drawable.ic_kintsu_ocean_glass,
-            costCoins = 40
-        ),
-        LauncherIconInfo(
-            id = "icon_minimal_ink",
-            title = "Minimal Ink",
-            description = "Monochrome line symbol",
-            aliasName = ".MainActivityAliasMinimalInk",
-            drawableResId = R.drawable.ic_kintsu_minimal_ink,
-            costCoins = 30
-        ),
-        LauncherIconInfo(
-            id = "icon_zen_circle",
-            title = "Zen Circle",
-            description = "Restrained circular brush-inspired design",
-            aliasName = ".MainActivityAliasZenCircle",
-            drawableResId = R.drawable.ic_kintsu_zen_circle,
-            costCoins = 35
-        ),
-        LauncherIconInfo(
             id = "icon_botanical_crest",
             title = "Botanical Crest",
             description = "Simple natural leaf motif",
             aliasName = ".MainActivityAliasBotanicalCrest",
             drawableResId = R.drawable.ic_kintsu_botanical_crest,
             costCoins = 35
-        ),
-        LauncherIconInfo(
-            id = "icon_prismatic_pearl",
-            title = "Prismatic Pearl",
-            description = "Soft layered geometric icon",
-            aliasName = ".MainActivityAliasPrismaticPearl",
-            drawableResId = R.drawable.ic_kintsu_prismatic_pearl,
-            costCoins = 45
         ),
         LauncherIconInfo(
             id = "icon_superman",
@@ -125,7 +136,21 @@ object AppIconManager {
     )
 
     fun getIconById(id: String): LauncherIconInfo {
-        return ICONS.find { it.id == id } ?: ICONS.first()
+        return ICONS.find { it.id == id }
+            ?: when (id) {
+                "icon_ceramic_ivory" -> ICONS.find { it.id == "icon_original" }
+                "icon_obsidian_gold" -> ICONS.find { it.id == "icon_obsidian_gold" }
+                "icon_carrara_silver" -> ICONS.find { it.id == "icon_carrara_silver" }
+                "icon_imperial_jade" -> ICONS.find { it.id == "icon_imperial_jade" }
+                "icon_lapis_lazuli" -> ICONS.find { it.id == "icon_lapis_lazuli" }
+                "icon_rose_quartz" -> ICONS.find { it.id == "icon_rose_quartz" }
+                "icon_terracotta_clay" -> ICONS.find { it.id == "icon_terracotta_clay" }
+                "icon_opal_pearl" -> ICONS.find { it.id == "icon_opal_pearl" }
+                "icon_celestial_glass" -> ICONS.find { it.id == "icon_celestial_glass" }
+                "icon_brushed_titanium" -> ICONS.find { it.id == "icon_brushed_titanium" }
+                else -> null
+            }
+            ?: ICONS.first()
     }
 
     fun applyLauncherIcon(context: Context, iconId: String): Boolean {

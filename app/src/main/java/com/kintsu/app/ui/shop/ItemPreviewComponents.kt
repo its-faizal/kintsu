@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kintsu.app.R
 import com.kintsu.app.data.model.ShopItemEntity
 import com.kintsu.app.ui.components.IconCheck
 import com.kintsu.app.ui.components.IconGoldSeam
@@ -69,7 +70,18 @@ fun ItemPreviewThumbnail(
 @Composable
 fun ThemeThumbnail(item: ShopItemEntity) {
     val cleanId = item.id.replace("theme_", "").uppercase()
-    val themeEnum = AppTheme.values().find { it.name.uppercase() == cleanId } ?: AppTheme.SAGE_IVORY
+    val themeEnum = when (cleanId) {
+        "OBSIDIAN_GOLD" -> AppTheme.MIDNIGHT_CHAMPAGNE
+        "CARRARA_SILVER" -> AppTheme.NORDIC_FROST
+        "IMPERIAL_JADE" -> AppTheme.MATCHA_ATELIER
+        "LAPIS_LAZULI" -> AppTheme.OCEAN_PEARL
+        "ROSE_QUARTZ" -> AppTheme.SAKURA_DAWN
+        "TERRACOTTA_CLAY" -> AppTheme.TERRACOTTA_LINEN
+        "OPAL_PEARL" -> AppTheme.BOTANICAL_PAPER
+        "CELESTIAL_GLASS" -> AppTheme.COASTAL_MIST
+        "BRUSHED_TITANIUM" -> AppTheme.ECLIPSE_GOLD
+        else -> AppTheme.values().find { it.name.uppercase() == cleanId } ?: AppTheme.SAGE_IVORY
+    }
     val palette = themeEnum.previewPalette
 
     Column(
@@ -116,7 +128,8 @@ fun AppIconThumbnail(item: ShopItemEntity) {
         contentDescription = item.title,
         modifier = Modifier
             .size(44.dp)
-            .clip(RoundedCornerShape(10.dp))
+            .clip(CircleShape)
+            .border(1.dp, KintsuTheme.colors.goldSeam.copy(alpha = 0.5f), CircleShape)
     )
 }
 
@@ -326,7 +339,18 @@ fun LargeItemInteractivePreview(
 @Composable
 fun LargeThemePreview(item: ShopItemEntity) {
     val cleanId = item.id.replace("theme_", "").uppercase()
-    val themeEnum = AppTheme.values().find { it.name.uppercase() == cleanId } ?: AppTheme.SAGE_IVORY
+    val themeEnum = when (cleanId) {
+        "OBSIDIAN_GOLD" -> AppTheme.MIDNIGHT_CHAMPAGNE
+        "CARRARA_SILVER" -> AppTheme.NORDIC_FROST
+        "IMPERIAL_JADE" -> AppTheme.MATCHA_ATELIER
+        "LAPIS_LAZULI" -> AppTheme.OCEAN_PEARL
+        "ROSE_QUARTZ" -> AppTheme.SAKURA_DAWN
+        "TERRACOTTA_CLAY" -> AppTheme.TERRACOTTA_LINEN
+        "OPAL_PEARL" -> AppTheme.BOTANICAL_PAPER
+        "CELESTIAL_GLASS" -> AppTheme.COASTAL_MIST
+        "BRUSHED_TITANIUM" -> AppTheme.ECLIPSE_GOLD
+        else -> AppTheme.values().find { it.name.uppercase() == cleanId } ?: AppTheme.SAGE_IVORY
+    }
     val palette = getThemePalette(themeEnum, isDark = false)
 
     // Render a miniature interactive Kintsu card
@@ -569,8 +593,34 @@ fun LargeBundlePreview(item: ShopItemEntity) {
         modifier = Modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("" + item.title, style = KintsuTheme.typography.itemTitle, color = colors.goldSeam)
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(item.description, style = KintsuTheme.typography.secondary, color = colors.textSecondary, maxLines = 3)
+        Row(horizontalArrangement = Arrangement.spacedBy((-6).dp)) {
+            val previewIcons = listOf(
+                R.drawable.ic_kintsu_original,
+                R.drawable.ic_kintsu_midnight_gold,
+                R.drawable.ic_kintsu_minimal_ink,
+                R.drawable.ic_kintsu_sage_emblem,
+                R.drawable.ic_kintsu_ocean_glass
+            )
+            previewIcons.forEach { resId ->
+                Image(
+                    painter = painterResource(id = resId),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .border(1.5.dp, colors.goldSeam, CircleShape)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+        Text(item.title, style = KintsuTheme.typography.itemTitle, color = colors.goldSeam)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = item.description,
+            style = KintsuTheme.typography.secondary,
+            color = colors.textSecondary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            maxLines = 3
+        )
     }
 }

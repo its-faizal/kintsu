@@ -1102,7 +1102,13 @@ class KintsuRepository(
 
             // If it's a bundle, also unlock all items included in this bundle
             if (item.itemType == "BUNDLE" && item.bundleId.isNotBlank()) {
-                val bundleItems = wellbeingDao.getShopItemsByBundle(item.bundleId)
+                val bundleItems = if (item.bundleId == "bundle_kintsugi_all") {
+                    wellbeingDao.getAllShopItems().first().filter {
+                        it.bundleId == "bundle_kintsugi_emblems" || it.bundleId == "bundle_kintsugi_themes"
+                    }
+                } else {
+                    wellbeingDao.getShopItemsByBundle(item.bundleId)
+                }
                 bundleItems.forEach { bi ->
                     if (!bi.isUnlocked) {
                         wellbeingDao.updateShopItem(
@@ -1124,7 +1130,18 @@ class KintsuRepository(
         when (item.itemType) {
             "THEME" -> {
                 val cleanId = item.id.replace("theme_", "").uppercase()
-                val themeEnum = AppTheme.values().find { it.name.uppercase() == cleanId }
+                val themeEnum = when (cleanId) {
+                    "OBSIDIAN_GOLD" -> AppTheme.MIDNIGHT_CHAMPAGNE
+                    "CARRARA_SILVER" -> AppTheme.NORDIC_FROST
+                    "IMPERIAL_JADE" -> AppTheme.MATCHA_ATELIER
+                    "LAPIS_LAZULI" -> AppTheme.OCEAN_PEARL
+                    "ROSE_QUARTZ" -> AppTheme.SAKURA_DAWN
+                    "TERRACOTTA_CLAY" -> AppTheme.TERRACOTTA_LINEN
+                    "OPAL_PEARL" -> AppTheme.BOTANICAL_PAPER
+                    "CELESTIAL_GLASS" -> AppTheme.COASTAL_MIST
+                    "BRUSHED_TITANIUM" -> AppTheme.ECLIPSE_GOLD
+                    else -> AppTheme.values().find { it.name.uppercase() == cleanId }
+                }
                 if (themeEnum != null) {
                     settingsDataStore.setAppTheme(themeEnum)
                 }
