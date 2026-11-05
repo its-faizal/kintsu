@@ -184,6 +184,32 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     return
                 }
 
+                // Check Daily Shorts Quota configured in Parental Controls
+                val shortsDailyLimit = settings.shortsDailyLimitMinutes
+                val shortsUsageMinutes = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, pkgName)
+                if (shortsDailyLimit == 0 || (shortsDailyLimit > 0 && shortsUsageMinutes >= shortsDailyLimit)) {
+                    lastTriggeredTimeMillis[pkgName] = now
+                    performGlobalAction(GLOBAL_ACTION_BACK)
+                    try {
+                        val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                        am?.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_MUTE, 0)
+                    } catch (_: Exception) {}
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+
+                    triggerBlockScreen(
+                        targetPackage = pkgName,
+                        ruleMode = "SHORTS_DAILY_LIMIT",
+                        strictness = "INVINCIBLE",
+                        customPrompt = if (shortsDailyLimit == 0)
+                            "Short-form feeds are locked under Parental Controls."
+                        else
+                            "Daily Short-Form Limit Reached: You have reached your ${shortsDailyLimit}-minute quota for today ($shortsUsageMinutes mins used).",
+                        pauseDurationSeconds = 15,
+                        interventionStyle = settings.interventionStyle
+                    )
+                    return
+                }
+
                 if (com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.hasPassExpiredRecently(pkgName)) {
                     com.kintsu.app.coin.NegativeEconomyEngine.recordDeduction(
                         context = applicationContext,
@@ -288,8 +314,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
     private suspend fun handlePackageInspection(packageName: String) {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
-        if (!settings.wellbeingEnabled) return
         if (settings.protectionFailSafeTripped) return
+        if (!settings.wellbeingEnabled && !settings.invincibleModeEnabled && !settings.tamperProtectionEnabled) return
 
         val db = KintsuDatabase.getDatabase(applicationContext)
         val nowMillis = System.currentTimeMillis()
@@ -570,7 +596,6 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
     private suspend fun checkTamperAndInvincible(event: AccessibilityEvent, pkgName: String): Boolean {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
-        if (!settings.wellbeingEnabled) return false
 
         val isInvincibleActive = settings.invincibleModeEnabled
         val isTamperActive = settings.tamperProtectionEnabled
@@ -608,10 +633,11 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             performGlobalAction(GLOBAL_ACTION_HOME)
             performGlobalAction(GLOBAL_ACTION_BACK)
 
+            val reason = if (isInvincibleActive) "Invincible Mode" else "Tamper Protection"
             withContext(Dispatchers.Main) {
                 Toast.makeText(
                     applicationContext,
-                    "Invincible Mode: Settings & uninstalling are locked until your daily 10-minute window.",
+                    "$reason: Settings & uninstalling are restricted by Kintsu Shield.",
                     Toast.LENGTH_LONG
                 ).show()
             }

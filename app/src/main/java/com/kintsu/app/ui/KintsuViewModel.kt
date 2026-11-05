@@ -524,6 +524,14 @@ class KintsuViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setShortsTimer(dailyLimitMinutes: Int, sessionInterruptionMinutes: Int) {
+        viewModelScope.launch {
+            repository.updateSettings {
+                it.setShortsTimer(dailyLimitMinutes, sessionInterruptionMinutes)
+            }
+        }
+    }
+
     fun resetFailSafe() {
         viewModelScope.launch { repository.updateSettings { it.setProtectionFailSafeTripped(false) } }
     }

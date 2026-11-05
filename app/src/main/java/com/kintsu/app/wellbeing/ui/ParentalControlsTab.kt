@@ -67,6 +67,7 @@ fun ParentalControlsScreen(
     onBack: () -> Unit,
     onSaveInvincibleMode: (enabled: Boolean, windowHour: Int, windowMin: Int, includeShorts: Boolean, includeBedtime: Boolean) -> Unit,
     onSaveProtection: (protectedAccess: Boolean, tamperProtection: Boolean, uninstallHour: Int, uninstallMin: Int) -> Unit,
+    onSaveShortsTimer: (dailyMinutes: Int, sessionMinutes: Int) -> Unit = { _, _ -> },
     onOpenAppRestrictions: () -> Unit,
     onOpenGroupRestrictions: () -> Unit
 ) {
@@ -89,6 +90,9 @@ fun ParentalControlsScreen(
     // Premium Kintsu Time Picker states
     var showInvinciblePicker by remember { mutableStateOf(false) }
     var showUninstallPicker by remember { mutableStateOf(false) }
+    var showShortsTimerPicker by remember { mutableStateOf(false) }
+    var shortsDailyLimit by remember(settings.shortsDailyLimitMinutes) { mutableIntStateOf(settings.shortsDailyLimitMinutes) }
+    var shortsSessionInterruption by remember(settings.shortsSessionInterruptionMinutes) { mutableIntStateOf(settings.shortsSessionInterruptionMinutes) }
 
     // Device Admin status
     var isDeviceAdminActive by remember { mutableStateOf(false) }
@@ -152,30 +156,12 @@ fun ParentalControlsScreen(
         verticalArrangement = Arrangement.spacedBy(spacing.m),
         modifier = Modifier.fillMaxWidth()
     ) {
-        // --- TOP BAR WITH BACK ARROW & TITLE ---
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(colors.surfaceElevated)
-                    .clickable { onBack() }
-                    .semantics { role = Role.Button },
-                contentAlignment = Alignment.Center
-            ) {
-                IconBack(size = 18.dp, color = colors.textPrimary)
-            }
-            Spacer(modifier = Modifier.width(spacing.m))
-            Text(
-                text = "Parental Controls & Invincible Mode",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = colors.textPrimary
-            )
-        }
+        // Header description
+        Text(
+            text = "Enforce hard boundaries on screen time, app groups, short-form doomscrolling, and device tamper protections.",
+            style = typography.caption.copy(lineHeight = 16.sp),
+            color = colors.textSecondary
+        )
 
         if (isLockedByInvincible) {
             Box(
@@ -478,6 +464,65 @@ fun ParentalControlsScreen(
                 }
 
                 IconChevronRight(color = colors.textSecondary, size = 18.dp)
+            }
+        }
+
+        // --- 5.5 SHORT-FORM CONTENT TIMER CARD ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceElevated)
+                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .clickable {
+                    if (isLockedByInvincible) {
+                        showInvincibleLockedToast()
+                    } else {
+                        showShortsTimerPicker = true
+                    }
+                }
+                .padding(spacing.m)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(colors.surface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        IconClock(size = 20.dp, color = colors.goldSeam)
+                    }
+                    Column {
+                        Text(
+                            text = "Short-Form Content Timer",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Daily Quota: ${if (shortsDailyLimit == 0) "Block Immediately" else "${shortsDailyLimit}m"} · Interruption: Every ${shortsSessionInterruption}m",
+                            fontSize = 12.sp,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (shortsDailyLimit == 0) "0m" else "${shortsDailyLimit}m",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.accent
+                )
             }
         }
 
@@ -933,6 +978,103 @@ fun ParentalControlsScreen(
                 commitProtection(h = h, m = m)
                 showUninstallPicker = false
             }
+        )
+    }
+
+    if (showShortsTimerPicker) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showShortsTimerPicker = false },
+            title = {
+                Text(
+                    text = "Short-Form Content Timer",
+                    style = typography.itemTitle.copy(fontWeight = FontWeight.Bold),
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(spacing.m)
+                ) {
+                    Text(
+                        text = "Daily Quota for Reels & Shorts",
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.goldSeam
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(0 to "0m (Block)", 15 to "15m", 30 to "30m", 45 to "45m").forEach { (mins, label) ->
+                            val isSel = shortsDailyLimit == mins
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) colors.goldSeamSoft else colors.surface)
+                                    .border(1.dp, if (isSel) colors.goldSeam else colors.border, RoundedCornerShape(8.dp))
+                                    .clickable { shortsDailyLimit = mins }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSel) colors.goldSeam else colors.textSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = "Mindful Interruption Frequency",
+                        style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                        color = colors.goldSeam
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(5 to "Every 5m", 10 to "Every 10m", 15 to "Every 15m").forEach { (mins, label) ->
+                            val isSel = shortsSessionInterruption == mins
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSel) colors.goldSeamSoft else colors.surface)
+                                    .border(1.dp, if (isSel) colors.goldSeam else colors.border, RoundedCornerShape(8.dp))
+                                    .clickable { shortsSessionInterruption = mins }
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSel) colors.goldSeam else colors.textSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        onSaveShortsTimer(shortsDailyLimit, shortsSessionInterruption)
+                        showShortsTimerPicker = false
+                    }
+                ) {
+                    Text("Save Timer", color = colors.goldSeam, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showShortsTimerPicker = false }) {
+                    Text("Cancel", color = colors.textSecondary)
+                }
+            },
+            containerColor = colors.surfaceElevated
         )
     }
 }

@@ -3,6 +3,8 @@ package com.kintsu.app.wellbeing.ui
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -70,58 +72,34 @@ fun StatisticsTab() {
 
     var activeMetric by remember { mutableStateOf("Screen") } // "Screen" or "Data"
     var totalScreenTimeTodayMinutes by remember { mutableLongStateOf(0L) }
+    var hasUsagePermission by remember { mutableStateOf(ScreenTimeHelper.hasUsageStatsPermission(context)) }
     val topAppsList = remember { mutableStateListOf<AppUsageRecord>() }
 
-    // Load actual usage stats
+    // Load actual usage stats from Android system
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            hasUsagePermission = ScreenTimeHelper.hasUsageStatsPermission(context)
             val totalMins = ScreenTimeHelper.getScreenTimeTodayMinutes(context)
-            val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            val perApp = ScreenTimeHelper.getPerAppUsageTodayMinutes(context)
             val pm = context.packageManager
-            val calendar = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0)
-                set(Calendar.MINUTE, 0)
-                set(Calendar.SECOND, 0)
-                set(Calendar.MILLISECOND, 0)
-            }
-            val startTime = calendar.timeInMillis
-            val endTime = System.currentTimeMillis()
 
-            val stats = usm?.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, startTime, endTime) ?: emptyList()
-            val aggregated = stats.groupBy { it.packageName }.mapValues { entry ->
-                entry.value.sumOf { it.totalTimeInForeground } / 60000L
-            }.filter { it.value > 0 && it.key != context.packageName }
-                .toList()
+            val parsed = perApp.toList()
                 .sortedByDescending { it.second }
-                .take(6)
-
-            val parsed = aggregated.map { (pkg, mins) ->
-                val label = try {
-                    val ai = pm.getApplicationInfo(pkg, 0)
-                    pm.getApplicationLabel(ai).toString()
-                } catch (_: Exception) {
-                    pkg.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+                .take(10)
+                .map { (pkg, mins) ->
+                    val label = try {
+                        val ai = pm.getApplicationInfo(pkg, 0)
+                        pm.getApplicationLabel(ai).toString()
+                    } catch (_: Exception) {
+                        pkg.substringAfterLast('.').replaceFirstChar { it.uppercase() }
+                    }
+                    AppUsageRecord(pkg, label, mins)
                 }
-                AppUsageRecord(pkg, label, mins)
-            }
 
             withContext(Dispatchers.Main) {
                 totalScreenTimeTodayMinutes = totalMins
                 topAppsList.clear()
-                if (parsed.isNotEmpty()) {
-                    topAppsList.addAll(parsed)
-                } else {
-                    // Graceful fallback demo if usage permission not yet active
-                    topAppsList.addAll(
-                        listOf(
-                            AppUsageRecord("com.instagram.android", "Instagram", 136),
-                            AppUsageRecord("com.dts.freefiremax", "Free Fire MAX", 91),
-                            AppUsageRecord("com.kintsu.app", "Kintsu", 90),
-                            AppUsageRecord("com.google.android.deskclock", "Clock", 17),
-                            AppUsageRecord("com.brave.browser", "Brave", 15)
-                        )
-                    )
-                }
+                topAppsList.addAll(parsed)
             }
         }
     }
@@ -129,12 +107,48 @@ fun StatisticsTab() {
     val hours = totalScreenTimeTodayMinutes / 60
     val minutes = totalScreenTimeTodayMinutes % 60
     val formattedScreenTime = if (totalScreenTimeTodayMinutes > 0) {
-        "$hours hours, $minutes minutes"
+        if (hours > 0) "$hours hours, $minutes minutes" else "$minutes minutes"
     } else {
-        "7 hours, 9 minutes" // Reference value
+        "0 minutes"
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(spacing.m)) {
+        if (!hasUsagePermission) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(colors.surfaceElevated)
+                    .border(1.2.dp, colors.goldSeam, RoundedCornerShape(14.dp))
+                    .clickable {
+                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        context.startActivity(intent)
+                    }
+                    .padding(spacing.m)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    IconDevice(size = 22.dp, color = colors.goldSeam)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Grant System Usage Access",
+                            style = typography.itemTitle.copy(fontWeight = FontWeight.Bold),
+                            color = colors.textPrimary
+                        )
+                        Text(
+                            text = "Tap to enable permission in Settings so Kintsu can show live screen time & app stats.",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+                    }
+                }
+            }
+        }
         // --- 1. HEADER (Title "Statistics" & Screen / Data Switcher) ---
         Row(
             modifier = Modifier.fillMaxWidth(),

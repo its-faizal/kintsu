@@ -104,6 +104,7 @@ fun DigitalBalanceScreen(
     onSaveNotificationBatching: ((enabled: Boolean, storeAll: Boolean, historyDays: Int, recapType: String, morning: Boolean, afternoon: Boolean, evening: Boolean) -> Unit)? = null,
     onSaveInvincibleMode: ((enabled: Boolean, windowHour: Int, windowMin: Int, includeShorts: Boolean, includeBedtime: Boolean) -> Unit)? = null,
     onSaveParentalControlsProtection: ((protectedAccess: Boolean, tamperProtection: Boolean, uninstallHour: Int, uninstallMin: Int) -> Unit)? = null,
+    onSaveShortsTimer: ((dailyMinutes: Int, sessionMinutes: Int) -> Unit)? = null,
     onAddQuitHabit: ((name: String, ifThen: String, alt: String, cName: String?, cPhone: String?) -> Unit)? = null,
     onRecordSlip: ((QuitHabitEntity) -> Unit)? = null,
     onRepairSlip: ((QuitHabitEntity) -> Unit)? = null,
@@ -221,6 +222,9 @@ fun DigitalBalanceScreen(
                             },
                             onSaveProtection = { prot, tamp, unH, unM ->
                                 onSaveParentalControlsProtection?.invoke(prot, tamp, unH, unM)
+                            },
+                            onSaveShortsTimer = { daily, sess ->
+                                onSaveShortsTimer?.invoke(daily, sess)
                             },
                             onOpenAppRestrictions = { showAppPicker = true },
                             onOpenGroupRestrictions = { showGroupPicker = true }

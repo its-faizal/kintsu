@@ -127,7 +127,9 @@ data class KintsuSettings(
     val protectedAccessEnabled: Boolean = false,
     val tamperProtectionEnabled: Boolean = false,
     val uninstallWindowHour: Int = 0,
-    val uninstallWindowMinute: Int = 0
+    val uninstallWindowMinute: Int = 0,
+    val shortsDailyLimitMinutes: Int = 15,
+    val shortsSessionInterruptionMinutes: Int = 5
 )
 
 class SettingsDataStore(val context: Context) {
@@ -245,6 +247,8 @@ class SettingsDataStore(val context: Context) {
         val TAMPER_PROTECTION_ENABLED = booleanPreferencesKey("tamper_protection_enabled")
         val UNINSTALL_WINDOW_HOUR = intPreferencesKey("uninstall_window_hour")
         val UNINSTALL_WINDOW_MINUTE = intPreferencesKey("uninstall_window_minute")
+        val SHORTS_DAILY_LIMIT_MINUTES = intPreferencesKey("shorts_daily_limit_minutes")
+        val SHORTS_SESSION_INTERRUPTION_MINUTES = intPreferencesKey("shorts_session_interruption_minutes")
     }
 
     val settingsFlow: Flow<KintsuSettings> = context.dataStore.data.map { prefs ->
@@ -404,7 +408,9 @@ class SettingsDataStore(val context: Context) {
                 protectedAccessEnabled = prefs[Keys.PROTECTED_ACCESS_ENABLED] ?: false,
                 tamperProtectionEnabled = prefs[Keys.TAMPER_PROTECTION_ENABLED] ?: false,
                 uninstallWindowHour = prefs[Keys.UNINSTALL_WINDOW_HOUR] ?: 0,
-                uninstallWindowMinute = prefs[Keys.UNINSTALL_WINDOW_MINUTE] ?: 0
+                uninstallWindowMinute = prefs[Keys.UNINSTALL_WINDOW_MINUTE] ?: 0,
+                shortsDailyLimitMinutes = prefs[Keys.SHORTS_DAILY_LIMIT_MINUTES] ?: 15,
+                shortsSessionInterruptionMinutes = prefs[Keys.SHORTS_SESSION_INTERRUPTION_MINUTES] ?: 5
         )
     }
 
@@ -855,6 +861,17 @@ class SettingsDataStore(val context: Context) {
             it[Keys.TAMPER_PROTECTION_ENABLED] = tamperProtection
             it[Keys.UNINSTALL_WINDOW_HOUR] = uninstallHour
             it[Keys.UNINSTALL_WINDOW_MINUTE] = uninstallMinute
+            if (tamperProtection || protectedAccess) {
+                it[Keys.WELLBEING_ENABLED] = true
+            }
+        }
+    }
+
+    suspend fun setShortsTimer(dailyLimitMinutes: Int, sessionInterruptionMinutes: Int) {
+        context.dataStore.edit {
+            it[Keys.SHORTS_DAILY_LIMIT_MINUTES] = dailyLimitMinutes
+            it[Keys.SHORTS_SESSION_INTERRUPTION_MINUTES] = sessionInterruptionMinutes
+            it[Keys.WELLBEING_ENABLED] = true
         }
     }
 }

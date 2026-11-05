@@ -872,6 +872,9 @@ fun KintsuApp(
                 onSaveParentalControlsProtection = { prot, tamp, unH, unM ->
                     viewModel.setParentalControlsProtection(prot, tamp, unH, unM)
                 },
+                onSaveShortsTimer = { daily, sess ->
+                    viewModel.setShortsTimer(daily, sess)
+                },
                 onAddQuitHabit = { name, ifThen, alt, cName, cPhone ->
                     viewModel.addQuitHabit(name, ifThen, alt, cName, cPhone)
                 },

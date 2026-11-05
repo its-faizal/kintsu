@@ -27,36 +27,12 @@ object ScreenTimeHelper {
      * Returns total foreground screen time in minutes for today across all non-protected apps.
      */
     fun getScreenTimeTodayMinutes(context: Context): Long {
-        if (!hasUsageStatsPermission(context)) return 0L
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager ?: return 0L
-
-        val calendar = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val startOfDay = calendar.timeInMillis
-        val now = System.currentTimeMillis()
-
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            startOfDay,
-            now
-        ) ?: return 0L
-
-        var totalMillis = 0L
-        for (usage in stats) {
-            val pkg = usage.packageName ?: continue
-            if (!ProtectedApps.isProtected(pkg)) {
-                totalMillis += usage.totalTimeInForeground
-            }
-        }
-        return totalMillis / (1000 * 60)
+        val perApp = getPerAppUsageTodayMinutes(context)
+        return perApp.values.sum()
     }
 
     /**
-     * Returns map of packageName to foreground minutes used today.
+     * Returns real-time map of packageName to foreground minutes used today from the Android system.
      */
     fun getPerAppUsageTodayMinutes(context: Context): Map<String, Long> {
         if (!hasUsageStatsPermission(context)) return emptyMap()
@@ -71,20 +47,86 @@ object ScreenTimeHelper {
         val startOfDay = calendar.timeInMillis
         val now = System.currentTimeMillis()
 
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            startOfDay,
-            now
-        ) ?: return emptyMap()
-
         val result = mutableMapOf<String, Long>()
-        for (usage in stats) {
-            val pkg = usage.packageName ?: continue
-            val mins = usage.totalTimeInForeground / (1000 * 60)
-            if (mins > 0) {
-                result[pkg] = (result[pkg] ?: 0L) + mins
+
+        // Tier 1: queryAndAggregateUsageStats (Most accurate on Android 10+)
+        try {
+            val aggregated = usageStatsManager.queryAndAggregateUsageStats(startOfDay, now)
+            if (!aggregated.isNullOrEmpty()) {
+                for ((pkg, stats) in aggregated) {
+                    if (ProtectedApps.isProtected(pkg) || pkg == context.packageName) continue
+                    val mins = stats.totalTimeInForeground / (1000 * 60)
+                    if (mins > 0) {
+                        result[pkg] = mins
+                    }
+                }
+                if (result.isNotEmpty()) return result
             }
-        }
+        } catch (_: Exception) {}
+
+        // Tier 2: UsageEvents calculation (Calculates foreground deltas directly from event stream)
+        try {
+            val events = usageStatsManager.queryEvents(startOfDay, now)
+            if (events != null) {
+                val event = UsageEvents.Event()
+                val resumedTimes = mutableMapOf<String, Long>()
+                val foregroundMillis = mutableMapOf<String, Long>()
+
+                while (events.hasNextEvent()) {
+                    events.getNextEvent(event)
+                    val pkg = event.packageName ?: continue
+                    if (ProtectedApps.isProtected(pkg) || pkg == context.packageName) continue
+
+                    when (event.eventType) {
+                        UsageEvents.Event.ACTIVITY_RESUMED -> {
+                            resumedTimes[pkg] = event.timeStamp
+                        }
+                        UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED -> {
+                            val start = resumedTimes.remove(pkg)
+                            if (start != null && event.timeStamp > start) {
+                                val delta = event.timeStamp - start
+                                foregroundMillis[pkg] = (foregroundMillis[pkg] ?: 0L) + delta
+                            }
+                        }
+                    }
+                }
+
+                // Add active sessions still running right now
+                for ((pkg, start) in resumedTimes) {
+                    if (now > start) {
+                        foregroundMillis[pkg] = (foregroundMillis[pkg] ?: 0L) + (now - start)
+                    }
+                }
+
+                for ((pkg, millis) in foregroundMillis) {
+                    val mins = millis / (1000 * 60)
+                    if (mins > 0) {
+                        result[pkg] = mins
+                    }
+                }
+                if (result.isNotEmpty()) return result
+            }
+        } catch (_: Exception) {}
+
+        // Tier 3: queryUsageStats with INTERVAL_BEST
+        try {
+            val stats = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_BEST,
+                startOfDay,
+                now
+            )
+            if (stats != null) {
+                for (usage in stats) {
+                    val pkg = usage.packageName ?: continue
+                    if (ProtectedApps.isProtected(pkg) || pkg == context.packageName) continue
+                    val mins = usage.totalTimeInForeground / (1000 * 60)
+                    if (mins > 0) {
+                        result[pkg] = (result[pkg] ?: 0L).coerceAtLeast(mins)
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
         return result
     }
 
