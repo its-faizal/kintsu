@@ -17,11 +17,22 @@ object ShortFormContentDetector {
     val BROWSER_PACKAGES = setOf(
         "com.android.chrome",
         "org.mozilla.firefox",
+        "org.mozilla.focus",
         "com.sec.android.app.sbrowser",
         "com.microsoft.emmx",
         "com.opera.browser",
+        "com.opera.mini.native",
+        "com.opera.gx",
         "com.brave.browser",
-        "com.duckduckgo.mobile.android"
+        "com.duckduckgo.mobile.android",
+        "com.kiwibrowser.browser",
+        "com.vivaldi.browser",
+        "mark.via.gp",
+        "org.torproject.torbrowser",
+        "com.cloudmosa.puffinFree",
+        "com.ecosia.android",
+        "com.google.android.apps.searchlite",
+        "com.google.android.googlequicksearchbox"
     )
 
     fun isShortFormPackage(pkgName: String): Boolean {
@@ -118,9 +129,16 @@ object ShortFormContentDetector {
             "com.android.chrome:id/url_bar",
             "com.sec.android.app.sbrowser:id/location_bar_edit_text",
             "org.mozilla.firefox:id/mozac_browser_toolbar_url_view",
+            "org.mozilla.firefox:id/toolbar",
             "com.microsoft.emmx:id/url_bar",
             "com.brave.browser:id/url_bar",
-            "com.opera.browser:id/url_field"
+            "com.opera.browser:id/url_field",
+            "com.opera.mini.native:id/url_field",
+            "com.duckduckgo.mobile.android:id/omnibarTextInput",
+            "com.kiwibrowser.browser:id/url_bar",
+            "com.vivaldi.browser:id/url_bar",
+            "mark.via.gp:id/address_bar",
+            "com.google.android.googlequicksearchbox:id/googleapp_search_box"
         )
         for (id in knownIds) {
             val nodes = rootNode.findAccessibilityNodeInfosByViewId(id)

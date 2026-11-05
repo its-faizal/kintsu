@@ -63,16 +63,19 @@ object AdultContentFilterEngine {
     private val ADULT_KEYWORDS = listOf(
         "pornhub", "xvideos", "xnxx", "xhamster", "spankbang", "brazzers", "chaturbate",
         "stripchat", "onlyfans", "fansly", "nhentai", "rule34", "hanime", "hentai",
-        "porn", "xxx", "adult video", "adult movie", "adult film",
-        "erotic", "nsfw video", "seductive video", "intimacy video", "camgirl", "webcam girl",
-        "naked girl", "naked woman", "nude video", "boobs video", "milf video",
+        "porn", "xxx", "adult video", "adult movie", "adult film", "adult content",
+        "18+ video", "18+ porn", "18+ sex", "18+ adult", "18 plus video",
+        "seductive", "seductive video", "intimacy video", "erotic", "erotic video",
+        "nsfw", "nsfw video", "camgirl", "webcam girl", "live cam porn",
+        "naked girl", "naked woman", "nude video", "nude photo", "boobs video", "milf video",
         "anal sex", "blowjob", "masturbat", "fetish video", "bdsm sex", "stripper video",
-        "leaked sex", "sex tape", "sex video", "hardcore sex", "softcore sex",
+        "leaked sex", "sex tape", "sex video", "hardcore sex", "hardcore porn", "softcore sex",
         "gangbang", "creampie", "threesome sex", "incest sex", "escort service",
-        "dildo video", "vagina video", "penis video", "taboo sex", "swinger party"
+        "dildo video", "vagina video", "penis video", "taboo sex", "swinger party",
+        "deepfake nsfw", "uncensored sex", "erome", "fap"
     )
 
-    private val ADULT_TLDS = setOf(".xxx", ".porn", ".adult", ".sex")
+    private val ADULT_TLDS = setOf(".xxx", ".porn", ".adult", ".sex", ".cam", ".tube")
 
     /**
      * Checks if a domain or hostname is blocked as adult content.

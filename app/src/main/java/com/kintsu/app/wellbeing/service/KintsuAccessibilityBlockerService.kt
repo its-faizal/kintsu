@@ -39,6 +39,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
     private var failSafeErrorsIn10Min = 0
     private var lastErrorTimeMillis = 0L
+    private val appSwitchHistory = java.util.ArrayDeque<Pair<String, Long>>()
+    private var lastDopamineGroundingPrompt = 0L
 
     companion object {
         var isServiceRunning = false
@@ -102,6 +104,15 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             try {
                 inspectMultiWindowAndPopups(event)
             } catch (_: Exception) {}
+        }
+
+        // Dopamine Hopping Detection on Window State Change
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkgName.isNotBlank()) {
+            serviceScope.launch {
+                try {
+                    checkDopamineHopping(pkgName, System.currentTimeMillis())
+                } catch (_: Exception) {}
+            }
         }
 
         if (pkgName.isBlank() || ProtectedApps.isProtected(pkgName)) return
@@ -183,7 +194,12 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
                 lastTriggeredTimeMillis[pkgName] = now
 
-                // Forcefully minimize background video player immediately so it cannot keep playing or trap overlay in pop-up
+                // Forcefully exit reel player and mute audio immediately so background video cannot continue
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                try {
+                    val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                    am?.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_MUTE, 0)
+                } catch (_: Exception) {}
                 performGlobalAction(GLOBAL_ACTION_HOME)
 
                 // Log intervention
@@ -660,6 +676,36 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     }
                     startActivity(overlayIntent)
                     return
+                }
+            }
+        }
+    }
+
+    private suspend fun checkDopamineHopping(pkgName: String, now: Long) {
+        if (pkgName.isBlank() || ProtectedApps.isProtected(pkgName) || pkgName == packageName) return
+
+        synchronized(appSwitchHistory) {
+            while (appSwitchHistory.isNotEmpty() && now - appSwitchHistory.first.second > 60_000L) {
+                appSwitchHistory.removeFirst()
+            }
+            if (appSwitchHistory.isEmpty() || appSwitchHistory.last.first != pkgName) {
+                appSwitchHistory.addLast(pkgName to now)
+            }
+
+            val distinctApps = appSwitchHistory.map { it.first }.toSet()
+            if (distinctApps.size >= 3 && (now - lastDopamineGroundingPrompt > 90_000L)) {
+                lastDopamineGroundingPrompt = now
+                appSwitchHistory.clear()
+                serviceScope.launch {
+                    val settings = SettingsDataStore(applicationContext).settingsFlow.first()
+                    triggerBlockScreen(
+                        targetPackage = pkgName,
+                        ruleMode = "DOPAMINE_HOPPING",
+                        strictness = "GENTLE",
+                        customPrompt = "Restlessness detected: Rapid app switching across 3 apps. Take 3 conscious breaths.",
+                        pauseDurationSeconds = 10,
+                        interventionStyle = settings.interventionStyle
+                    )
                 }
             }
         }

@@ -164,9 +164,15 @@ class FocusForegroundService : Service() {
         startForeground(NOTIFICATION_ID, buildNotification(newState))
         startTicker()
         com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
+
+        FocusSoundEngine.playZenBell()
+        if (FocusSoundEngine.currentMode != SoundscapeMode.OFF) {
+            FocusSoundEngine.start()
+        }
     }
 
     private fun pauseTimer() {
+        FocusSoundEngine.stop()
         val paused = FocusTimerManager.pause(_focusState.value)
         _focusState.value = paused
         updateNotification(paused)
@@ -178,10 +184,14 @@ class FocusForegroundService : Service() {
         _focusState.value = resumed
         updateNotification(resumed)
         com.kintsu.app.widget.KintsuWidgetUpdater.triggerUpdate(applicationContext)
+        if (FocusSoundEngine.currentMode != SoundscapeMode.OFF) {
+            FocusSoundEngine.start()
+        }
     }
 
     private fun stopTimer() {
         tickerJob?.cancel()
+        FocusSoundEngine.stop()
         val currentState = _focusState.value
         if (currentState.isRunning && !currentState.isBreak) {
             // Record cancelled session in history
@@ -232,6 +242,8 @@ class FocusForegroundService : Service() {
 
     private fun onSessionCompleted(state: FocusState) {
         tickerJob?.cancel()
+        FocusSoundEngine.stop()
+        FocusSoundEngine.playZenBell()
         val now = System.currentTimeMillis()
         val todayEpochDay = LocalDate.now().toEpochDay()
 
@@ -441,6 +453,7 @@ class FocusForegroundService : Service() {
 
     override fun onDestroy() {
         tickerJob?.cancel()
+        FocusSoundEngine.stop()
         super.onDestroy()
     }
 }

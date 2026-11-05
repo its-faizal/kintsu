@@ -2,6 +2,7 @@ package com.kintsu.app.wellbeing.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -123,20 +124,7 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Lock to full screen dimensions - prevent pop-up view and floating window leaks
-        window.setLayout(
-            android.view.WindowManager.LayoutParams.MATCH_PARENT,
-            android.view.WindowManager.LayoutParams.MATCH_PARENT
-        )
-        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
-
-        if (isInMultiWindowMode) {
-            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            startActivity(homeIntent)
-        }
+        enforceFullscreenLock()
 
         val platform = intent.getStringExtra(EXTRA_PLATFORM) ?: "Short-Form Feed"
         val pkgName = intent.getStringExtra(EXTRA_PACKAGE) ?: ""
@@ -182,6 +170,67 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        enforceFullscreenLock()
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        if (isInMultiWindowMode) {
+            escapeToHomeAndClose()
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        if (isInPictureInPictureMode) {
+            escapeToHomeAndClose()
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (!hasFocus) {
+            // Lost focus means user clicked outside overlay into the underlying app
+            stepAwayAndClose()
+        }
+    }
+
+    private fun enforceFullscreenLock() {
+        window.setLayout(
+            android.view.WindowManager.LayoutParams.MATCH_PARENT,
+            android.view.WindowManager.LayoutParams.MATCH_PARENT
+        )
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
+
+        if (isInMultiWindowMode || isInPictureInPictureMode) {
+            escapeToHomeAndClose()
+            return
+        }
+
+        val displayMetrics = resources.displayMetrics
+        val decorView = window.decorView
+        val visibleRect = android.graphics.Rect()
+        decorView.getGlobalVisibleRect(visibleRect)
+        if (visibleRect.width() > 0 && visibleRect.height() > 0) {
+            val isWindowShrunk = visibleRect.width() < displayMetrics.widthPixels * 0.82f ||
+                                 visibleRect.height() < displayMetrics.heightPixels * 0.82f
+            if (isWindowShrunk) {
+                escapeToHomeAndClose()
+            }
+        }
+    }
+
+    private fun escapeToHomeAndClose() {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        startActivity(homeIntent)
+        finishAffinity()
     }
 
     private fun stepAwayAndClose() {
@@ -250,6 +299,7 @@ fun ReelOverlayContent(
     var isBreathingActive by remember { mutableStateOf(false) }
     var breathingPhase by remember { mutableStateOf("Inhale") }
     var breathingSecondsLeft by remember { mutableIntStateOf(60) }
+    var showEmergencyFrictionSheet by remember { mutableStateOf(false) }
 
     LaunchedEffect(isBreathingActive) {
         if (isBreathingActive) {
@@ -274,16 +324,25 @@ fun ReelOverlayContent(
             .padding(spacing.l),
         contentAlignment = Alignment.Center
     ) {
-        // Main overlay card (Spacious, prominent, not tiny pills!)
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(colors.surfaceElevated)
-                .border(1.2.dp, colors.goldSeam.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
-                .padding(spacing.l)
-        ) {
-            if (isBreathingActive) {
+        if (showEmergencyFrictionSheet) {
+            EmergencyFrictionSheet(
+                onDismiss = { showEmergencyFrictionSheet = false },
+                onSuccess = {
+                    showEmergencyFrictionSheet = false
+                    onAllowFiveMinutes()
+                }
+            )
+        } else {
+            // Main overlay card (Spacious, prominent, not tiny pills!)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(colors.surfaceElevated)
+                    .border(1.2.dp, colors.goldSeam.copy(alpha = 0.5f), RoundedCornerShape(24.dp))
+                    .padding(spacing.l)
+            ) {
+                if (isBreathingActive) {
                 // Interactive Breathing Exercise inside overlay
                 Column(
                     modifier = Modifier.fillMaxWidth(),
@@ -461,7 +520,7 @@ fun ReelOverlayContent(
                             .clip(RoundedCornerShape(14.dp))
                             .background(if (canUsePass) colors.surface else colors.surface.copy(alpha = 0.4f))
                             .border(1.dp, if (canUsePass) colors.border.copy(alpha = 0.5f) else Color.Transparent, RoundedCornerShape(14.dp))
-                            .clickable(enabled = canUsePass, onClick = onAllowFiveMinutes)
+                            .clickable(enabled = canUsePass) { showEmergencyFrictionSheet = true }
                             .padding(vertical = 14.dp, horizontal = 16.dp)
                             .semantics { role = Role.Button }
                     ) {
@@ -577,4 +636,6 @@ fun ReelOverlayContent(
             }
         }
     }
+}
+
 }

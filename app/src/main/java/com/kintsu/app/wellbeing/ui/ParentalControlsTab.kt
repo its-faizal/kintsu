@@ -2,6 +2,8 @@ package com.kintsu.app.wellbeing.ui
 
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
@@ -788,6 +790,113 @@ fun ParentalControlsScreen(
                     fontWeight = FontWeight.Bold,
                     color = colors.accent
                 )
+            }
+        }
+
+        // --- 11. DEVICE OWNER HARDCORE SHIELD CARD ---
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager
+        val isDeviceOwner = dpm?.isDeviceOwnerApp(context.packageName) == true
+        val adbCmd = "adb shell dpm set-device-owner com.kintsu.app/.wellbeing.receiver.KintsuDeviceAdminReceiver"
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(colors.surfaceElevated)
+                .border(
+                    1.dp,
+                    if (isDeviceOwner) colors.goldSeam else colors.border.copy(alpha = 0.5f),
+                    RoundedCornerShape(16.dp)
+                )
+                .padding(spacing.m)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(spacing.s)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        IconShield(size = 20.dp, color = if (isDeviceOwner) colors.goldSeam else colors.textSecondary)
+                        Text(
+                            text = "Firmware Hardcore Shield",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.textPrimary
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isDeviceOwner) colors.goldSeamSoft else colors.surface)
+                            .border(1.dp, if (isDeviceOwner) colors.goldSeam else colors.border, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isDeviceOwner) "ACTIVE" else "STANDARD",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDeviceOwner) colors.goldSeam else colors.textSecondary
+                        )
+                    }
+                }
+
+                Text(
+                    text = if (isDeviceOwner)
+                        "Device Owner status is active. Kintsu cannot be uninstalled, force-stopped, or bypassed even after device reboot."
+                    else
+                        "Elevate Kintsu to Device Owner via ADB to make it 100% uninstall-proof and unbypassable.",
+                    fontSize = 12.sp,
+                    color = colors.textSecondary,
+                    lineHeight = 16.sp
+                )
+
+                if (!isDeviceOwner) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                            .padding(spacing.s)
+                    ) {
+                        Text(
+                            text = adbCmd,
+                            fontSize = 11.sp,
+                            color = colors.goldSeam,
+                            lineHeight = 15.sp
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(colors.surface)
+                            .border(1.dp, colors.border, RoundedCornerShape(10.dp))
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                clipboard?.setPrimaryClip(ClipData.newPlainText("ADB Command", adbCmd))
+                                Toast.makeText(context, "ADB command copied to clipboard", Toast.LENGTH_SHORT).show()
+                            }
+                            .padding(vertical = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Copy ADB Shell Command",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textPrimary
+                        )
+                    }
+                }
             }
         }
 

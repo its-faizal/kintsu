@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.model.FocusSessionEntity
 import com.kintsu.app.data.model.HabitEntity
 import com.kintsu.app.data.model.TaskEntity
+import com.kintsu.app.focus.FocusSoundEngine
+import com.kintsu.app.focus.SoundscapeMode
 import com.kintsu.app.domain.focus.FocusState
 import com.kintsu.app.domain.focus.FocusTimerManager
 import com.kintsu.app.ui.components.IconCheck
@@ -97,6 +99,7 @@ fun FocusScreen(
 
     var selectedFocusDuration by remember { mutableIntStateOf(defaultPresetMinutes) }
     var selectedBreakDuration by remember { mutableIntStateOf(breakLengthMinutes) }
+    var selectedSoundscape by remember { mutableStateOf(FocusSoundEngine.currentMode) }
     var customDuration by remember { mutableFloatStateOf(if (defaultPresetMinutes !in listOf(15, 25, 50)) defaultPresetMinutes.toFloat() else 30f) }
     var selectedHabitId by remember { mutableStateOf<Long?>(null) }
     var linkedTask by remember { mutableStateOf(initialLinkedTask) }
@@ -410,6 +413,39 @@ fun FocusScreen(
                                     activeTrackColor = colors.goldSeam,
                                     inactiveTrackColor = colors.border
                                 )
+                            )
+                        }
+                    }
+                }
+
+                // Ambient Focus Soundscape (Synthesizer)
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(spacing.xs)
+                ) {
+                    Text(
+                        text = "Synthesized Soundscape",
+                        style = typography.caption,
+                        color = colors.textSecondary
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.xs)
+                    ) {
+                        listOf(
+                            SoundscapeMode.OFF to "Silent",
+                            SoundscapeMode.BROWN_NOISE to "Deep Rain",
+                            SoundscapeMode.BINAURAL_40HZ to "40Hz Gamma"
+                        ).forEach { (mode, label) ->
+                            KintsuFilterChip(
+                                label = label,
+                                selected = selectedSoundscape == mode,
+                                onClick = {
+                                    selectedSoundscape = mode
+                                    FocusSoundEngine.setMode(mode)
+                                }
                             )
                         }
                     }
