@@ -231,6 +231,7 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
     }
 
     private fun escapeToHomeAndClose() {
+        com.kintsu.app.wellbeing.service.KintsuAccessibilityBlockerService.hideFloatingPill()
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -240,9 +241,10 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
     }
 
     private fun stepAwayAndClose() {
+        com.kintsu.app.wellbeing.service.KintsuAccessibilityBlockerService.hideFloatingPill()
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         startActivity(homeIntent)
         CoroutineScope(Dispatchers.IO).launch {

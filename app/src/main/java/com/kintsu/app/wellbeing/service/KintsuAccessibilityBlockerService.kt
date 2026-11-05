@@ -59,6 +59,11 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             )
         }
 
+        fun hideFloatingPill() {
+            instance?.currentForegroundPackage = null
+            instance?.pillOverlay?.hide()
+        }
+
         fun getRemainingUnlockMillis(packageName: String): Long {
             val expireTime = instance?.temporarilyUnlockedUntil?.get(packageName) ?: return 0L
             val remaining = expireTime - System.currentTimeMillis()
@@ -168,7 +173,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             while (isActive) {
                 kotlinx.coroutines.delay(1000L)
                 val pkg = currentForegroundPackage
-                if (pkg.isNullOrBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName) {
+                if (pkg.isNullOrBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName || pkg.contains("kintsu")) {
                     pillOverlay.hide()
                     continue
                 }
@@ -250,11 +255,18 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
-        if (pkgName.isNotBlank() && !ProtectedApps.isProtected(pkgName) && pkgName != applicationContext.packageName) {
-            currentForegroundPackage = pkgName
+        val isSelfOrProtected = pkgName.isBlank() ||
+                ProtectedApps.isProtected(pkgName) ||
+                pkgName == applicationContext.packageName ||
+                pkgName.contains("kintsu")
+
+        if (isSelfOrProtected) {
+            currentForegroundPackage = null
+            pillOverlay.hide()
+            return
         }
 
-        if (pkgName.isBlank() || ProtectedApps.isProtected(pkgName)) return
+        currentForegroundPackage = pkgName
 
         val now = System.currentTimeMillis()
 
@@ -667,24 +679,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             }
         }
 
-        // 9. Pre-App Mindful Friction Gateway
-        // If not blocked, but belongs to a tracked app group and no micro-pass is active
-        if (matchingGroups.isNotEmpty() && !com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.isMicroPassActive(packageName)) {
-            val appLabel = try {
-                val pm = packageManager
-                val info = pm.getApplicationInfo(packageName, 0)
-                pm.getApplicationLabel(info).toString()
-            } catch (_: Exception) { packageName }
 
-            val frictionIntent = android.content.Intent(applicationContext, com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity::class.java).apply {
-                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.EXTRA_TARGET_PACKAGE, packageName)
-                putExtra(com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.EXTRA_APP_LABEL, appLabel)
-            }
-            startActivity(frictionIntent)
-        }
     }
 
     private suspend fun evaluateRule(
@@ -733,6 +728,10 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         pauseDurationSeconds: Int = 10,
         interventionStyle: String = "BREATHING"
     ) {
+        performGlobalAction(GLOBAL_ACTION_HOME)
+        currentForegroundPackage = null
+        pillOverlay.hide()
+
         val intent = Intent(this, BlockActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
