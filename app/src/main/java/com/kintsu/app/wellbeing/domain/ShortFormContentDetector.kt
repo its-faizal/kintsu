@@ -62,11 +62,10 @@ object ShortFormContentDetector {
                     return true
                 }
                 rootNode?.let { root ->
-                    hasMatchingNode(root) { id, text ->
-                        id.contains("reel_recycler") ||
-                        id.contains("shorts_container") ||
-                        id.contains("shorts_player") ||
-                        id.contains("reel_player") ||
+                    hasMatchingNode(root) { id, text, desc ->
+                        id.contains("reel") ||
+                        id.contains("shorts") ||
+                        desc.contains("Shorts", ignoreCase = true) ||
                         text.equals("Shorts", ignoreCase = true)
                     }
                 } ?: false
@@ -78,27 +77,29 @@ object ShortFormContentDetector {
                     return true
                 }
                 rootNode?.let { root ->
-                    hasMatchingNode(root) { id, text ->
-                        id.contains("clips_viewer_fragment") ||
-                        id.contains("reel_viewer") ||
-                        id.contains("clips_video_container") ||
-                        id.contains("clips_recycler_view")
+                    hasMatchingNode(root) { id, text, desc ->
+                        id.contains("clips") ||
+                        id.contains("reel") ||
+                        desc.contains("Reel", ignoreCase = true) ||
+                        desc.contains("Short video", ignoreCase = true) ||
+                        text.contains("Reels", ignoreCase = true)
                     }
                 } ?: false
             }
             PKG_FACEBOOK, PKG_FACEBOOK_LITE -> {
                 if (!blockFacebook) return false
                 rootNode?.let { root ->
-                    hasMatchingNode(root) { id, text ->
-                        id.contains("fb_shorts") || id.contains("reels_tray") || id.contains("reel_viewer")
+                    hasMatchingNode(root) { id, text, desc ->
+                        id.contains("fb_shorts") || id.contains("reels_tray") || id.contains("reel_viewer") ||
+                        desc.contains("Reel", ignoreCase = true) || text.contains("Reels", ignoreCase = true)
                     }
                 } ?: false
             }
             PKG_SNAPCHAT -> {
                 if (!blockSnapchat) return false
                 rootNode?.let { root ->
-                    hasMatchingNode(root) { id, text ->
-                        id.contains("spotlight")
+                    hasMatchingNode(root) { id, text, desc ->
+                        id.contains("spotlight") || desc.contains("Spotlight", ignoreCase = true) || text.contains("Spotlight", ignoreCase = true)
                     }
                 } ?: false
             }
@@ -167,12 +168,13 @@ object ShortFormContentDetector {
     private fun hasMatchingNode(
         node: AccessibilityNodeInfo?,
         depth: Int = 0,
-        predicate: (viewId: String, text: String) -> Boolean
+        predicate: (viewId: String, text: String, desc: String) -> Boolean
     ): Boolean {
-        if (node == null || depth > 10) return false
+        if (node == null || depth > 12) return false
         val id = node.viewIdResourceName?.lowercase() ?: ""
         val text = node.text?.toString() ?: ""
-        if (predicate(id, text)) return true
+        val desc = node.contentDescription?.toString() ?: ""
+        if (predicate(id, text, desc)) return true
         for (i in 0 until node.childCount) {
             val child = node.getChild(i)
             if (hasMatchingNode(child, depth + 1, predicate)) return true

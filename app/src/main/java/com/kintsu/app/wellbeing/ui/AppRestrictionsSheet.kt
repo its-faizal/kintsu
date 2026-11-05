@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.KintsuDatabase
+import com.kintsu.app.data.SettingsDataStore
 import com.kintsu.app.data.model.AppGroupEntity
 import com.kintsu.app.data.model.BlockRuleEntity
 import com.kintsu.app.ui.components.AppLogo
@@ -257,6 +258,10 @@ fun AppRestrictionsSheet(
                                         if (grp != null) {
                                             db.wellbeingDao().deleteAppGroup(grp)
                                         }
+                                        try {
+                                            SettingsDataStore(context).setWellbeingEnabled(true)
+                                        } catch (_: Exception) {}
+
                                         withContext(Dispatchers.Main) {
                                             selectedAppForEdit = null
                                             // Refresh

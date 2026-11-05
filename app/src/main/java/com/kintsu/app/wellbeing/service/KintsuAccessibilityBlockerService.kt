@@ -36,6 +36,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private val temporarilyUnlockedUntil = ConcurrentHashMap<String, Long>()
     private val lastTriggeredTimeMillis = ConcurrentHashMap<String, Long>()
     private val lastShortFormCheckMillis = ConcurrentHashMap<String, Long>()
+    private var activeMonitoringJob: kotlinx.coroutines.Job? = null
+    private var currentForegroundPackage: String? = null
 
     private var failSafeErrorsIn10Min = 0
     private var lastErrorTimeMillis = 0L
@@ -78,6 +80,33 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 SettingsDataStore(applicationContext).setProtectionActive(true)
             } catch (_: Exception) {}
         }
+        startContinuousUsageMonitor()
+    }
+
+    private fun startContinuousUsageMonitor() {
+        activeMonitoringJob?.cancel()
+        activeMonitoringJob = serviceScope.launch {
+            while (kotlinx.coroutines.isActive) {
+                kotlinx.coroutines.delay(2000L)
+                val pkg = currentForegroundPackage ?: continue
+                if (pkg.isBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName) continue
+
+                val now = System.currentTimeMillis()
+                val unlockExpiry = temporarilyUnlockedUntil[pkg]
+                if (unlockExpiry != null && now < unlockExpiry) continue
+
+                try {
+                    handlePackageInspection(pkg)
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        activeMonitoringJob?.cancel()
+        instance = null
+        isServiceRunning = false
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -113,6 +142,10 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     checkDopamineHopping(pkgName, System.currentTimeMillis())
                 } catch (_: Exception) {}
             }
+        }
+
+        if (pkgName.isNotBlank() && !ProtectedApps.isProtected(pkgName) && pkgName != applicationContext.packageName) {
+            currentForegroundPackage = pkgName
         }
 
         if (pkgName.isBlank() || ProtectedApps.isProtected(pkgName)) return
@@ -160,7 +193,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         now: Long
     ) {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
-        if (!settings.wellbeingEnabled || settings.protectionFailSafeTripped) return
+        if (settings.protectionFailSafeTripped) return
+        if (!settings.shortFormBlockingEnabled && !settings.wellbeingEnabled && !settings.invincibleModeEnabled) return
 
         val db = KintsuDatabase.getDatabase(applicationContext)
 
@@ -180,13 +214,12 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             )
 
             if (isShortForm) {
-                if (com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(pkgName)) {
-                    return
-                }
-
-                // Check Daily Shorts Quota configured in Parental Controls
+                // Check Daily Shorts Quota configured in Parental Controls FIRST
                 val shortsDailyLimit = settings.shortsDailyLimitMinutes
-                val shortsUsageMinutes = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, pkgName)
+                val liveUsageSec = limitTracker.getUsageSecondsToday(pkgName)
+                val systemUsageMin = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, pkgName)
+                val shortsUsageMinutes = (liveUsageSec / 60L).coerceAtLeast(systemUsageMin)
+
                 if (shortsDailyLimit == 0 || (shortsDailyLimit > 0 && shortsUsageMinutes >= shortsDailyLimit)) {
                     lastTriggeredTimeMillis[pkgName] = now
                     performGlobalAction(GLOBAL_ACTION_BACK)
@@ -207,6 +240,10 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                         pauseDurationSeconds = 15,
                         interventionStyle = settings.interventionStyle
                     )
+                    return
+                }
+
+                if (com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(pkgName)) {
                     return
                 }
 
@@ -315,9 +352,17 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private suspend fun handlePackageInspection(packageName: String) {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
         if (settings.protectionFailSafeTripped) return
-        if (!settings.wellbeingEnabled && !settings.invincibleModeEnabled && !settings.tamperProtectionEnabled) return
 
         val db = KintsuDatabase.getDatabase(applicationContext)
+        val allRules = db.wellbeingDao().getAllBlockRules().first()
+        val hasActiveRules = allRules.any { it.isEnabled }
+        val shouldInspect = settings.wellbeingEnabled ||
+                settings.invincibleModeEnabled ||
+                settings.tamperProtectionEnabled ||
+                settings.bedtimeLockEnabled ||
+                settings.appLaunchLimitEnabled ||
+                hasActiveRules
+        if (!shouldInspect) return
         val nowMillis = System.currentTimeMillis()
 
         // 1. Check if App is in Active Cooldown from an excessive session
@@ -407,7 +452,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         // 4. Check App Groups & Rules
         val allGroups = db.wellbeingDao().getAllAppGroups().first()
         val matchingGroups = allGroups.filter { group ->
-            group.packageNames.split(",").map { it.trim() }.contains(packageName)
+            group.packageNames.split(",").map { it.trim().lowercase() }.contains(packageName.lowercase())
         }
 
         val isDistractionCandidate = matchingGroups.isNotEmpty() ||
@@ -498,6 +543,11 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                             targetKey = packageName
                         )
                     }
+                    performGlobalAction(GLOBAL_ACTION_HOME)
+                    try {
+                        val am = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                        am?.adjustStreamVolume(android.media.AudioManager.STREAM_MUSIC, android.media.AudioManager.ADJUST_MUTE, 0)
+                    } catch (_: Exception) {}
                     triggerBlockScreen(
                         targetPackage = packageName,
                         ruleMode = rule.mode,
@@ -521,10 +571,19 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     ): Boolean {
         return when (rule.mode) {
             BlockMode.DAILY_LIMIT.name -> {
-                val usageSec = limitTracker.getUsageSecondsToday(packageName)
-                val systemUsageMin = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, packageName)
-                val totalUsedMin = (usageSec / 60L).coerceAtLeast(systemUsageMin)
-                totalUsedMin >= rule.dailyLimitMinutes
+                val group = db.wellbeingDao().getAppGroupById(rule.appGroupId)
+                val packagesToCheck = group?.packageNames
+                    ?.split(",")
+                    ?.map { it.trim().lowercase() }
+                    ?.filter { it.isNotBlank() }
+                    ?: listOf(packageName.lowercase())
+
+                val totalGroupUsedMin = packagesToCheck.sumOf { pkg ->
+                    val usageSec = limitTracker.getUsageSecondsToday(pkg)
+                    val systemUsageMin = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, pkg)
+                    (usageSec / 60L).coerceAtLeast(systemUsageMin)
+                }
+                totalGroupUsedMin >= rule.dailyLimitMinutes
             }
             BlockMode.SCHEDULE.name, BlockMode.BEDTIME.name -> {
                 val schedules = db.wellbeingDao().getSchedulesForRule(rule.id)
@@ -649,7 +708,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
 
     private suspend fun inspectMultiWindowAndPopups(event: AccessibilityEvent) {
         val settings = SettingsDataStore(applicationContext).settingsFlow.first()
-        if (!settings.wellbeingEnabled || settings.protectionFailSafeTripped) return
+        if (settings.protectionFailSafeTripped) return
+        if (!settings.wellbeingEnabled && !settings.invincibleModeEnabled && !settings.shortFormBlockingEnabled && !settings.blockNsfw) return
 
         val currentWindows = try { windows } catch (_: Exception) { emptyList() }
         for (w in currentWindows) {
