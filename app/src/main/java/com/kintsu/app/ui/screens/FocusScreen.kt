@@ -48,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -413,6 +415,75 @@ fun FocusScreen(
                                     activeTrackColor = colors.goldSeam,
                                     inactiveTrackColor = colors.border
                                 )
+                            )
+                        }
+                    }
+                }
+
+                // Zen Studio and Desk Clock Entry Card
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                colors = listOf(Color(0xFF241F18), Color(0xFF171512))
+                            )
+                        )
+                        .border(1.dp, Color(0xFFD4AF37), RoundedCornerShape(16.dp))
+                        .clickable {
+                            val intent = android.content.Intent(context, com.kintsu.app.ui.screens.ZenStudioActivity::class.java)
+                            context.startActivity(intent)
+                        }
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(7.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFD4AF37))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "ZEN STUDIO & DESK CLOCK",
+                                    color = Color(0xFFD4AF37),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.5.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Split-Flap Mechanical Clock and 5 Soundscapes",
+                                color = Color(0xFFF5F2EB),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Text(
+                                text = "Bamboo Rain, Singing Bowl, River Koto, Fireside, Bell",
+                                color = Color(0xFF8E8B85),
+                                fontSize = 11.sp
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF2E271D))
+                                .border(1.dp, Color(0x60D4AF37), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "Enter",
+                                color = Color(0xFFD4AF37),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
