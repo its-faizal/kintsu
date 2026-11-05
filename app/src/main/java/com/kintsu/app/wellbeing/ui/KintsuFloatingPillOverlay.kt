@@ -221,6 +221,39 @@ class KintsuFloatingPillOverlay(
     }
 
     /**
+     * Displays an active micro-pass intentional timer on screen.
+     */
+    fun showMicroPass(label: String, remainingSeconds: Long) {
+        val totalSec = remainingSeconds.coerceAtLeast(0L)
+        val mins = totalSec / 60
+        val secs = totalSec % 60
+        val timeFormatted = String.format(Locale.US, "%02d:%02d", mins, secs)
+
+        mainHandler.post {
+            createPillView()
+            val container = pillContainer ?: return@post
+            val tv = textLabel ?: return@post
+            val dot = dotIndicator ?: return@post
+
+            val cleanLabel = if (label.length > 10) label.take(8) + ".." else label
+            val displayText = "$cleanLabel  $timeFormatted"
+
+            if (lastFormattedTime != displayText || lastMode != "MICRO_PASS") {
+                lastFormattedTime = displayText
+                lastMode = "MICRO_PASS"
+                tv.text = displayText
+
+                val density = service.resources.displayMetrics.density
+                val bg = container.background as? GradientDrawable
+                bg?.setStroke((1.4f * density).toInt(), 0xFFD4AF37.toInt())
+                (dot.background as? GradientDrawable)?.setColor(0xFFD4AF37.toInt())
+            }
+
+            attachIfNeeded(container)
+        }
+    }
+
+    /**
      * Hides and detaches the floating pill overlay.
      */
     fun hide() {

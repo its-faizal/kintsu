@@ -184,13 +184,21 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 val isUnlocked = (unlockExpiry != null && now < unlockExpiry) ||
                         com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(pkg)
 
-                // 1. Check if Emergency Pass / Temporary Unlock is active
+                // 1. Check if Emergency Pass, Temporary Unlock, or Micro-Pass is active
+                val microPassSec = com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.getRemainingMicroPassSeconds(pkg)
                 val emergencyPassMs = maxOf(
                     com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.getRemainingTemporaryPassMillis(pkg),
                     getRemainingUnlockMillis(pkg)
                 )
 
-                if (emergencyPassMs > 0L) {
+                if (microPassSec > 0L) {
+                    val label = try {
+                        val pm = packageManager
+                        val info = pm.getApplicationInfo(pkg, 0)
+                        pm.getApplicationLabel(info).toString()
+                    } catch (_: Exception) { pkg }
+                    pillOverlay.showMicroPass(label, microPassSec)
+                } else if (emergencyPassMs > 0L) {
                     pillOverlay.showEmergencyPass(pkg, emergencyPassMs)
                 } else {
                     // 2. Check if a limit is approaching (within 2 minutes / 120s)
@@ -669,6 +677,25 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                     return
                 }
             }
+        }
+
+        // 9. Pre-App Mindful Friction Gateway
+        // If not blocked, but belongs to a tracked app group and no micro-pass is active
+        if (matchingGroups.isNotEmpty() && !com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.isMicroPassActive(packageName)) {
+            val appLabel = try {
+                val pm = packageManager
+                val info = pm.getApplicationInfo(packageName, 0)
+                pm.getApplicationLabel(info).toString()
+            } catch (_: Exception) { packageName }
+
+            val frictionIntent = android.content.Intent(applicationContext, com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity::class.java).apply {
+                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                        android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.EXTRA_TARGET_PACKAGE, packageName)
+                putExtra(com.kintsu.app.wellbeing.ui.MindfulFrictionOverlayActivity.EXTRA_APP_LABEL, appLabel)
+            }
+            startActivity(frictionIntent)
         }
     }
 

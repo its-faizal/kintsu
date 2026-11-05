@@ -459,6 +459,20 @@
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.Kintsu" />
 
+        <!-- Mindful Friction Gateway Pre-App Interception Activity -->
+        <activity
+            android:name=".wellbeing.ui.MindfulFrictionOverlayActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTop"
+            android:resizeableActivity="false"
+            android:supportsPictureInPicture="false"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize"
+            android:windowSoftInputMode="adjustNothing"
+            android:theme="@style/Theme.Kintsu" />
+
         <!-- Notification Listener Service for Scheduled Notification Batching -->
         <service
             android:name=".wellbeing.service.KintsuNotificationListenerService"
