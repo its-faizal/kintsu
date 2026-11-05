@@ -228,7 +228,7 @@ fun FlipClockColon(height: Dp) {
             .height(height)
             .padding(horizontal = 8.dp),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterVertically
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier = Modifier

@@ -79,7 +79,8 @@ fun ZenStudioScreen(
     // Repository for coin rewards
     val repository = remember {
         val db = KintsuDatabase.getDatabase(context.applicationContext)
-        KintsuRepository.getInstance(context.applicationContext, db)
+        val ds = com.kintsu.app.data.SettingsDataStore(context.applicationContext)
+        KintsuRepository(db, ds)
     }
 
     // Audio state
@@ -118,7 +119,7 @@ fun ZenStudioScreen(
                 val reward = 25
                 earnedCoins = reward
                 scope.launch {
-                    repository.addCoins(reward, "Completed ${selectedDurationMinutes}m Zen Focus session")
+                    repository.awardCoins(reward, "Completed ${selectedDurationMinutes}m Zen Focus session", "FOCUS_SESSION", "zen_${System.currentTimeMillis()}")
                 }
             }
         }
@@ -149,7 +150,7 @@ fun ZenStudioScreen(
                 // Left Column: Split-Flap Clock
                 Column(
                     modifier = Modifier.weight(1.2f),
-                    horizontalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
                     ZenFlipClock(

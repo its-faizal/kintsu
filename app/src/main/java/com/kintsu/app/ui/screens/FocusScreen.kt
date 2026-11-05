@@ -53,7 +53,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.model.FocusSessionEntity
@@ -95,6 +94,7 @@ fun FocusScreen(
     breakLengthMinutes: Int = 5,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
     val typography = KintsuTheme.typography

@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.kintsu.app.data.KintsuDatabase
 import com.kintsu.app.data.KintsuRepository
-import com.kintsu.app.service.KintsuAccessibilityBlockerService
 import com.kintsu.app.ui.theme.KintsuTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -151,7 +150,8 @@ fun MindfulFrictionContent(
     // Repository for coin rewards on stepping back
     val repository = remember {
         val db = KintsuDatabase.getDatabase(context.applicationContext)
-        KintsuRepository.getInstance(context.applicationContext, db)
+        val ds = com.kintsu.app.data.SettingsDataStore(context.applicationContext)
+        KintsuRepository(db, ds)
     }
 
     // App icon loader
@@ -351,7 +351,7 @@ fun MindfulFrictionContent(
                     )
                     .clickable {
                         scope.launch {
-                            repository.addCoins(5, "Conscious restraint: Stepped back from $appLabel")
+                            repository.awardCoins(5, "Conscious restraint: Stepped back from $appLabel", "CONSCIOUS_RESTRAINT", "restraint_${System.currentTimeMillis()}")
                             Toast.makeText(context, "Conscious restraint honored. +5 Coins", Toast.LENGTH_SHORT).show()
                             onStepBack()
                         }

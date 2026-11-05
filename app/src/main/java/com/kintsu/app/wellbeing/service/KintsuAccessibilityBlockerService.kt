@@ -24,6 +24,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.isActive
 import java.time.LocalDate
 import java.time.LocalTime
 import java.util.Calendar
@@ -132,13 +133,6 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                         }
                         return ApproachingLimit(appLabel, remainingSec)
                     }
-                } else if (rule.mode == BlockMode.SESSION_LIMIT.name && rule.sessionLimitMinutes > 0) {
-                    val activeSessionSec = limitTracker.getActiveSessionSeconds()
-                    val limitSec = rule.sessionLimitMinutes * 60L
-                    val remainingSec = limitSec - activeSessionSec
-                    if (remainingSec in 1..120) {
-                        return ApproachingLimit("Session", remainingSec)
-                    }
                 }
             }
         }
@@ -171,7 +165,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private fun startContinuousUsageMonitor() {
         activeMonitoringJob?.cancel()
         activeMonitoringJob = serviceScope.launch {
-            while (kotlinx.coroutines.isActive) {
+            while (isActive) {
                 kotlinx.coroutines.delay(1000L)
                 val pkg = currentForegroundPackage
                 if (pkg.isNullOrBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName) {
@@ -219,13 +213,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        activeMonitoringJob?.cancel()
-        pillOverlay.onDestroy()
-        instance = null
-        isServiceRunning = false
-    }
+
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
@@ -957,6 +945,8 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     override fun onDestroy() {
         instance = null
         isServiceRunning = false
+        activeMonitoringJob?.cancel()
+        pillOverlay.onDestroy()
         serviceScope.cancel()
         super.onDestroy()
     }
