@@ -396,7 +396,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 // Launch interface overlay with conscious choices directly over reels
                 val platformName = when {
                     pkgName.contains("instagram") -> "Instagram"
-                    pkgName.contains("youtube") -> "YouTube"
+                    pkgName.contains("youtube") || com.kintsu.app.wellbeing.domain.ShortFormContentDetector.isYouTubeLikePackage(pkgName) -> "YouTube"
                     pkgName.contains("tiktok") -> "TikTok"
                     pkgName.contains("facebook") || pkgName.contains("katana") -> "Facebook"
                     pkgName.contains("snapchat") -> "Snapchat"

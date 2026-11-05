@@ -3,15 +3,18 @@ package com.kintsu.app.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -27,7 +30,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,6 +70,11 @@ enum class ChartTimeframe(val label: String, val days: Int) {
     DAYS_90("90D", 90)
 }
 
+enum class ChartViewType(val label: String) {
+    BARS("Bars"),
+    POINTS_2D("2D Points")
+}
+
 data class DynamicBarData(
     val label: String,
     val sublabel: String,
@@ -90,6 +102,7 @@ fun DynamicProgressChartSection(
     var selectedMetric by remember { mutableStateOf(ChartMetric.HABITS) }
     var selectedTimeframe by remember { mutableStateOf(ChartTimeframe.DAYS_7) }
     var selectedBarIndex by remember { mutableStateOf<Int?>(null) }
+    var chartViewType by remember { mutableStateOf(ChartViewType.BARS) }
 
     // Calculate chart bars based on selected metric and timeframe
     val barItems = remember(selectedMetric, selectedTimeframe, logs, tasks, focusSessions, journalEntries, habits) {
@@ -490,82 +503,217 @@ fun DynamicProgressChartSection(
                         )
                     }
 
-                    val peakItem = barItems.maxByOrNull { it.value }
-                    if (peakItem != null && peakItem.value > 0f) {
-                        Box(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Toggle between Bars and 2D Points
+                        Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(metricColor.copy(alpha = 0.12f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .background(colors.surfaceElevated)
+                                .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                .padding(2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            Text(
-                                text = "Peak: ${peakItem.formattedValue}",
-                                style = typography.caption,
-                                color = metricColor,
-                                fontWeight = FontWeight.Medium,
-                                fontSize = 11.sp
-                            )
+                            ChartViewType.values().forEach { mode ->
+                                val isSelected = chartViewType == mode
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isSelected) metricColor.copy(alpha = 0.2f) else Color.Transparent)
+                                        .clickable { chartViewType = mode }
+                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = mode.label,
+                                        style = typography.caption,
+                                        color = if (isSelected) metricColor else colors.textTertiary,
+                                        fontSize = 10.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                        }
+
+                        val peakItem = barItems.maxByOrNull { it.value }
+                        if (peakItem != null && peakItem.value > 0f) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(metricColor.copy(alpha = 0.12f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Peak: ${peakItem.formattedValue}",
+                                    style = typography.caption,
+                                    color = metricColor,
+                                    fontWeight = FontWeight.Medium,
+                                    fontSize = 11.sp
+                                )
+                            }
                         }
                     }
                 }
 
-                // Interactive Dynamic Bars
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.Bottom
-                ) {
-                    barItems.forEachIndexed { index, item ->
-                        val isSelected = selectedBarIndex == index
-                        val fraction = if (maxValue > 0f) (item.value / maxValue).coerceIn(0f, 1f) else 0f
-                        val hasValue = item.value > 0.001f
+                if (chartViewType == ChartViewType.BARS) {
+                    // Interactive Dynamic Bars
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(110.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        barItems.forEachIndexed { index, item ->
+                            val isSelected = selectedBarIndex == index
+                            val fraction = if (maxValue > 0f) (item.value / maxValue).coerceIn(0f, 1f) else 0f
+                            val hasValue = item.value > 0.001f
 
-                        val barHeight by animateDpAsState(
-                            targetValue = if (hasValue) (80 * fraction.coerceAtLeast(0.12f)).dp else 3.dp,
-                            animationSpec = tween(durationMillis = 300),
-                            label = "barHeight"
-                        )
+                            val barHeight by animateDpAsState(
+                                targetValue = if (hasValue) (80 * fraction.coerceAtLeast(0.12f)).dp else 3.dp,
+                                animationSpec = tween(durationMillis = 300),
+                                label = "barHeight"
+                            )
 
-                        val barColor = when {
-                            isSelected -> metricColor
-                            hasValue -> metricColor.copy(alpha = 0.6f)
-                            else -> colors.border.copy(alpha = 0.35f)
+                            val barColor = when {
+                                isSelected -> metricColor
+                                hasValue -> metricColor.copy(alpha = 0.6f)
+                                else -> colors.border.copy(alpha = 0.35f)
+                            }
+
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable {
+                                        selectedBarIndex = if (isSelected) null else index
+                                    }
+                                    .padding(horizontal = 3.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(barHeight)
+                                        .clip(RoundedCornerShape(if (hasValue) 6.dp else 1.dp))
+                                        .background(barColor)
+                                        .then(
+                                            if (isSelected) Modifier.border(
+                                                1.5.dp,
+                                                colors.textPrimary,
+                                                RoundedCornerShape(6.dp)
+                                            ) else Modifier
+                                        )
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = item.label,
+                                    style = typography.caption,
+                                    color = if (isSelected) metricColor else colors.textTertiary,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Interactive 2D Points Graph
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(110.dp)
+                        ) {
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(barItems) {
+                                        detectTapGestures { tapOffset ->
+                                            if (barItems.isNotEmpty()) {
+                                                val stepX = size.width / barItems.size
+                                                val tappedIndex = (tapOffset.x / stepX).toInt().coerceIn(0, barItems.lastIndex)
+                                                selectedBarIndex = if (selectedBarIndex == tappedIndex) null else tappedIndex
+                                            }
+                                        }
+                                    }
+                            ) {
+                                val w = size.width
+                                val h = size.height
+                                val count = barItems.size
+                                if (count > 0) {
+                                    val stepX = w / count
+                                    val gridColor = colors.border.copy(alpha = 0.25f)
+
+                                    // Cartesian grid lines (horizontal 25%, 50%, 75%, 100%)
+                                    drawLine(gridColor, Offset(0f, h * 0.25f), Offset(w, h * 0.25f), strokeWidth = 1f)
+                                    drawLine(gridColor, Offset(0f, h * 0.50f), Offset(w, h * 0.50f), strokeWidth = 1f)
+                                    drawLine(gridColor, Offset(0f, h * 0.75f), Offset(w, h * 0.75f), strokeWidth = 1f)
+                                    drawLine(gridColor, Offset(0f, h - 2f), Offset(w, h - 2f), strokeWidth = 1.5f)
+
+                                    // Calculate 2D point coordinates
+                                    val points = barItems.mapIndexed { i, item ->
+                                        val x = (i * stepX) + (stepX / 2f)
+                                        val fraction = if (maxValue > 0f) (item.value / maxValue).coerceIn(0f, 1f) else 0f
+                                        val y = h - (fraction * (h - 24f)) - 12f
+                                        Offset(x, y)
+                                    }
+
+                                    // Connected Line Path
+                                    val path = Path()
+                                    points.forEachIndexed { i, pt ->
+                                        if (i == 0) path.moveTo(pt.x, pt.y) else path.lineTo(pt.x, pt.y)
+                                    }
+                                    drawPath(
+                                        path = path,
+                                        color = metricColor.copy(alpha = 0.55f),
+                                        style = Stroke(width = 2.dp.toPx())
+                                    )
+
+                                    // 2D Point Nodes
+                                    points.forEachIndexed { i, pt ->
+                                        val isSelected = selectedBarIndex == i
+                                        val hasValue = barItems[i].value > 0.001f
+
+                                        // Outer halo / glow
+                                        drawCircle(
+                                            color = if (isSelected) metricColor.copy(alpha = 0.35f) else metricColor.copy(alpha = 0.12f),
+                                            radius = if (isSelected) 10.dp.toPx() else 6.dp.toPx(),
+                                            center = pt
+                                        )
+
+                                        // Inner 2D Point
+                                        drawCircle(
+                                            color = if (isSelected) colors.textPrimary else (if (hasValue) metricColor else colors.border),
+                                            radius = if (isSelected) 5.dp.toPx() else 3.5.dp.toPx(),
+                                            center = pt
+                                        )
+                                    }
+                                }
+                            }
                         }
 
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier
-                                .weight(1f)
-                                .clickable {
-                                    selectedBarIndex = if (isSelected) null else index
-                                }
-                                .padding(horizontal = 3.dp)
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        // X-axis label points
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(barHeight)
-                                    .clip(RoundedCornerShape(if (hasValue) 6.dp else 1.dp))
-                                    .background(barColor)
-                                    .then(
-                                        if (isSelected) Modifier.border(
-                                            1.5.dp,
-                                            colors.textPrimary,
-                                            RoundedCornerShape(6.dp)
-                                        ) else Modifier
-                                    )
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = item.label,
-                                style = typography.caption,
-                                color = if (isSelected) metricColor else colors.textTertiary,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                                textAlign = TextAlign.Center
-                            )
+                            barItems.forEachIndexed { index, item ->
+                                val isSelected = selectedBarIndex == index
+                                Text(
+                                    text = item.label,
+                                    style = typography.caption,
+                                    color = if (isSelected) metricColor else colors.textTertiary,
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedBarIndex = if (isSelected) null else index }
+                                )
+                            }
                         }
                     }
                 }

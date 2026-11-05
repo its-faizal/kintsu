@@ -35,11 +35,25 @@ object ShortFormContentDetector {
         "com.google.android.googlequicksearchbox"
     )
 
+    fun isYouTubeLikePackage(pkgName: String): Boolean {
+        val lower = pkgName.lowercase()
+        return lower == PKG_YOUTUBE ||
+                lower.contains("youtube") ||
+                lower.contains("revanced") ||
+                lower.contains("vanced") ||
+                lower.contains("newpipe") ||
+                lower.contains("libretube") ||
+                lower.contains("skytube") ||
+                lower.contains("tubular") ||
+                lower.contains("songtube") ||
+                lower.contains("piped")
+    }
+
     fun isShortFormPackage(pkgName: String): Boolean {
         val lower = pkgName.lowercase()
         return lower.contains("instagram") || lower.contains("youtube") ||
                 lower.contains("tiktok") || lower.contains("facebook") ||
-                lower.contains("snapchat")
+                lower.contains("snapchat") || isYouTubeLikePackage(lower)
     }
 
     fun isShortFormContent(
@@ -53,23 +67,32 @@ object ShortFormContentDetector {
         blockSnapchat: Boolean = true,
         blockWeb: Boolean = true
     ): Boolean {
+        if (isYouTubeLikePackage(packageName)) {
+            if (!blockYouTube) return false
+            val className = event.className?.toString() ?: ""
+            if (className.contains("Shorts", ignoreCase = true) || className.contains("Reel", ignoreCase = true)) {
+                return true
+            }
+            return rootNode?.let { root ->
+                hasMatchingNode(root) { id, text, desc ->
+                    id.contains("reel") ||
+                    id.contains("shorts") ||
+                    id.contains("short_video") ||
+                    id.contains("reel_player") ||
+                    id.contains("shorts_player") ||
+                    id.contains("shorts_container") ||
+                    id.contains("feed_shorts") ||
+                    id.contains("piped_shorts") ||
+                    desc.contains("Shorts", ignoreCase = true) ||
+                    desc.contains("Short video", ignoreCase = true) ||
+                    text.equals("Shorts", ignoreCase = true) ||
+                    text.contains("#shorts", ignoreCase = true)
+                }
+            } ?: false
+        }
+
         return when (packageName) {
             PKG_TIKTOK, PKG_TIKTOK_LITE -> blockTikTok
-            PKG_YOUTUBE -> {
-                if (!blockYouTube) return false
-                val className = event.className?.toString() ?: ""
-                if (className.contains("Shorts", ignoreCase = true) || className.contains("Reel", ignoreCase = true)) {
-                    return true
-                }
-                rootNode?.let { root ->
-                    hasMatchingNode(root) { id, text, desc ->
-                        id.contains("reel") ||
-                        id.contains("shorts") ||
-                        desc.contains("Shorts", ignoreCase = true) ||
-                        text.equals("Shorts", ignoreCase = true)
-                    }
-                } ?: false
-            }
             PKG_INSTAGRAM -> {
                 if (!blockInstagram) return false
                 val className = event.className?.toString() ?: ""
@@ -107,7 +130,18 @@ object ShortFormContentDetector {
                 if (blockWeb && BROWSER_PACKAGES.contains(packageName)) {
                     val url = extractBrowserUrl(rootNode)
                     isShortFormUrl(url)
-                } else false
+                } else {
+                    val className = event.className?.toString() ?: ""
+                    if (className.contains("Shorts", ignoreCase = true) || className.contains("Reel", ignoreCase = true) || className.contains("Clips", ignoreCase = true)) {
+                        return true
+                    }
+                    rootNode?.let { root ->
+                        hasMatchingNode(root) { id, text, desc ->
+                            (id.contains("shorts_player") || id.contains("reel_viewer") || id.contains("shorts_container")) ||
+                            ((id.contains("shorts") || id.contains("reel")) && (desc.contains("Shorts", ignoreCase = true) || text.equals("Shorts", ignoreCase = true)))
+                        }
+                    } ?: false
+                }
             }
         }
     }

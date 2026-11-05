@@ -1,5 +1,8 @@
 package com.kintsu.app.ui.screens
 
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
+import android.net.VpnService
 import android.content.Intent
 import android.provider.Settings
 import com.kintsu.app.wellbeing.domain.PermissionStateHelper
@@ -261,6 +264,17 @@ fun SettingsScreen(
     var hasOverlayPermission by remember {
         mutableStateOf(PermissionStateHelper.isOverlayGranted(context))
     }
+    val dpm = remember { context.getSystemService(Context.DEVICE_POLICY_SERVICE) as? DevicePolicyManager }
+    val adminComponent = remember { ComponentName(context, com.kintsu.app.wellbeing.service.KintsuDeviceAdminReceiver::class.java) }
+    var isDeviceAdminActive by remember {
+        mutableStateOf(dpm?.isAdminActive(adminComponent) == true)
+    }
+    var isDndAccessActive by remember {
+        mutableStateOf(PermissionStateHelper.isDndAccessGranted(context))
+    }
+    var isVpnPrepared by remember {
+        mutableStateOf(PermissionStateHelper.isVpnPrepared(context))
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -271,6 +285,9 @@ fun SettingsScreen(
                 hasUsageAccessPermission = ScreenTimeHelper.hasUsageStatsPermission(context)
                 hasAccessibilityPermission = PermissionStateHelper.isAccessibilityEnabled(context)
                 hasOverlayPermission = PermissionStateHelper.isOverlayGranted(context)
+                isDeviceAdminActive = dpm?.isAdminActive(adminComponent) == true
+                isDndAccessActive = PermissionStateHelper.isDndAccessGranted(context)
+                isVpnPrepared = PermissionStateHelper.isVpnPrepared(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -805,312 +822,6 @@ fun SettingsScreen(
                 }
             }
 
-            // Secure Encrypted Compressed Auto-Backup Section
-            item {
-                Text(
-                    text = "ENCRYPTED AUTO-BACKUP & CLOUD STORAGE",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        verticalArrangement = Arrangement.spacedBy(spacing.m)
-                    ) {
-                        Text(
-                            text = "Kintsu Cryptographic Vault",
-                            style = typography.itemTitle,
-                            color = colors.goldSeam
-                        )
-                        Text(
-                            text = "Backups are compressed with GZIP and encrypted with AES-256-GCM. Stored in sandboxed mobile storage strictly accessible to Kintsu, and automatically saved to your cloud account whenever logged in.",
-                            style = typography.caption,
-                            color = colors.textSecondary
-                        )
-
-                        val backupInfo = remember(settings.lastAutoBackupTime, isBackingUp) { SecureEncryptedBackupManager.getBackupInfo(context) }
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(if (backupInfo.exists) colors.accentSoft.copy(alpha = 0.5f) else colors.surfaceElevated)
-                                        .border(
-                                            width = 1.dp,
-                                            color = if (backupInfo.exists) colors.accent.copy(alpha = 0.35f) else colors.border.copy(alpha = 0.3f),
-                                            shape = RoundedCornerShape(6.dp)
-                                        )
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text(
-                                        text = if (backupInfo.exists) "Secured locally (${backupInfo.fileSizeBytes / 1024} KB encrypted)" else "No local encrypted vault yet",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        maxLines = 1,
-                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                                        color = if (backupInfo.exists) colors.accent else colors.textTertiary
-                                    )
-                                }
-                                val lastSaveText = if (settings.lastAutoBackupTime > 0L) {
-                                    val diffMin = (System.currentTimeMillis() - settings.lastAutoBackupTime) / 60000
-                                    "Last Auto-Save: ${if (diffMin < 2) "Just now" else "$diffMin mins ago"}"
-                                } else {
-                                    "Compressed GZIP & AES-256 encrypted"
-                                }
-                                Text(
-                                    text = lastSaveText,
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                KintsuButton(
-                                    text = if (isBackingUp) "Saving..." else "Backup",
-                                    onClick = {
-                                        isBackingUp = true
-                                        onTriggerEncryptedBackup { res ->
-                                            isBackingUp = false
-                                            if (res.isSuccess) {
-                                                val info = res.getOrNull()
-                                                Toast.makeText(context, "Encrypted backup created (${(info?.fileSizeBytes ?: 0) / 1024} KB AES-GCM)", Toast.LENGTH_SHORT).show()
-                                            } else {
-                                                Toast.makeText(context, "Backup failed: ${res.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    },
-                                    variant = KintsuButtonVariant.ACCENT_SOFT
-                                )
-
-                                if (backupInfo.exists) {
-                                    KintsuButton(
-                                        text = "Restore",
-                                        onClick = { showRestoreEncryptedConfirmDialog = true },
-                                        variant = KintsuButtonVariant.SECONDARY
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // System Permissions Section
-            item {
-                Text(
-                    text = "SYSTEM PERMISSIONS",
-                    style = typography.caption,
-                    color = colors.textTertiary,
-                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
-                )
-                KintsuGroupedSection {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(spacing.m),
-                        verticalArrangement = Arrangement.spacedBy(spacing.m)
-                    ) {
-                        // 1. Notifications
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "Mindful Notifications",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Habit alerts, intentions & focus timer intervals",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (hasNotificationPermission) "Allowed" else "Grant",
-                                onClick = {
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
-                                        postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                    } else {
-                                        PermissionHelper.openAppNotificationSettings(context)
-                                    }
-                                },
-                                variant = if (hasNotificationPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        // 2. Exact Alarms
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "Exact Alarms & Timers",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Accurate ritual timing without system delays",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (hasExactAlarmPermission) "Granted" else "Configure",
-                                onClick = {
-                                    PermissionHelper.openExactAlarmSettings(context)
-                                },
-                                variant = if (hasExactAlarmPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        // 3. Background Execution / Battery Optimization
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "Unrestricted Background",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Prevents OS from pausing timers and sync",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (isBatteryUnrestricted) "Unrestricted" else "Allow",
-                                onClick = {
-                                    PermissionHelper.openBatteryOptimizationSettings(context)
-                                },
-                                variant = if (isBatteryUnrestricted) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        // 4. App Usage Access (Digital Balance)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "App Usage Access",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Track screen time and enforce Addiction Shield limits",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (hasUsageAccessPermission) "Granted" else "Allow",
-                                onClick = {
-                                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    try { context.startActivity(intent) } catch (_: Exception) {}
-                                },
-                                variant = if (hasUsageAccessPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        // 5. App Intervention Service (Accessibility)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "App Intervention Service",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Recognise distracting apps to present mindful pauses",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (hasAccessibilityPermission) "Active" else "Enable",
-                                onClick = {
-                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    try { context.startActivity(intent) } catch (_: Exception) {}
-                                },
-                                variant = if (hasAccessibilityPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-
-                        KintsuDivider()
-
-                        // 6. Display Over Other Apps (Overlay)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
-                                Text(
-                                    text = "Display Over Other Apps",
-                                    style = typography.itemTitle,
-                                    color = colors.textPrimary
-                                )
-                                Text(
-                                    text = "Present calm breathing pauses over blocked apps",
-                                    style = typography.secondary,
-                                    color = colors.textSecondary
-                                )
-                            }
-                            KintsuButton(
-                                text = if (hasOverlayPermission) "Granted" else "Allow",
-                                onClick = {
-                                    val intent = Intent(
-                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                        Uri.parse("package:${context.packageName}")
-                                    ).apply {
-                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                    }
-                                    try { context.startActivity(intent) } catch (_: Exception) {}
-                                },
-                                variant = if (hasOverlayPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
-                            )
-                        }
-                    }
-                }
-            }
-
             // Home Screen Widgets Section
             item {
                 Text(
@@ -1293,6 +1004,417 @@ fun SettingsScreen(
                 }
             }
 
+            // System Permissions Section
+            item {
+                Text(
+                    text = "SYSTEM PERMISSIONS",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        verticalArrangement = Arrangement.spacedBy(spacing.m)
+                    ) {
+                        // 1. Notifications
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Mindful Notifications",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Habit alerts, intentions & focus timer intervals",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasNotificationPermission) "Allowed" else "Allow",
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !hasNotificationPermission) {
+                                        postNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                    } else {
+                                        PermissionHelper.openAppNotificationSettings(context)
+                                    }
+                                },
+                                variant = if (hasNotificationPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 2. Exact Alarms
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Exact Alarms & Timers",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Accurate ritual timing without system delays",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasExactAlarmPermission) "Allowed" else "Allow",
+                                onClick = {
+                                    PermissionHelper.openExactAlarmSettings(context)
+                                },
+                                variant = if (hasExactAlarmPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 3. Background Execution / Battery Optimization
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Unrestricted Background",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Prevents OS from pausing timers and sync",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (isBatteryUnrestricted) "Allowed" else "Allow",
+                                onClick = {
+                                    PermissionHelper.openBatteryOptimizationSettings(context)
+                                },
+                                variant = if (isBatteryUnrestricted) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 4. App Usage Access (Digital Balance)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "App Usage Access",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Track screen time and enforce Addiction Shield limits",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasUsageAccessPermission) "Allowed" else "Allow",
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasUsageAccessPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 5. App Intervention Service (Accessibility)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "App Intervention Service",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Recognise distracting apps to present mindful pauses",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasAccessibilityPermission) "Allowed" else "Allow",
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasAccessibilityPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 6. Display Over Other Apps (Overlay)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Display Over Other Apps",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Present calm breathing pauses over blocked apps",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (hasOverlayPermission) "Allowed" else "Allow",
+                                onClick = {
+                                    val intent = Intent(
+                                        Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                                        Uri.parse("package:${context.packageName}")
+                                    ).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (hasOverlayPermission) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 7. Device Admin Reboot Protection (Recent Permission)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Device Admin Reboot Protection",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Block uninstallation bypass and survive reboot deletion",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (isDeviceAdminActive) "Allowed" else "Allow",
+                                onClick = {
+                                    val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                                        putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                                        putExtra(
+                                            DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                                            "Kintsu requires Device Administrator permission to permanently block uninstall bypass and reboot deletion."
+                                        )
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (isDeviceAdminActive) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 8. Do Not Disturb Access (Recent Permission)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Do Not Disturb Focus Mode",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "Silence notification interruptions during Deep Focus timers",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (isDndAccessActive) "Allowed" else "Allow",
+                                onClick = {
+                                    val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS).apply {
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    try { context.startActivity(intent) } catch (_: Exception) {}
+                                },
+                                variant = if (isDndAccessActive) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+
+                        KintsuDivider()
+
+                        // 9. Local DNS Filtering (Recent Permission)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Text(
+                                    text = "Local DNS Protection (VPN)",
+                                    style = typography.itemTitle,
+                                    color = colors.textPrimary
+                                )
+                                Text(
+                                    text = "On-device domain filtering to block adult & addictive websites",
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+                            KintsuButton(
+                                text = if (isVpnPrepared) "Allowed" else "Allow",
+                                onClick = {
+                                    val vpnIntent = VpnService.prepare(context)
+                                    if (vpnIntent != null) {
+                                        try { context.startActivity(vpnIntent.apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }) } catch (_: Exception) {}
+                                    } else {
+                                        val intent = Intent(Settings.ACTION_VPN_SETTINGS).apply {
+                                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                        }
+                                        try { context.startActivity(intent) } catch (_: Exception) {}
+                                    }
+                                },
+                                variant = if (isVpnPrepared) KintsuButtonVariant.SECONDARY else KintsuButtonVariant.ACCENT_SOFT
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Secure Encrypted Compressed Auto-Backup Section (Kintsu Cryptographic Vault)
+            item {
+                Text(
+                    text = "ENCRYPTED AUTO-BACKUP & CLOUD STORAGE",
+                    style = typography.caption,
+                    color = colors.textTertiary,
+                    modifier = Modifier.padding(start = spacing.xs, bottom = spacing.xs)
+                )
+                KintsuGroupedSection {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(spacing.m),
+                        verticalArrangement = Arrangement.spacedBy(spacing.m)
+                    ) {
+                        Text(
+                            text = "Kintsu Cryptographic Vault",
+                            style = typography.itemTitle,
+                            color = colors.goldSeam
+                        )
+                        Text(
+                            text = "Backups are compressed with GZIP and encrypted with AES-256-GCM. Stored in sandboxed mobile storage strictly accessible to Kintsu, and automatically saved to your cloud account whenever logged in.",
+                            style = typography.caption,
+                            color = colors.textSecondary
+                        )
+
+                        val backupInfo = remember(settings.lastAutoBackupTime, isBackingUp) { SecureEncryptedBackupManager.getBackupInfo(context) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = spacing.s)) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (backupInfo.exists) colors.accentSoft.copy(alpha = 0.5f) else colors.surfaceElevated)
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (backupInfo.exists) colors.accent.copy(alpha = 0.35f) else colors.border.copy(alpha = 0.3f),
+                                            shape = RoundedCornerShape(6.dp)
+                                        )
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = if (backupInfo.exists) "Secured locally (${backupInfo.fileSizeBytes / 1024} KB encrypted)" else "No local encrypted vault yet",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                        color = if (backupInfo.exists) colors.accent else colors.textTertiary
+                                    )
+                                }
+                                val lastSaveText = if (settings.lastAutoBackupTime > 0L) {
+                                    val diffMin = (System.currentTimeMillis() - settings.lastAutoBackupTime) / 60000
+                                    "Last Auto-Save: ${if (diffMin < 2) "Just now" else "$diffMin mins ago"}"
+                                } else {
+                                    "Compressed GZIP & AES-256 encrypted"
+                                }
+                                Text(
+                                    text = lastSaveText,
+                                    style = typography.secondary,
+                                    color = colors.textSecondary
+                                )
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(spacing.xs),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                KintsuButton(
+                                    text = if (isBackingUp) "Saving..." else "Backup",
+                                    onClick = {
+                                        isBackingUp = true
+                                        onTriggerEncryptedBackup { res ->
+                                            isBackingUp = false
+                                            if (res.isSuccess) {
+                                                val info = res.getOrNull()
+                                                Toast.makeText(context, "Encrypted backup created (${(info?.fileSizeBytes ?: 0) / 1024} KB AES-GCM)", Toast.LENGTH_SHORT).show()
+                                            } else {
+                                                Toast.makeText(context, "Backup failed: ${res.exceptionOrNull()?.localizedMessage}", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    },
+                                    variant = KintsuButtonVariant.ACCENT_SOFT
+                                )
+
+                                if (backupInfo.exists) {
+                                    KintsuButton(
+                                        text = "Restore",
+                                        onClick = { showRestoreEncryptedConfirmDialog = true },
+                                        variant = KintsuButtonVariant.SECONDARY
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // Data & Storage Section
             item {
                 Text(

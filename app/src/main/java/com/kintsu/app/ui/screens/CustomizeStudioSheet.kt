@@ -59,6 +59,10 @@ import androidx.compose.ui.unit.sp
 import com.kintsu.app.data.ContentDensity
 import com.kintsu.app.data.KintsuSettings
 import com.kintsu.app.data.model.StylePresetEntity
+import androidx.compose.runtime.collectAsState
+import com.kintsu.app.data.ItemPreviewManager
+import com.kintsu.app.data.model.ShopItemEntity
+import com.kintsu.app.ui.components.IconLock
 import com.kintsu.app.ui.components.IconCheck
 import com.kintsu.app.ui.components.IconClose
 import com.kintsu.app.ui.components.KintsuBottomSheet
@@ -98,6 +102,8 @@ fun CustomizeStudioSheet(
     onUpdateLauncherIcon: (String) -> Unit,
     onUpdateHapticsEnabled: (Boolean) -> Unit,
     onUpdateReducedMotion: (Boolean) -> Unit,
+    allShopItems: List<ShopItemEntity> = emptyList(),
+    onOpenShop: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val colors = KintsuTheme.colors
@@ -122,7 +128,7 @@ fun CustomizeStudioSheet(
         ) {
             // Header Description
             Text(
-                text = "Instant themes, curated packs, app icons, and fluid motion. All 100% free and ready to use.",
+                text = "Instant themes, curated packs, app icons, and fluid motion. Unlock in Shop or test with 10-minute preview.",
                 style = typography.caption,
                 color = colors.textSecondary,
                 modifier = Modifier.padding(bottom = spacing.m)
@@ -187,19 +193,42 @@ fun CustomizeStudioSheet(
                                 onApplyPreset = onApplyPreset,
                                 onSaveClick = { showSaveDialog = true },
                                 onDeletePreset = onDeletePreset,
-                                onRestoreDefaults = onRestoreDefaultPresets
+                                onRestoreDefaults = onRestoreDefaultPresets,
+                                allShopItems = allShopItems,
+                                onOpenShop = onOpenShop,
+                                onPreviewPack = { preset ->
+                                    val themeObj = AppTheme.values().find {
+                                        it.displayName.equals(preset.themeName, ignoreCase = true) || it.name.equals(preset.themeName, ignoreCase = true)
+                                    } ?: AppTheme.SAGE_IVORY
+                                    ItemPreviewManager.startPackPreview(
+                                        context = context,
+                                        packId = "pack_${preset.name.lowercase().replace(' ', '_')}",
+                                        themeObj = themeObj,
+                                        iconId = preset.iconId,
+                                        currentThemeName = currentSettings.appTheme.name,
+                                        currentIconId = currentSettings.launcherIconId,
+                                        onApply = { t, ic ->
+                                            onUpdateAppTheme(t)
+                                            onUpdateLauncherIcon(ic)
+                                        }
+                                    )
+                                }
                             )
                         }
                         CustomizeTab.THEMES -> {
                             ThemesTabContent(
                                 currentSettings = currentSettings,
-                                onUpdateAppTheme = onUpdateAppTheme
+                                onUpdateAppTheme = onUpdateAppTheme,
+                                allShopItems = allShopItems,
+                                onOpenShop = onOpenShop
                             )
                         }
                         CustomizeTab.ICONS -> {
                             IconsTabContent(
                                 currentIconId = currentSettings.launcherIconId,
-                                onSelectIcon = onUpdateLauncherIcon
+                                onSelectIcon = onUpdateLauncherIcon,
+                                allShopItems = allShopItems,
+                                onOpenShop = onOpenShop
                             )
                         }
                         CustomizeTab.APPEARANCE -> {
@@ -291,7 +320,10 @@ private fun PacksTabContent(
     onApplyPreset: (StylePresetEntity) -> Unit,
     onSaveClick: () -> Unit,
     onDeletePreset: (StylePresetEntity) -> Unit,
-    onRestoreDefaults: () -> Unit
+    onRestoreDefaults: () -> Unit,
+    allShopItems: List<ShopItemEntity>,
+    onOpenShop: () -> Unit,
+    onPreviewPack: (StylePresetEntity) -> Unit
 ) {
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
@@ -460,8 +492,14 @@ private fun PacksTabContent(
 @Composable
 private fun ThemesTabContent(
     currentSettings: KintsuSettings,
-    onUpdateAppTheme: (AppTheme) -> Unit
+    onUpdateAppTheme: (AppTheme) -> Unit,
+    allShopItems: List<ShopItemEntity>,
+    onOpenShop: () -> Unit
 ) {
+    val context = LocalContext.current
+    val activePreviewId by ItemPreviewManager.activePreviewId.collectAsState()
+    val remainingSeconds by ItemPreviewManager.remainingSeconds.collectAsState()
+    var lockedThemeToPreview by remember { mutableStateOf<AppTheme?>(null) }
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
     val typography = KintsuTheme.typography
@@ -472,21 +510,31 @@ private fun ThemesTabContent(
     ) {
         item {
             Text(
-                text = "ATMOSPHERIC THEMES (100% FREE)",
+                text = "ATMOSPHERIC THEMES",
                 style = typography.caption,
                 color = colors.textTertiary
             )
         }
 
         items(AppTheme.values(), key = { it.id }) { theme ->
+            val themeShopId = mapThemeToShopId(theme)
+            val shopItem = allShopItems.find { it.id == themeShopId || it.title.equals(theme.displayName, ignoreCase = true) }
+            val isUnlocked = (theme == AppTheme.SAGE_IVORY) || (shopItem?.isUnlocked == true)
+            val isPreviewActive = ItemPreviewManager.isItemInPreview(themeShopId)
             val isSelected = currentSettings.appTheme == theme
 
             KintsuCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onUpdateAppTheme(theme) },
+                    .clickable {
+                        if (isUnlocked) {
+                            onUpdateAppTheme(theme)
+                        } else {
+                            lockedThemeToPreview = theme
+                        }
+                    },
                 backgroundColor = if (isSelected) colors.surfaceElevated else colors.surface,
-                borderColor = if (isSelected) colors.accent else colors.border
+                borderColor = if (isSelected) colors.accent else (if (!isUnlocked) colors.border.copy(alpha = 0.5f) else colors.border)
             ) {
                 Row(
                     modifier = Modifier
@@ -500,7 +548,7 @@ private fun ThemesTabContent(
                             Text(
                                 text = theme.displayName,
                                 style = typography.itemTitle,
-                                color = if (isSelected) colors.accent else colors.textPrimary
+                                color = if (isSelected) colors.accent else (if (!isUnlocked) colors.textSecondary else colors.textPrimary)
                             )
                             if (isSelected) {
                                 Spacer(modifier = Modifier.width(spacing.xs))
@@ -515,6 +563,41 @@ private fun ThemesTabContent(
                                         style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
                                         color = colors.accent
                                     )
+                                }
+                            } else if (isPreviewActive) {
+                                Spacer(modifier = Modifier.width(spacing.xs))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(colors.goldSeam.copy(alpha = 0.2f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${remainingSeconds / 60}m ${remainingSeconds % 60}s",
+                                        style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                        color = colors.goldSeam
+                                    )
+                                }
+                            } else if (!isUnlocked) {
+                                Spacer(modifier = Modifier.width(spacing.xs))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(colors.surfaceElevated)
+                                        .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        IconLock(color = colors.textTertiary, size = 10.dp)
+                                        Text(
+                                            text = "Shop",
+                                            style = typography.caption.copy(fontSize = 10.sp),
+                                            color = colors.textTertiary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -561,13 +644,82 @@ private fun ThemesTabContent(
             }
         }
     }
-}
 
+    // Locked Theme Preview & Shop Dialog
+    lockedThemeToPreview?.let { theme ->
+        val themeShopId = mapThemeToShopId(theme)
+        val shopItem = allShopItems.find { it.id == themeShopId || it.title.equals(theme.displayName, ignoreCase = true) }
+        val costCoins = shopItem?.costCoins ?: 250
+        val canTrial = ItemPreviewManager.canPreview(context, themeShopId)
+        val isPreviewActive = ItemPreviewManager.isItemInPreview(themeShopId)
+
+        KintsuDialog(
+            title = theme.displayName,
+            onDismissRequest = { lockedThemeToPreview = null },
+            confirmButton = {
+                KintsuButton(
+                    text = "Unlock ($costCoins Coins)",
+                    onClick = {
+                        lockedThemeToPreview = null
+                        onOpenShop()
+                    },
+                    variant = KintsuButtonVariant.PRIMARY
+                )
+            },
+            dismissButton = {
+                if (canTrial && !isPreviewActive) {
+                    KintsuButton(
+                        text = "10-Min Preview",
+                        onClick = {
+                            ItemPreviewManager.startThemePreview(
+                                context = context,
+                                themeId = themeShopId,
+                                themeObj = theme,
+                                currentThemeName = currentSettings.appTheme.name,
+                                onApply = onUpdateAppTheme
+                            )
+                            lockedThemeToPreview = null
+                        },
+                        variant = KintsuButtonVariant.ACCENT_SOFT
+                    )
+                } else {
+                    KintsuButton(
+                        text = "Close",
+                        onClick = { lockedThemeToPreview = null },
+                        variant = KintsuButtonVariant.SECONDARY
+                    )
+                }
+            }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.s)) {
+                Text(
+                    text = "${theme.subtitle}\n\nExclusive Sanctuary aesthetic. Without unlocking in the Shop, it cannot be permanently equipped. You can try a 10-minute live functional preview (1 time) to test it on your device.",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+                if (isPreviewActive) {
+                    Text(
+                        text = "Active Preview: ${remainingSeconds / 60}m ${remainingSeconds % 60}s remaining",
+                        style = typography.caption,
+                        color = colors.goldSeam,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun IconsTabContent(
     currentIconId: String,
-    onSelectIcon: (String) -> Unit
+    onSelectIcon: (String) -> Unit,
+    allShopItems: List<ShopItemEntity>,
+    onOpenShop: () -> Unit
 ) {
+    val context = LocalContext.current
+    val activePreviewId by ItemPreviewManager.activePreviewId.collectAsState()
+    val remainingSeconds by ItemPreviewManager.remainingSeconds.collectAsState()
+    var lockedIconToPreview by remember { mutableStateOf<LauncherIconInfo?>(null) }
     val colors = KintsuTheme.colors
     val spacing = KintsuTheme.spacing
     val typography = KintsuTheme.typography
@@ -579,21 +731,30 @@ private fun IconsTabContent(
     ) {
         item {
             Text(
-                text = "APP LAUNCHER ICONS (100% FREE)",
+                text = "APP LAUNCHER ICONS",
                 style = typography.caption,
                 color = colors.textTertiary
             )
         }
 
         items(icons, key = { it.id }) { iconInfo ->
+            val shopItem = allShopItems.find { it.id == iconInfo.id }
+            val isUnlocked = iconInfo.isDefault || (shopItem?.isUnlocked == true)
+            val isPreviewActive = ItemPreviewManager.isItemInPreview(iconInfo.id)
             val isSelected = currentIconId == iconInfo.id
 
             KintsuCard(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onSelectIcon(iconInfo.id) },
+                    .clickable {
+                        if (isUnlocked) {
+                            onSelectIcon(iconInfo.id)
+                        } else {
+                            lockedIconToPreview = iconInfo
+                        }
+                    },
                 backgroundColor = if (isSelected) colors.surfaceElevated else colors.surface,
-                borderColor = if (isSelected) colors.accent else colors.border
+                borderColor = if (isSelected) colors.accent else (if (!isUnlocked) colors.border.copy(alpha = 0.5f) else colors.border)
             ) {
                 Row(
                     modifier = Modifier
@@ -625,11 +786,63 @@ private fun IconsTabContent(
                         }
 
                         Column {
-                            Text(
-                                text = iconInfo.title,
-                                style = typography.itemTitle,
-                                color = if (isSelected) colors.accent else colors.textPrimary
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = iconInfo.title,
+                                    style = typography.itemTitle,
+                                    color = if (isSelected) colors.accent else (if (!isUnlocked) colors.textSecondary else colors.textPrimary)
+                                )
+                                if (isSelected) {
+                                    Spacer(modifier = Modifier.width(spacing.xs))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.accent.copy(alpha = 0.15f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "Active",
+                                            style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.accent
+                                        )
+                                    }
+                                } else if (isPreviewActive) {
+                                    Spacer(modifier = Modifier.width(spacing.xs))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.goldSeam.copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "${remainingSeconds / 60}m ${remainingSeconds % 60}s",
+                                            style = typography.caption.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                                            color = colors.goldSeam
+                                        )
+                                    }
+                                } else if (!isUnlocked) {
+                                    Spacer(modifier = Modifier.width(spacing.xs))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(colors.surfaceElevated)
+                                            .border(1.dp, colors.border.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                        ) {
+                                            IconLock(color = colors.textTertiary, size = 10.dp)
+                                            Text(
+                                                text = "Shop",
+                                                style = typography.caption.copy(fontSize = 10.sp),
+                                                color = colors.textTertiary
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = iconInfo.description,
@@ -649,23 +862,80 @@ private fun IconsTabContent(
                         ) {
                             IconCheck(color = colors.background, size = 14.dp)
                         }
-                    } else {
+                    } else if (isUnlocked) {
                         Text(
                             text = "Apply",
-                            style = typography.caption.copy(fontWeight = FontWeight.SemiBold),
+                            style = typography.caption,
                             color = colors.accent,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(colors.accentSoft.copy(alpha = 0.4f))
-                                .padding(horizontal = spacing.s, vertical = 4.dp)
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
         }
     }
-}
 
+    // Locked Icon Preview & Shop Dialog
+    lockedIconToPreview?.let { iconInfo ->
+        val costCoins = iconInfo.costCoins
+        val canTrial = ItemPreviewManager.canPreview(context, iconInfo.id)
+        val isPreviewActive = ItemPreviewManager.isItemInPreview(iconInfo.id)
+
+        KintsuDialog(
+            title = iconInfo.title,
+            onDismissRequest = { lockedIconToPreview = null },
+            confirmButton = {
+                KintsuButton(
+                    text = "Unlock ($costCoins Coins)",
+                    onClick = {
+                        lockedIconToPreview = null
+                        onOpenShop()
+                    },
+                    variant = KintsuButtonVariant.PRIMARY
+                )
+            },
+            dismissButton = {
+                if (canTrial && !isPreviewActive) {
+                    KintsuButton(
+                        text = "10-Min Preview",
+                        onClick = {
+                            ItemPreviewManager.startIconPreview(
+                                context = context,
+                                iconId = iconInfo.id,
+                                currentIconId = currentIconId,
+                                onApply = onSelectIcon
+                            )
+                            lockedIconToPreview = null
+                        },
+                        variant = KintsuButtonVariant.ACCENT_SOFT
+                    )
+                } else {
+                    KintsuButton(
+                        text = "Close",
+                        onClick = { lockedIconToPreview = null },
+                        variant = KintsuButtonVariant.SECONDARY
+                    )
+                }
+            }
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.s)) {
+                Text(
+                    text = "${iconInfo.description}\n\nExclusive Sanctuary app icon. Without unlocking in the Shop, it cannot be permanently set. You can test it with a 10-minute live functional preview (1 time) to see it on your home screen.",
+                    style = typography.caption,
+                    color = colors.textSecondary
+                )
+                if (isPreviewActive) {
+                    Text(
+                        text = "Active Preview: ${remainingSeconds / 60}m ${remainingSeconds % 60}s remaining",
+                        style = typography.caption,
+                        color = colors.goldSeam,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
 @Composable
 private fun AppearanceTabContent(
     currentSettings: KintsuSettings,
@@ -909,5 +1179,22 @@ private fun MotionTabContent(
                 }
             }
         }
+    }
+}
+
+
+private fun mapThemeToShopId(theme: AppTheme): String {
+    return when (theme) {
+        AppTheme.SAGE_IVORY -> "theme_sage_ivory"
+        AppTheme.MIDNIGHT_CHAMPAGNE -> "theme_obsidian_gold"
+        AppTheme.NORDIC_FROST -> "theme_carrara_silver"
+        AppTheme.MATCHA_ATELIER -> "theme_imperial_jade"
+        AppTheme.COASTAL_MIST -> "theme_lapis_lazuli"
+        AppTheme.SAKURA_DAWN -> "theme_rose_quartz"
+        AppTheme.TERRACOTTA_LINEN -> "theme_terracotta_clay"
+        AppTheme.LAVENDER_MIST -> "theme_opal_pearl"
+        AppTheme.OCEAN_PEARL -> "theme_celestial_glass"
+        AppTheme.ECLIPSE_GOLD -> "theme_brushed_titanium"
+        else -> "theme_${theme.name.lowercase()}"
     }
 }

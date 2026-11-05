@@ -72,6 +72,9 @@ fun KintsuApp(
     onShortcutHandled: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.kintsu.app.data.ItemPreviewManager.initialize(context)
+    }
     val settings by viewModel.settings.collectAsState()
     val currentTab by viewModel.currentTab.collectAsState()
     val isSettingsOpen by viewModel.isSettingsOpen.collectAsState()
@@ -911,6 +914,11 @@ fun KintsuApp(
                 onUpdateLauncherIcon = { iconId -> viewModel.setLauncherIcon(iconId, context) },
                 onUpdateHapticsEnabled = { viewModel.setHapticsEnabled(it) },
                 onUpdateReducedMotion = { viewModel.setReducedMotion(it) },
+                allShopItems = allShopItems,
+                onOpenShop = {
+                    isCustomizeOpen = false
+                    viewModel.setShopOpen(true)
+                },
                 onDismiss = { isCustomizeOpen = false }
             )
         }

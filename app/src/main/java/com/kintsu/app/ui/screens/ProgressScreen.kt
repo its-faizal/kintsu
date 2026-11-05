@@ -156,7 +156,7 @@ fun ProgressScreen(
                 // Kintsugi Gold Repairs Banner
                 KintsuCard(
                     modifier = Modifier.fillMaxWidth(),
-                    backgroundColor = colors.accentSoft.copy(alpha = 0.5f)
+                    backgroundColor = colors.surface, borderColor = colors.goldSeam.copy(alpha = 0.35f)
                 ) {
                     Row(
                         modifier = Modifier.padding(spacing.l),
