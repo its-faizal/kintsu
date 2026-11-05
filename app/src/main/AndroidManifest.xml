@@ -435,6 +435,13 @@
             android:windowSoftInputMode="adjustNothing"
             android:theme="@style/Theme.Kintsu" />
 
+        <!-- Zen Studio Fullscreen Desk Clock Activity -->
+        <activity
+            android:name=".ui.screens.ZenStudioActivity"
+            android:exported="false"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:theme="@style/Theme.Kintsu" />
+
         <!-- Reel & Short-Form Intervention Screen Overlay Activity -->
         <activity
             android:name=".wellbeing.ui.ReelInterventionOverlayActivity"
