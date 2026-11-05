@@ -119,6 +119,12 @@ class ReelInterventionOverlayActivity : ComponentActivity() {
         fun grantTemporaryPass(pkgName: String, minutes: Int) {
             temporaryUnlockTimestamps[pkgName] = System.currentTimeMillis() + (minutes * 60 * 1000L)
         }
+
+        fun getRemainingTemporaryPassMillis(pkgName: String): Long {
+            val expireTime = temporaryUnlockTimestamps[pkgName] ?: return 0L
+            val remaining = expireTime - System.currentTimeMillis()
+            return remaining.coerceAtLeast(0L)
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

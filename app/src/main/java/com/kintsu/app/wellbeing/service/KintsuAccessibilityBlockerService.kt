@@ -38,6 +38,9 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     private val lastShortFormCheckMillis = ConcurrentHashMap<String, Long>()
     private var activeMonitoringJob: kotlinx.coroutines.Job? = null
     private var currentForegroundPackage: String? = null
+    private val pillOverlay by lazy {
+        com.kintsu.app.wellbeing.ui.KintsuFloatingPillOverlay(this)
+    }
 
     private var failSafeErrorsIn10Min = 0
     private var lastErrorTimeMillis = 0L
@@ -53,6 +56,12 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
                 packageName,
                 System.currentTimeMillis() + (durationMinutes * 60 * 1000L)
             )
+        }
+
+        fun getRemainingUnlockMillis(packageName: String): Long {
+            val expireTime = instance?.temporarilyUnlockedUntil?.get(packageName) ?: return 0L
+            val remaining = expireTime - System.currentTimeMillis()
+            return remaining.coerceAtLeast(0L)
         }
 
         private var instance: KintsuAccessibilityBlockerService? = null
@@ -83,21 +92,121 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
         startContinuousUsageMonitor()
     }
 
+    data class ApproachingLimit(val label: String, val remainingSeconds: Long)
+
+    private suspend fun checkApproachingLimit(packageName: String): ApproachingLimit? {
+        val settings = SettingsDataStore(applicationContext).settingsFlow.first()
+        val db = KintsuDatabase.getDatabase(applicationContext)
+
+        // A. App / Group Daily Limit
+        val allGroups = db.wellbeingDao().getAllAppGroups().first()
+        val matchingGroups = allGroups.filter { group ->
+            group.packageNames.split(",").map { it.trim().lowercase() }.contains(packageName.lowercase())
+        }
+
+        for (group in matchingGroups) {
+            val rules = db.wellbeingDao().getRulesForGroup(group.id)
+            for (rule in rules) {
+                if (!rule.isEnabled) continue
+                if (rule.mode == BlockMode.DAILY_LIMIT.name && rule.dailyLimitMinutes > 0) {
+                    val packagesToCheck = group.packageNames
+                        .split(",")
+                        .map { it.trim().lowercase() }
+                        .filter { it.isNotBlank() }
+
+                    val totalGroupUsedSec = packagesToCheck.sumOf { p ->
+                        val usageSec = limitTracker.getUsageSecondsToday(p)
+                        val systemUsageSec = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, p) * 60L
+                        maxOf(usageSec, systemUsageSec)
+                    }
+
+                    val limitSec = rule.dailyLimitMinutes * 60L
+                    val remainingSec = limitSec - totalGroupUsedSec
+                    if (remainingSec in 1..120) {
+                        val appLabel = try {
+                            val pm = applicationContext.packageManager
+                            val info = pm.getApplicationInfo(packageName, 0)
+                            pm.getApplicationLabel(info).toString()
+                        } catch (_: Exception) {
+                            group.name
+                        }
+                        return ApproachingLimit(appLabel, remainingSec)
+                    }
+                } else if (rule.mode == BlockMode.SESSION_LIMIT.name && rule.sessionLimitMinutes > 0) {
+                    val activeSessionSec = limitTracker.getActiveSessionSeconds()
+                    val limitSec = rule.sessionLimitMinutes * 60L
+                    val remainingSec = limitSec - activeSessionSec
+                    if (remainingSec in 1..120) {
+                        return ApproachingLimit("Session", remainingSec)
+                    }
+                }
+            }
+        }
+
+        // B. Short-Form Content Daily Limit
+        if (ShortFormContentDetector.isShortFormPackage(packageName) && settings.shortsDailyLimitMinutes > 0) {
+            val liveUsageSec = limitTracker.getUsageSecondsToday(packageName)
+            val systemUsageSec = ScreenTimeHelper.getPackageUsageTodayMinutes(applicationContext, packageName) * 60L
+            val totalShortsSec = maxOf(liveUsageSec, systemUsageSec)
+            val limitSec = settings.shortsDailyLimitMinutes * 60L
+            val remainingSec = limitSec - totalShortsSec
+            if (remainingSec in 1..120) {
+                return ApproachingLimit("Shorts", remainingSec)
+            }
+        }
+
+        // C. Continuous Session Limit
+        if (settings.maxContinuousSessionMinutes > 0) {
+            val activeSessionSec = limitTracker.getActiveSessionSeconds()
+            val limitSec = settings.maxContinuousSessionMinutes * 60L
+            val remainingSec = limitSec - activeSessionSec
+            if (remainingSec in 1..120) {
+                return ApproachingLimit("Session", remainingSec)
+            }
+        }
+
+        return null
+    }
+
     private fun startContinuousUsageMonitor() {
         activeMonitoringJob?.cancel()
         activeMonitoringJob = serviceScope.launch {
             while (kotlinx.coroutines.isActive) {
-                kotlinx.coroutines.delay(2000L)
-                val pkg = currentForegroundPackage ?: continue
-                if (pkg.isBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName) continue
+                kotlinx.coroutines.delay(1000L)
+                val pkg = currentForegroundPackage
+                if (pkg.isNullOrBlank() || ProtectedApps.isProtected(pkg) || pkg == applicationContext.packageName) {
+                    pillOverlay.hide()
+                    continue
+                }
 
                 val now = System.currentTimeMillis()
                 val unlockExpiry = temporarilyUnlockedUntil[pkg]
-                if (unlockExpiry != null && now < unlockExpiry) continue
+                val isUnlocked = (unlockExpiry != null && now < unlockExpiry) ||
+                        com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.isTemporarilyUnlocked(pkg)
 
-                try {
-                    handlePackageInspection(pkg)
-                } catch (_: Exception) {}
+                // 1. Check if Emergency Pass / Temporary Unlock is active
+                val emergencyPassMs = maxOf(
+                    com.kintsu.app.wellbeing.ui.ReelInterventionOverlayActivity.getRemainingTemporaryPassMillis(pkg),
+                    getRemainingUnlockMillis(pkg)
+                )
+
+                if (emergencyPassMs > 0L) {
+                    pillOverlay.showEmergencyPass(pkg, emergencyPassMs)
+                } else {
+                    // 2. Check if a limit is approaching (within 2 minutes / 120s)
+                    val approachingWarning = checkApproachingLimit(pkg)
+                    if (approachingWarning != null) {
+                        pillOverlay.showApproachingLimit(approachingWarning.label, approachingWarning.remainingSeconds)
+                    } else {
+                        pillOverlay.hide()
+                    }
+                }
+
+                if (!isUnlocked) {
+                    try {
+                        handlePackageInspection(pkg)
+                    } catch (_: Exception) {}
+                }
             }
         }
     }
@@ -105,6 +214,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         activeMonitoringJob?.cancel()
+        pillOverlay.onDestroy()
         instance = null
         isServiceRunning = false
     }
@@ -619,6 +729,7 @@ class KintsuAccessibilityBlockerService : AccessibilityService() {
             putExtra(BlockActivity.EXTRA_PAUSE_SECONDS, pauseDurationSeconds)
             putExtra(BlockActivity.EXTRA_INTERVENTION_STYLE, interventionStyle)
         }
+        pillOverlay.hide()
         startActivity(intent)
     }
 
